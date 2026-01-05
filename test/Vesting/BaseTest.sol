@@ -138,12 +138,16 @@ abstract contract VestingTest is Test {
     function setUpRoles() internal {
         vm.startPrank(admin);
 
-        // Set role admins
-        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(
-            Roles.YIELD_DISTRIBUTOR_ROLE,
-            Roles.ADMIN_ROLE
-        );
+        // Configure function permissions using Roles library helpers
+        accessManager.setRoleAdmins();
+
+        accessManager.assignAdminTargetsFor(apxUSD);
+        accessManager.assignAdminTargetsFor(apyUSD);
+        accessManager.assignAdminTargetsFor(denyList);
+        accessManager.assignAdminTargetsFor(vesting);
+
+        accessManager.assignMintingContractTargetsFor(apxUSD);
+        accessManager.assignYieldDistributorTargetsFor(vesting);
 
         // Grant MINT_STRAT_ROLE to admin (no delay)
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
@@ -154,15 +158,6 @@ abstract contract VestingTest is Test {
             yieldDistributor,
             0
         );
-
-        // Configure function permissions using Roles library helpers
-        accessManager.assignAdminTargetsFor(apxUSD);
-        accessManager.assignAdminTargetsFor(apyUSD);
-        accessManager.assignAdminTargetsFor(denyList);
-        accessManager.assignAdminTargetsFor(vesting);
-
-        accessManager.assignMintingContractTargetsFor(apxUSD);
-        accessManager.assignYieldDistributorTargetsFor(vesting);
 
         vm.stopPrank();
     }

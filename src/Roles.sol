@@ -36,6 +36,20 @@ library Roles {
     uint64 public constant YIELD_DISTRIBUTOR_ROLE = 6;
 
     /**
+     * @notice Sets the admin role for all roles
+     * @param accessManager The AccessManager contract
+     */
+    function setRoleAdmins(IAccessManager accessManager) internal {
+        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.MINTER_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(
+            Roles.YIELD_DISTRIBUTOR_ROLE,
+            Roles.ADMIN_ROLE
+        );
+    }
+
+    /**
      * @notice Assigns admin function selectors for ApxUSD contract
      * @param accessManager The AccessManager contract
      * @param apxUSD The ApxUSD contract address
