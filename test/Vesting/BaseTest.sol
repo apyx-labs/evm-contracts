@@ -198,18 +198,10 @@ abstract contract VestingTest is Test {
     }
 
     /**
-     * @notice Helper to warp time forward by a specific amount
-     * @param duration Time to warp forward in seconds
-     */
-    function warpForward(uint256 duration) internal {
-        vm.warp(block.timestamp + duration);
-    }
-
-    /**
      * @notice Helper to warp time forward by the vesting period
      */
     function warpPastVestingPeriod() internal {
-        vm.warp(block.timestamp + VESTING_PERIOD + 1);
+        vm.warp(vm.clone(block.timestamp) + VESTING_PERIOD + 1);
     }
 
     /**
