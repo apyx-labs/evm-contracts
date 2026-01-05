@@ -2,8 +2,14 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/src/Test.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {Vm} from "forge-std/src/Vm.sol";
+import {VmExt} from "../utils/VmExt.sol";
+import {
+    ERC1967Proxy
+} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    AccessManager
+} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
 import {LinearVestV0} from "../../src/LinearVestV0.sol";
@@ -24,6 +30,9 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   - Standard test accounts
  */
 abstract contract VestingTest is Test {
+    using VmExt for Vm;
+    using Roles for AccessManager;
+
     ApxUSD public apxUSD;
     ApyUSD public apyUSD;
     LinearVestV0 public vesting;
@@ -66,8 +75,14 @@ abstract contract VestingTest is Test {
 
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), APX_SUPPLY_CAP));
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize,
+            (address(accessManager), APX_SUPPLY_CAP)
+        );
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
+            address(apxUSDImpl),
+            apxUSDInitData
+        );
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy AddressList
@@ -76,16 +91,30 @@ abstract contract VestingTest is Test {
         // Deploy ApyUSD (vault) first with no Silo
         ApyUSD apyUSDImpl = new ApyUSD();
         bytes memory apyUSDInitData = abi.encodeCall(
-            apyUSDImpl.initialize, (address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(denyList))
+            apyUSDImpl.initialize,
+            (
+                address(accessManager),
+                address(apxUSD),
+                UNLOCKING_DELAY,
+                address(denyList)
+            )
         );
-        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
+        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(
+            address(apyUSDImpl),
+            apyUSDInitData
+        );
         apyUSD = ApyUSD(address(apyUSDProxy));
 
         // Deploy Silo with ApyUSD as owner
         silo = new Silo(address(apxUSD), address(apyUSD));
 
         // Deploy Vesting contract
-        vesting = new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), VESTING_PERIOD);
+        vesting = new LinearVestV0(
+            address(apxUSD),
+            address(accessManager),
+            address(apyUSD),
+            VESTING_PERIOD
+        );
 
         // Configure roles
         setUpRoles();
@@ -111,63 +140,29 @@ abstract contract VestingTest is Test {
 
         // Set role admins
         accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.YIELD_DISTRIBUTOR_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(
+            Roles.YIELD_DISTRIBUTOR_ROLE,
+            Roles.ADMIN_ROLE
+        );
 
         // Grant MINT_STRAT_ROLE to admin (no delay)
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
 
         // Grant YIELD_DISTRIBUTOR_ROLE to yieldDistributor (no delay)
-        accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, yieldDistributor, 0);
+        accessManager.grantRole(
+            Roles.YIELD_DISTRIBUTOR_ROLE,
+            yieldDistributor,
+            0
+        );
 
-        // Configure ApxUSD function permissions
-        bytes4 mintSelector = apxUSD.mint.selector;
-        bytes4[] memory mintSelectors = new bytes4[](1);
-        mintSelectors[0] = mintSelector;
-        accessManager.setTargetFunctionRole(address(apxUSD), mintSelectors, Roles.MINT_STRAT_ROLE);
+        // Configure function permissions using Roles library helpers
+        accessManager.assignAdminTargetsFor(apxUSD);
+        accessManager.assignAdminTargetsFor(apyUSD);
+        accessManager.assignAdminTargetsFor(denyList);
+        accessManager.assignAdminTargetsFor(vesting);
 
-        bytes4 pauseSelector = apxUSD.pause.selector;
-        bytes4 unpauseSelector = apxUSD.unpause.selector;
-        bytes4 setSupplyCapSelector = apxUSD.setSupplyCap.selector;
-        bytes4[] memory apxAdminSelectors = new bytes4[](3);
-        apxAdminSelectors[0] = pauseSelector;
-        apxAdminSelectors[1] = unpauseSelector;
-        apxAdminSelectors[2] = setSupplyCapSelector;
-        accessManager.setTargetFunctionRole(address(apxUSD), apxAdminSelectors, Roles.ADMIN_ROLE);
-
-        // Configure ApyUSD function permissions
-        bytes4 setUnlockingDelaySelector = apyUSD.setUnlockingDelay.selector;
-        bytes4 apyPauseSelector = apyUSD.pause.selector;
-        bytes4 apyUnpauseSelector = apyUSD.unpause.selector;
-        bytes4 setSiloSelector = apyUSD.setSilo.selector;
-        bytes4 setVestingSelector = apyUSD.setVesting.selector;
-        bytes4[] memory apyAdminSelectors = new bytes4[](5);
-        apyAdminSelectors[0] = setUnlockingDelaySelector;
-        apyAdminSelectors[1] = apyPauseSelector;
-        apyAdminSelectors[2] = apyUnpauseSelector;
-        apyAdminSelectors[3] = setSiloSelector;
-        apyAdminSelectors[4] = setVestingSelector;
-        accessManager.setTargetFunctionRole(address(apyUSD), apyAdminSelectors, Roles.ADMIN_ROLE);
-
-        // Configure AddressList function permissions
-        bytes4 addSelector = denyList.add.selector;
-        bytes4 removeSelector = denyList.remove.selector;
-        bytes4[] memory denyListSelectors = new bytes4[](2);
-        denyListSelectors[0] = addSelector;
-        denyListSelectors[1] = removeSelector;
-        accessManager.setTargetFunctionRole(address(denyList), denyListSelectors, Roles.ADMIN_ROLE);
-
-        // Configure Vesting function permissions
-        bytes4 depositYieldSelector = vesting.depositYield.selector;
-        bytes4[] memory yieldDistributorSelectors = new bytes4[](1);
-        yieldDistributorSelectors[0] = depositYieldSelector;
-        accessManager.setTargetFunctionRole(address(vesting), yieldDistributorSelectors, Roles.YIELD_DISTRIBUTOR_ROLE);
-
-        bytes4 setVestingPeriodSelector = vesting.setVestingPeriod.selector;
-        bytes4 setBeneficiarySelector = vesting.setBeneficiary.selector;
-        bytes4[] memory vestingAdminSelectors = new bytes4[](2);
-        vestingAdminSelectors[0] = setVestingPeriodSelector;
-        vestingAdminSelectors[1] = setBeneficiarySelector;
-        accessManager.setTargetFunctionRole(address(vesting), vestingAdminSelectors, Roles.ADMIN_ROLE);
+        accessManager.assignMintingContractTargetsFor(apxUSD);
+        accessManager.assignYieldDistributorTargetsFor(vesting);
 
         vm.stopPrank();
     }
@@ -210,7 +205,10 @@ abstract contract VestingTest is Test {
      * @param assets Amount of ApxUSD to deposit
      * @return shares Amount of apyUSD shares received
      */
-    function deposit(address user, uint256 assets) internal returns (uint256 shares) {
+    function deposit(
+        address user,
+        uint256 assets
+    ) internal returns (uint256 shares) {
         vm.startPrank(user);
         apxUSD.approve(address(apyUSD), assets);
         shares = apyUSD.deposit(assets, user);
