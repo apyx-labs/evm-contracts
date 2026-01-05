@@ -4,6 +4,9 @@ pragma solidity 0.8.30;
 import {
     IAccessManager
 } from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
+import {
+    AccessManager
+} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "./ApxUSD.sol";
 import {ApyUSD} from "./ApyUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
@@ -35,70 +38,61 @@ library Roles {
     /// @dev Can call Vesting.depositYield() to add yield for vesting
     uint64 public constant YIELD_DISTRIBUTOR_ROLE = 6;
 
+    // ========================================
+    // Extension Functions for AccessManager
+    // ========================================
+
     /**
-     * @notice Sets the admin role for all roles
-     * @param accessManager The AccessManager contract
+     * @notice Sets the admin role for all roles (extension function)
+     * @param self The AccessManager contract
      */
-    function setRoleAdmins(IAccessManager accessManager) internal {
-        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINTER_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(
-            Roles.YIELD_DISTRIBUTOR_ROLE,
-            Roles.ADMIN_ROLE
-        );
+    function setRoleAdmins(AccessManager self) internal {
+        self.setRoleAdmin(MINT_STRAT_ROLE, ADMIN_ROLE);
+        self.setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
+        self.setRoleAdmin(MINT_GUARD_ROLE, ADMIN_ROLE);
+        self.setRoleAdmin(YIELD_DISTRIBUTOR_ROLE, ADMIN_ROLE);
     }
 
     /**
-     * @notice Assigns admin function selectors for ApxUSD contract
-     * @param accessManager The AccessManager contract
-     * @param apxUSD The ApxUSD contract address
+     * @notice Assigns admin function selectors for ApxUSD contract (extension function)
+     * @param self The AccessManager contract
+     * @param apxUSD The ApxUSD contract
      */
-    function assignAdminTargetsFor(
-        IAccessManager accessManager,
-        ApxUSD apxUSD
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, ApxUSD apxUSD) internal {
         bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = ApxUSD.pause.selector;
         selectors[1] = ApxUSD.unpause.selector;
         selectors[2] = ApxUSD.setSupplyCap.selector;
         selectors[3] = ApxUSD.freeze.selector;
         selectors[4] = ApxUSD.unfreeze.selector;
-        accessManager.setTargetFunctionRole(
-            address(apxUSD),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(apxUSD), selectors, ADMIN_ROLE);
     }
 
     /**
-     * @notice Assigns admin function selectors for MinterV0 contract
-     * @param accessManager The AccessManager contract
-     * @param mintingContract The Minting contract address
+     * @notice Assigns admin function selectors for MinterV0 contract (extension function)
+     * @param self The AccessManager contract
+     * @param minterContract The MinterV0 contract
      */
     function assignAdminTargetsFor(
-        IAccessManager accessManager,
-        IMinterV0 mintingContract
+        AccessManager self,
+        IMinterV0 minterContract
     ) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IMinterV0.setMaxMintAmount.selector;
         selectors[1] = IMinterV0.setRateLimit.selector;
-        accessManager.setTargetFunctionRole(
-            address(mintingContract),
+        self.setTargetFunctionRole(
+            address(minterContract),
             selectors,
             ADMIN_ROLE
         );
     }
 
     /**
-     * @notice Assigns admin function selectors for ApyUSD contract
-     * @param accessManager The AccessManager contract
-     * @param apyUSD The ApyUSD contract address
+     * @notice Assigns admin function selectors for ApyUSD contract (extension function)
+     * @param self The AccessManager contract
+     * @param apyUSD The ApyUSD contract
      */
-    function assignAdminTargetsFor(
-        IAccessManager accessManager,
-        ApyUSD apyUSD
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, ApyUSD apyUSD) internal {
         bytes4[] memory selectors = new bytes4[](7);
         selectors[0] = ApyUSD.setUnlockingDelay.selector;
         selectors[1] = ApyUSD.pause.selector;
@@ -107,26 +101,22 @@ library Roles {
         selectors[4] = ApyUSD.setVesting.selector;
         selectors[5] = ApyUSD.freeze.selector;
         selectors[6] = ApyUSD.unfreeze.selector;
-        accessManager.setTargetFunctionRole(
-            address(apyUSD),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);
     }
 
     /**
-     * @notice Assigns admin function selectors for Vesting contract
-     * @param accessManager The AccessManager contract
-     * @param vestingContract The Vesting contract address
+     * @notice Assigns admin function selectors for Vesting contract (extension function)
+     * @param self The AccessManager contract
+     * @param vestingContract The Vesting contract
      */
     function assignAdminTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         IVesting vestingContract
     ) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IVesting.setVestingPeriod.selector;
         selectors[1] = IVesting.setBeneficiary.selector;
-        accessManager.setTargetFunctionRole(
+        self.setTargetFunctionRole(
             address(vestingContract),
             selectors,
             ADMIN_ROLE
@@ -134,37 +124,34 @@ library Roles {
     }
 
     /**
-     * @notice Assigns admin function selectors for AddressList (DenyList) contract
-     * @param accessManager The AccessManager contract
-     * @param denyList The AddressList contract address
+     * @notice Assigns admin function selectors for AddressList contract (extension function)
+     * @param self The AccessManager contract
+     * @param denyList The AddressList contract
      */
     function assignAdminTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         IAddressList denyList
     ) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IAddressList.add.selector;
         selectors[1] = IAddressList.remove.selector;
-        accessManager.setTargetFunctionRole(
-            address(denyList),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(denyList), selectors, ADMIN_ROLE);
     }
 
     /**
-     * @notice Assigns minter function selector for MinterV0 contract
-     * @param accessManager The AccessManager contract
-     * @param minterContract The MinterV0 contract address
+     * @notice Assigns minter function selectors for MinterV0 contract (extension function)
+     * @param self The AccessManager contract
+     * @param minterContract The MinterV0 contract
      */
     function assignMinterTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         IMinterV0 minterContract
     ) internal {
-        bytes4[] memory selectors = new bytes4[](2);
+        bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = IMinterV0.requestMint.selector;
         selectors[1] = IMinterV0.executeMint.selector;
-        accessManager.setTargetFunctionRole(
+        selectors[2] = IMinterV0.cleanMintHistory.selector;
+        self.setTargetFunctionRole(
             address(minterContract),
             selectors,
             MINTER_ROLE
@@ -172,17 +159,17 @@ library Roles {
     }
 
     /**
-     * @notice Assigns mint guard function selector for MinterV0 contract
-     * @param accessManager The AccessManager contract
-     * @param minterContract The MinterV0 contract address
+     * @notice Assigns mint guard function selectors for MinterV0 contract (extension function)
+     * @param self The AccessManager contract
+     * @param minterContract The MinterV0 contract
      */
     function assignMintGuardTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         IMinterV0 minterContract
     ) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IMinterV0.cancelMint.selector;
-        accessManager.setTargetFunctionRole(
+        self.setTargetFunctionRole(
             address(minterContract),
             selectors,
             MINT_GUARD_ROLE
@@ -190,35 +177,31 @@ library Roles {
     }
 
     /**
-     * @notice Assigns minting contract function selector for ApxUSD contract
-     * @param accessManager The AccessManager contract
-     * @param apxUSD The ApxUSD contract address
+     * @notice Assigns minting contract function selectors for ApxUSD contract (extension function)
+     * @param self The AccessManager contract
+     * @param apxUSD The ApxUSD contract
      */
     function assignMintingContractTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         ApxUSD apxUSD
     ) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = ApxUSD.mint.selector;
-        accessManager.setTargetFunctionRole(
-            address(apxUSD),
-            selectors,
-            MINT_STRAT_ROLE
-        );
+        self.setTargetFunctionRole(address(apxUSD), selectors, MINT_STRAT_ROLE);
     }
 
     /**
-     * @notice Assigns yield distributor function selector for Vesting contract
-     * @param accessManager The AccessManager contract
-     * @param vestingContract The Vesting contract address
+     * @notice Assigns yield distributor function selectors for Vesting contract (extension function)
+     * @param self The AccessManager contract
+     * @param vestingContract The Vesting contract
      */
     function assignYieldDistributorTargetsFor(
-        IAccessManager accessManager,
+        AccessManager self,
         IVesting vestingContract
     ) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IVesting.depositYield.selector;
-        accessManager.setTargetFunctionRole(
+        self.setTargetFunctionRole(
             address(vestingContract),
             selectors,
             YIELD_DISTRIBUTOR_ROLE

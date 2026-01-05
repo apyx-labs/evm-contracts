@@ -4,8 +4,12 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {Vm} from "forge-std/src/Vm.sol";
 import {VmExt} from "../utils/VmExt.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {
+    ERC1967Proxy
+} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {
+    AccessManager
+} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {MinterV0} from "../../src/MinterV0.sol";
 import {IMinterV0} from "../../src/interfaces/IMinterV0.sol";
@@ -22,6 +26,7 @@ import {Roles} from "../../src/Roles.sol";
  */
 abstract contract MinterTest is Test {
     using VmExt for Vm;
+    using Roles for AccessManager;
 
     ApxUSD public apxUSD;
     MinterV0 public minterV0;
@@ -63,17 +68,32 @@ abstract contract MinterTest is Test {
 
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), SUPPLY_CAP));
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize,
+            (address(accessManager), SUPPLY_CAP)
+        );
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
+            address(apxUSDImpl),
+            apxUSDInitData
+        );
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy MinterV0
         MinterV0 minterImpl = new MinterV0();
         bytes memory minterInitData = abi.encodeCall(
             minterImpl.initialize,
-            (address(accessManager), address(apxUSD), MAX_MINT_AMOUNT, RATE_LIMIT_AMOUNT, RATE_LIMIT_PERIOD)
+            (
+                address(accessManager),
+                address(apxUSD),
+                MAX_MINT_AMOUNT,
+                RATE_LIMIT_AMOUNT,
+                RATE_LIMIT_PERIOD
+            )
         );
-        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minterImpl), minterInitData);
+        ERC1967Proxy minterProxy = new ERC1967Proxy(
+            address(minterImpl),
+            minterInitData
+        );
         minterV0 = MinterV0(address(minterProxy));
 
         // Configure roles
@@ -88,56 +108,23 @@ abstract contract MinterTest is Test {
         vm.startPrank(admin);
 
         // Set role admins
-        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINTER_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmins();
 
-        // Grant MINT_STRAT_ROLE to MinterV0 contract (with delay)
-        accessManager.grantRole(Roles.MINT_STRAT_ROLE, address(minterV0), MINT_DELAY);
+        // Configure function permissions using Roles library helpers
+        accessManager.assignMintingContractTargetsFor(apxUSD);
+        accessManager.assignAdminTargetsFor(apxUSD);
+        accessManager.assignMinterTargetsFor(minterV0);
+        accessManager.assignMintGuardTargetsFor(minterV0);
+        accessManager.assignAdminTargetsFor(minterV0);
 
-        // Grant MINTER_ROLE to minter address (no delay)
+        // Grant roles with no delay
+        accessManager.grantRole(
+            Roles.MINT_STRAT_ROLE,
+            address(minterV0),
+            MINT_DELAY
+        );
         accessManager.grantRole(Roles.MINTER_ROLE, minter, 0);
-
-        // Grant MINT_GUARD_ROLE to guardian address (no delay)
         accessManager.grantRole(Roles.MINT_GUARD_ROLE, guardian, 0);
-
-        // Configure ApxUSD function permissions
-        bytes4 mintSelector = apxUSD.mint.selector;
-        bytes4[] memory mintSelectors = new bytes4[](1);
-        mintSelectors[0] = mintSelector;
-        accessManager.setTargetFunctionRole(address(apxUSD), mintSelectors, Roles.MINT_STRAT_ROLE);
-
-        bytes4 pauseSelector = apxUSD.pause.selector;
-        bytes4 unpauseSelector = apxUSD.unpause.selector;
-        bytes4 setSupplyCapSelector = apxUSD.setSupplyCap.selector;
-        bytes4[] memory adminSelectors = new bytes4[](3);
-        adminSelectors[0] = pauseSelector;
-        adminSelectors[1] = unpauseSelector;
-        adminSelectors[2] = setSupplyCapSelector;
-        accessManager.setTargetFunctionRole(address(apxUSD), adminSelectors, Roles.ADMIN_ROLE);
-
-        // Configure MinterV0 function permissions
-        bytes4 requestMintSelector = minterV0.requestMint.selector;
-        bytes4 executeMintSelector = minterV0.executeMint.selector;
-        bytes4 cleanMintHistorySelector = minterV0.cleanMintHistory.selector;
-        bytes4 cancelMintSelector = minterV0.cancelMint.selector;
-        bytes4 setMaxMintAmountSelector = minterV0.setMaxMintAmount.selector;
-        bytes4 setRateLimitSelector = minterV0.setRateLimit.selector;
-
-        bytes4[] memory minterSelectors = new bytes4[](3);
-        minterSelectors[0] = requestMintSelector;
-        minterSelectors[1] = executeMintSelector;
-        minterSelectors[2] = cleanMintHistorySelector;
-        accessManager.setTargetFunctionRole(address(minterV0), minterSelectors, Roles.MINTER_ROLE);
-
-        bytes4[] memory guardSelectors = new bytes4[](1);
-        guardSelectors[0] = cancelMintSelector;
-        accessManager.setTargetFunctionRole(address(minterV0), guardSelectors, Roles.MINT_GUARD_ROLE);
-
-        bytes4[] memory minterAdminSelectors = new bytes4[](2);
-        minterAdminSelectors[0] = setMaxMintAmountSelector;
-        minterAdminSelectors[1] = setRateLimitSelector;
-        accessManager.setTargetFunctionRole(address(minterV0), minterAdminSelectors, Roles.ADMIN_ROLE);
 
         vm.stopPrank();
     }
@@ -149,20 +136,21 @@ abstract contract MinterTest is Test {
      * @param amount Amount of tokens to mint
      * @return order The created mint order
      */
-    function _createOrder(address beneficiary, uint48 nonce, uint208 amount)
-        internal
-        view
-        returns (IMinterV0.Order memory)
-    {
+    function _createOrder(
+        address beneficiary,
+        uint48 nonce,
+        uint208 amount
+    ) internal view returns (IMinterV0.Order memory) {
         uint256 currentTimestamp = vm.clone(block.timestamp);
 
-        return IMinterV0.Order({
-            beneficiary: beneficiary,
-            notBefore: uint48(currentTimestamp),
-            notAfter: uint48(currentTimestamp + 24 hours), // Long enough to not expire during tests
-            nonce: nonce,
-            amount: amount
-        });
+        return
+            IMinterV0.Order({
+                beneficiary: beneficiary,
+                notBefore: uint48(currentTimestamp),
+                notAfter: uint48(currentTimestamp + 24 hours), // Long enough to not expire during tests
+                nonce: nonce,
+                amount: amount
+            });
     }
 
     /**
@@ -171,7 +159,10 @@ abstract contract MinterTest is Test {
      * @param privateKey Private key to sign with
      * @return signature The EIP-712 signature
      */
-    function _signOrder(IMinterV0.Order memory order, uint256 privateKey) internal view returns (bytes memory) {
+    function _signOrder(
+        IMinterV0.Order memory order,
+        uint256 privateKey
+    ) internal view returns (bytes memory) {
         bytes32 digest = minterV0.hashOrder(order);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
