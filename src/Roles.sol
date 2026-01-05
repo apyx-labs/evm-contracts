@@ -16,7 +16,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 /**
  * @title Roles
  * @notice Centralized role definitions for AccessManager-based access control
- * @dev These role IDs are used across the PrefUSD ecosystem for consistent access management
+ * @dev These role IDs are used across the Apyx ecosystem of contracts for consistent access management
  */
 library Roles {
     /// @notice Built-in OpenZeppelin admin role - controls all other roles and critical functions
