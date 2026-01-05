@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {console2 as console} from "forge-std/src/console2.sol";
 import {VestingTest} from "./BaseTest.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
 
@@ -9,8 +10,8 @@ import {IVesting} from "../../src/interfaces/IVesting.sol";
  * @notice Tests for yield deposit functionality
  */
 contract VestingDepositTest is VestingTest {
-    function test_DepositYield() public {
-        uint256 amount = DEPOSIT_AMOUNT;
+    function test_DepositYield(uint256 amount) public {
+        amount = bound(amount, 1 gwei, LARGE_AMOUNT);
 
         depositYield(yieldDistributor, amount);
 
@@ -26,8 +27,8 @@ contract VestingDepositTest is VestingTest {
         );
     }
 
-    function test_DepositYield_ResetsVestingPeriod() public {
-        uint256 amount = DEPOSIT_AMOUNT;
+    function test_DepositYield_ResetsVestingPeriod(uint256 amount) public {
+        amount = bound(amount, 1 gwei, LARGE_AMOUNT);
         uint256 initialTimestamp = block.timestamp;
 
         depositYield(yieldDistributor, amount);
@@ -39,11 +40,15 @@ contract VestingDepositTest is VestingTest {
         );
     }
 
-    function test_DepositYield_AddsToUnvested() public {
-        uint256 firstAmount = DEPOSIT_AMOUNT;
-        uint256 secondAmount = DEPOSIT_AMOUNT * 2;
+    function test_DepositYield_AddsToUnvested(
+        uint256 firstAmount,
+        uint256 secondAmount
+    ) public {
+        firstAmount = bound(firstAmount, 1, LARGE_AMOUNT);
+        secondAmount = bound(secondAmount, 1, LARGE_AMOUNT);
 
         // First deposit
+        deal(address(apxUSD), yieldDistributor, firstAmount);
         depositYield(yieldDistributor, firstAmount);
 
         // Warp forward to partially vest
@@ -52,6 +57,7 @@ contract VestingDepositTest is VestingTest {
         uint256 unvestedBefore = vesting.unvestedAmount();
 
         // Second deposit should add to existing unvested
+        deal(address(apxUSD), yieldDistributor, secondAmount);
         depositYield(yieldDistributor, secondAmount);
 
         uint256 expectedVestingAmount = unvestedBefore + secondAmount;
@@ -62,8 +68,9 @@ contract VestingDepositTest is VestingTest {
         );
     }
 
-    function test_DepositYield_EmitsEvent() public {
-        uint256 amount = DEPOSIT_AMOUNT;
+    function test_DepositYield_EmitsEvent(uint256 amount) public {
+        amount = bound(amount, 1 gwei, LARGE_AMOUNT);
+        deal(address(apxUSD), yieldDistributor, amount);
 
         vm.startPrank(yieldDistributor);
         apxUSD.approve(address(vesting), amount);
@@ -75,32 +82,40 @@ contract VestingDepositTest is VestingTest {
         vm.stopPrank();
     }
 
-    function test_DepositYield_TransfersAssets() public {
+    function test_DepositYield_TransfersAssets(uint256 amount) public {
+        amount = bound(amount, 1 gwei, LARGE_AMOUNT);
+
+        deal(address(apxUSD), yieldDistributor, amount);
         uint256 balanceBefore = apxUSD.balanceOf(yieldDistributor);
-        depositYield(yieldDistributor, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, amount);
 
         assertEq(
             apxUSD.balanceOf(yieldDistributor),
-            balanceBefore - DEPOSIT_AMOUNT,
+            balanceBefore - amount,
             "Depositor balance should decrease"
         );
         assertEq(
             apxUSD.balanceOf(address(vesting)),
-            DEPOSIT_AMOUNT,
+            amount,
             "Vesting contract should receive assets"
         );
     }
 
-    function test_MultipleDeposits() public {
-        uint256 amount1 = DEPOSIT_AMOUNT;
-        uint256 amount2 = DEPOSIT_AMOUNT * 2;
+    function test_MultipleDeposits(
+        uint256 firstAmount,
+        uint256 secondAmount
+    ) public {
+        firstAmount = bound(firstAmount, 1, LARGE_AMOUNT);
+        secondAmount = bound(secondAmount, 1, LARGE_AMOUNT);
 
-        depositYield(yieldDistributor, amount1);
+        deal(address(apxUSD), yieldDistributor, firstAmount);
+        depositYield(yieldDistributor, firstAmount);
         uint256 timestamp1 = vesting.lastDepositTimestamp();
 
         skip(1 hours);
 
-        depositYield(yieldDistributor, amount2);
+        deal(address(apxUSD), yieldDistributor, secondAmount);
+        depositYield(yieldDistributor, secondAmount);
         uint256 timestamp2 = vesting.lastDepositTimestamp();
 
         assertGt(
@@ -110,8 +125,15 @@ contract VestingDepositTest is VestingTest {
         );
     }
 
-    function test_DepositDuringVesting() public {
-        depositYield(yieldDistributor, DEPOSIT_AMOUNT);
+    function test_DepositDuringVesting(
+        uint256 firstAmount,
+        uint256 secondAmount
+    ) public {
+        firstAmount = bound(firstAmount, 1 gwei, LARGE_AMOUNT);
+        secondAmount = bound(secondAmount, 1 gwei, LARGE_AMOUNT);
+
+        deal(address(apxUSD), yieldDistributor, firstAmount);
+        depositYield(yieldDistributor, firstAmount);
         uint256 vestingBalanceBefore = apxUSD.balanceOf(address(vesting));
         uint256 apyUSDBalanceBefore = apxUSD.balanceOf(address(apyUSD));
 
@@ -121,7 +143,8 @@ contract VestingDepositTest is VestingTest {
         uint256 vestedBefore = vesting.vestedAmount();
         assertGt(vestedBefore, 0, "Some yield should be vested");
 
-        depositYield(yieldDistributor, DEPOSIT_AMOUNT);
+        deal(address(apxUSD), yieldDistributor, secondAmount);
+        depositYield(yieldDistributor, secondAmount);
 
         // After deposit, vested amount should be recalculated from new timestamp
         uint256 vestedAfter = vesting.vestedAmount();
@@ -129,7 +152,7 @@ contract VestingDepositTest is VestingTest {
         // After deposit, vesting contract balance should decrease by the vested amount
         assertEq(
             apxUSD.balanceOf(address(vesting)),
-            vestingBalanceBefore + DEPOSIT_AMOUNT - vestedBefore,
+            vestingBalanceBefore + secondAmount - vestedBefore,
             "Vesting contract balance should decrease by the vested amount"
         );
         // After deposit, apyUSD balance should increase by the vested amount
@@ -157,29 +180,16 @@ contract VestingDepositTest is VestingTest {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_DepositInsufficientAllowance() public {
-        uint256 amount = DEPOSIT_AMOUNT;
+    function test_RevertWhen_DepositInsufficientAllowance(
+        uint256 amount
+    ) public {
+        amount = bound(amount, 1 gwei, LARGE_AMOUNT);
+        deal(address(apxUSD), yieldDistributor, amount);
 
         vm.startPrank(yieldDistributor);
         // Don't approve
         vm.expectRevert();
         vesting.depositYield(amount);
         vm.stopPrank();
-    }
-
-    function testFuzz_DepositYield(uint256 amount) public {
-        amount = bound(amount, 1, LARGE_AMOUNT);
-
-        vm.startPrank(admin);
-        apxUSD.mint(yieldDistributor, amount);
-        vm.stopPrank();
-
-        depositYield(yieldDistributor, amount);
-
-        assertEq(
-            vesting.vestingAmount(),
-            amount,
-            "Vesting amount should equal deposit"
-        );
     }
 }
