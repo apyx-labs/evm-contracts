@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "anthropic.claude-code",
+        "juanblanco.solidity",
+        "tamasfe.even-better-toml",
+        "bierner.markdown-mermaid"
+    ]
+}

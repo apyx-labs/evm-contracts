@@ -1,0 +1,28 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib", "dependencies"]
+
+optimizer = true
+optimizer_runs = 10 # or even lower like 100 for size optimization
+via_ir = true       # can help with size but slower compilation
+
+fs_permissions = [
+    { access = "read-write", path = "./out" },
+    { access = "read-write", path = "./deploy" },
+    { access = "read-write", path = "./reports" },
+]
+
+[lint]
+exclude_lints = [
+    "mixed-case-variable",
+    "mixed-case-function",
+    "pascal-case-struct",
+]
+
+[dependencies]
+forge-std = "1.11.0"
+"@openzeppelin-contracts-upgradeable" = "5.5.0"
+"@openzeppelin-contracts" = "5.5.0"
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

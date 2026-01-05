@@ -1,0 +1,27 @@
+# Compiler files
+cache/
+out/
+
+# Ignores development broadcast logs
+!/broadcast
+/broadcast/*/31337/
+/broadcast/**/dry-run/
+
+# Dotenv file
+.env
+
+# Soldeer
+/dependencies
+
+# LLM backup files
+*.bak
+
+# Generated docs
+docs
+book
+
+# Local deployment files
+deploy/local.json
+
+# Generated reports
+reports/*.csv
