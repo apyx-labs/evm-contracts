@@ -686,4 +686,22 @@ contract ApyUSD is
     function unfreeze(address target) external restricted {
         _unfreeze(target);
     }
+
+    // ========================================
+    // ERC7540 Operator Functions (Not Implemented)
+    // ========================================
+
+    /**
+     * @notice Not implemented in v0 - owner and controller must be msg.sender
+     */
+    function setOperator(address, bool) external pure returns (bool) {
+        revert("Operators not supported");
+    }
+
+    /**
+     * @notice Not implemented in v0 - always returns false
+     */
+    function isOperator(address, address) external pure returns (bool) {
+        return false;
+    }
 }
