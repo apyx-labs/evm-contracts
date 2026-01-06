@@ -8,6 +8,16 @@ pragma solidity 0.8.30;
  */
 interface IError {
     /**
+     * @notice Error thrown when the caller is invalid
+     */
+    error InvalidCaller();
+
+    /**
+     * @notice Error thrown when a function is not supported
+     */
+    error NotSupported();
+
+    /**
      * @notice Error thrown when a zero address is provided where it's not allowed
      */
     error InvalidZeroAddress();
