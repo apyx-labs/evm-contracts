@@ -137,6 +137,6 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
         // Note: YieldDistributor must have YIELD_DISTRIBUTOR_ROLE to call this
         _vesting.depositYield(amount);
 
-        emit YieldDeposited(amount);
+        emit YieldDeposited(msg.sender, amount);
     }
 }
