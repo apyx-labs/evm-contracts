@@ -27,7 +27,7 @@ interface IYieldDistributor is IError {
      * @param oldVesting Previous vesting contract address
      * @param newVesting New vesting contract address
      */
-    event VestingUpdated(
+    event VestingContractUpdated(
         address indexed oldVesting,
         address indexed newVesting
     );
