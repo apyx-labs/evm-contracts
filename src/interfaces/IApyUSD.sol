@@ -30,7 +30,10 @@ interface IApyUSD {
      * @param oldUnlockingDelay Previous unlocking delay period in seconds
      * @param newUnlockingDelay New unlocking delay period in seconds
      */
-    event UnlockingDelayUpdated(uint48 oldUnlockingDelay, uint48 newUnlockingDelay);
+    event UnlockingDelayUpdated(
+        uint48 oldUnlockingDelay,
+        uint48 newUnlockingDelay
+    );
 
     /**
      * @notice Emitted when the Silo contract is updated
@@ -62,11 +65,6 @@ interface IApyUSD {
      * @notice Error thrown when setting invalid cooldown values
      */
     error InvalidCooldown();
-
-    /**
-     * @notice Error thrown when owner, controller, and msg.sender don't match
-     */
-    error InvalidCaller();
 
     /**
      * @notice Error thrown when asset amount doesn't match the request

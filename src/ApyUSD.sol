@@ -32,6 +32,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {ISilo} from "./interfaces/ISilo.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
+import {IError} from "./interfaces/IError.sol";
 
 /**
  * @title ApyUSD
@@ -57,7 +58,8 @@ contract ApyUSD is
     UUPSUpgradeable,
     ERC4626Upgradeable,
     IApyUSD,
-    IERC7540Redeem
+    IERC7540Redeem,
+    IError
 {
     using SafeERC20 for IERC20;
 
@@ -695,7 +697,7 @@ contract ApyUSD is
      * @notice Not implemented in v0 - owner and controller must be msg.sender
      */
     function setOperator(address, bool) external pure returns (bool) {
-        revert("Operators not supported");
+        revert NotSupported();
     }
 
     /**
