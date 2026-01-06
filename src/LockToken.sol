@@ -15,6 +15,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {
     AccessManaged
 } from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
 
 import {ILockToken} from "./interfaces/ILockToken.sol";
@@ -51,7 +52,14 @@ contract LockToken is
         address asset_,
         uint48 unlockingDelay_,
         address denyList_
-    ) AccessManaged(authority_) ERC4626(IERC20(asset_)) {
+    )
+        AccessManaged(authority_)
+        ERC4626(IERC20(asset_))
+        ERC20(
+            string.concat(IERC20Metadata(asset_).name(), " Lock Token"),
+            string.concat("LT-", IERC20Metadata(asset_).symbol())
+        )
+    {
         require(authority_ != address(0), "authority is zero address");
         require(asset_ != address(0), "asset is zero address");
         require(unlockingDelay_ > 0, "unlocking delay must be positive");
@@ -120,29 +128,30 @@ contract LockToken is
     }
 
     // ========================================
-    // ERC20 Metadata
+    // ERC20 Overrides
     // ========================================
 
-    function name()
-        public
-        view
-        override(ERC20, IERC20Metadata)
-        returns (string memory)
-    {
-        return string.concat(IERC20Metadata(asset()).name(), " Lock Token");
-    }
-
-    function symbol()
-        public
-        view
-        override(ERC20, IERC20Metadata)
-        returns (string memory)
-    {
-        return string.concat("LT-", IERC20Metadata(asset()).symbol());
-    }
-
-    function decimals() public view override returns (uint8) {
+    /**
+     * @inheritdoc ERC20
+     */
+    function decimals() public view override(ERC4626, ERC20) returns (uint8) {
         return IERC20Metadata(asset()).decimals();
+    }
+
+    /**
+     * @notice Lock tokens are not transferable and only support minting and burning
+     * @inheritdoc ERC20
+     */
+    function _update(
+        address from,
+        address to,
+        uint256 value
+    ) internal override(ERC20, ERC20Pausable) {
+        // Only support minting and burning
+        if (from != address(0) && to != address(0)) {
+            revert NotSupported();
+        }
+        super._update(from, to, value);
     }
 
     // ========================================
@@ -150,28 +159,13 @@ contract LockToken is
     // ========================================
 
     /**
-     * @notice LockTokens are currently not transferable
-     * @param from The address to transfer from
-     * @param to The address to transfer to
-     * @param value The amount of tokens to transfer
-     */
-    function _transfer(
-        address from,
-        address to,
-        uint256 value
-    ) internal override {
-        revert NotSupported();
-    }
-
-    /**
      * @notice Assets convert to shares at a 1:1 ratio
      * @param assets The amount of assets to convert to shares
-     * @param rounding The rounding direction
      * @return shares The amount of shares
      */
     function _convertToShares(
         uint256 assets,
-        Math.Rounding rounding
+        Math.Rounding
     ) internal view override returns (uint256 shares) {
         return assets;
     }
@@ -179,12 +173,11 @@ contract LockToken is
     /**
      * @notice Shares convert to assets at a 1:1 ratio
      * @param shares The amount of shares to convert to assets
-     * @param rounding The rounding direction
      * @return assets The amount of assets
      */
     function _convertToAssets(
         uint256 shares,
-        Math.Rounding rounding
+        Math.Rounding
     ) internal view override returns (uint256 assets) {
         return shares;
     }
@@ -205,7 +198,7 @@ contract LockToken is
         address receiver,
         uint256 assets,
         uint256 shares
-    ) internal override {
+    ) internal override whenNotPaused {
         _revertIfDenied(caller);
         _revertIfDenied(receiver);
         super._deposit(caller, receiver, assets, shares);
@@ -267,11 +260,7 @@ contract LockToken is
     }
 
     /**
-     * @notice Request an asynchronous withdrawal of assets
-     * @param assets Amount of assets to withdraw
-     * @param controller Address that will control the request (must be msg.sender)
-     * @param owner Address that owns the shares (must be msg.sender)
-     * @return requestId ID of the request (always 0 for this implementation)
+     * @inheritdoc ILockToken
      */
     function requestWithdraw(
         uint256 assets,
@@ -303,6 +292,9 @@ contract LockToken is
         return uint48(request.requestedAt + unlockingDelay - block.timestamp);
     }
 
+    /**
+     * @inheritdoc ILockToken
+     */
     function cooldownRemaining(
         uint256,
         address owner
@@ -317,6 +309,9 @@ contract LockToken is
         return request.requestedAt != 0 && _cooldownRemaining(request) == 0;
     }
 
+    /**
+     * @inheritdoc ILockToken
+     */
     function isClaimable(uint256, address owner) external view returns (bool) {
         Request storage request = redeemRequests[owner];
         return _isClaimable(request);
@@ -406,7 +401,7 @@ contract LockToken is
         // Clear request (follow CEI pattern)
         delete redeemRequests[msg.sender];
 
-        super._withdraw(caller, receiver, assets, shares);
+        super._withdraw(caller, receiver, owner, assets, shares);
 
         // Emit standard ERC4626 Withdraw event
         emit Withdraw(caller, receiver, owner, assets, shares);
@@ -458,5 +453,23 @@ contract LockToken is
 
         _withdraw(request, msg.sender, receiver, owner);
         return request.shares;
+    }
+
+    // ========================================
+    // ERC7540 Operator Functions (Not Implemented)
+    // ========================================
+
+    /**
+     * @notice Not implemented in v0 - owner and controller must be msg.sender
+     */
+    function setOperator(address, bool) external pure returns (bool) {
+        revert NotSupported();
+    }
+
+    /**
+     * @notice Not implemented in v0 - always returns false
+     */
+    function isOperator(address, address) external pure returns (bool) {
+        return false;
     }
 }

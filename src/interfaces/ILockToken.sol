@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-interface ILockToken {
+import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
+import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
+import {IAddressList} from "./IAddressList.sol";
+
+interface ILockToken is IERC7540Redeem {
     /**
      * @notice Request data structure used for both deposits and redeems
      * @dev The meaning of fields changes based on which mapping stores the request
@@ -70,11 +74,6 @@ interface ILockToken {
     error InvalidCooldown();
 
     /**
-     * @notice Error thrown when owner, controller, and msg.sender don't match
-     */
-    error InvalidCaller();
-
-    /**
      * @notice Error thrown when asset amount doesn't match the request
      */
     error InvalidAssets();
@@ -88,11 +87,38 @@ interface ILockToken {
     // Functions
     // ========================================
 
-    function unlockingDelay() external view returns (uint48);
+    /**
+     * @notice Request an asynchronous withdrawal of assets
+     * @param assets Amount of assets to withdraw
+     * @param controller Address that will control the request (must be msg.sender)
+     * @param owner Address that owns the shares (must be msg.sender)
+     * @return requestId ID of the request (always 0)
+     */
+    function requestWithdraw(
+        uint256 assets,
+        address controller,
+        address owner
+    ) external returns (uint256 requestId);
 
-    function redeemRequests(address user) external view returns (Request);
+    /**
+     * @notice Returns the remaining cooldown time for a request
+     * @param requestId ID of the request (ignored)
+     * @param owner Address that owns the shares (must be msg.sender)
+     * @return cooldown Remaining cooldown time in seconds
+     */
+    function cooldownRemaining(
+        uint256 requestId,
+        address owner
+    ) external view returns (uint48 cooldown);
 
-    function denyList() external view returns (address);
-
-    function cooldown() external view returns (address);
+    /**
+     * @notice Returns true if a request is claimable
+     * @param requestId ID of the request (ignored)
+     * @param owner Address that owns the shares (must be msg.sender)
+     * @return true if the request is claimable, false otherwise
+     */
+    function isClaimable(
+        uint256 requestId,
+        address owner
+    ) external view returns (bool);
 }
