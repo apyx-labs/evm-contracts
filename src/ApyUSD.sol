@@ -1,21 +1,31 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {ERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
+import {
+    ERC20Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import {
     ERC20PermitUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PermitUpgradeable.sol";
 import {
     ERC20PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
-import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
+import {
+    ERC4626Upgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {
     AccessManagedUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {
+    UUPSUpgradeable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {
+    Initializable
+} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {
+    SafeERC20
+} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {ERC20FreezeableUpgradable} from "./exts/ERC20FreezeableUpgradable.sol";
 import {IApyUSD} from "./interfaces/IApyUSD.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -66,9 +76,14 @@ contract ApyUSD is
     }
 
     // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApyUSD")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant APYUSD_STORAGE_LOC = 0x1ff8d3deae3efb825bbaa861079c5ce537ca15be7f99d50a5b2800b88987f100;
+    bytes32 private constant APYUSD_STORAGE_LOC =
+        0x1ff8d3deae3efb825bbaa861079c5ce537ca15be7f99d50a5b2800b88987f100;
 
-    function _getApyUSDStorage() private pure returns (ApyUSDStorage storage $) {
+    function _getApyUSDStorage()
+        private
+        pure
+        returns (ApyUSDStorage storage $)
+    {
         assembly {
             $.slot := APYUSD_STORAGE_LOC
         }
@@ -84,14 +99,20 @@ contract ApyUSD is
      * @param oldDenyList Previous deny list contract address
      * @param newDenyList New deny list contract address
      */
-    event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
+    event DenyListUpdated(
+        address indexed oldDenyList,
+        address indexed newDenyList
+    );
 
     /**
      * @notice Emitted when the Vesting contract is updated
      * @param oldVesting Previous Vesting contract address
      * @param newVesting New Vesting contract address
      */
-    event VestingUpdated(address indexed oldVesting, address indexed newVesting);
+    event VestingUpdated(
+        address indexed oldVesting,
+        address indexed newVesting
+    );
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -106,10 +127,12 @@ contract ApyUSD is
      * @param initialDenyList Address of the AddressList contract for deny list checking
      * @dev Silo must be set after deployment using setSilo()
      */
-    function initialize(address initialAuthority, address asset, uint48 initialUnlockingDelay, address initialDenyList)
-        public
-        initializer
-    {
+    function initialize(
+        address initialAuthority,
+        address asset,
+        uint48 initialUnlockingDelay,
+        address initialDenyList
+    ) public initializer {
         require(initialAuthority != address(0), "authority is zero address");
         require(asset != address(0), "asset is zero address");
         require(initialDenyList != address(0), "denyList is zero address");
@@ -138,7 +161,9 @@ contract ApyUSD is
      * @notice Authorizes contract upgrades
      * @dev Only callable through AccessManager with ADMIN role
      */
-    function _authorizeUpgrade(address newImplementation) internal override restricted {}
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override restricted {}
 
     // ========================================
     // ERC20 Overrides
@@ -148,9 +173,17 @@ contract ApyUSD is
      * @notice Hook that is called before any token transfer
      * @dev Enforces pause, freeze, and deny list functionality
      */
-    function _update(address from, address to, uint256 value)
+    function _update(
+        address from,
+        address to,
+        uint256 value
+    )
         internal
-        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20FreezeableUpgradable)
+        override(
+            ERC20Upgradeable,
+            ERC20PausableUpgradeable,
+            ERC20FreezeableUpgradable
+        )
     {
         super._update(from, to, value);
     }
@@ -163,7 +196,12 @@ contract ApyUSD is
      * @notice Returns the number of decimals used for the token
      * @dev Overrides both ERC20 and ERC4626 decimals
      */
-    function decimals() public view override(ERC20Upgradeable, ERC4626Upgradeable) returns (uint8) {
+    function decimals()
+        public
+        view
+        override(ERC20Upgradeable, ERC4626Upgradeable)
+        returns (uint8)
+    {
         return ERC4626Upgradeable.decimals();
     }
 
@@ -205,7 +243,12 @@ contract ApyUSD is
      * @param assets Amount of assets to deposit
      * @param shares Amount of shares to mint
      */
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
         ApyUSDStorage storage $ = _getApyUSDStorage();
 
         // Check deny list
@@ -267,11 +310,11 @@ contract ApyUSD is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return requestId ID of the request (always 0 for this implementation)
      */
-    function requestRedeem(uint256 shares, address controller, address owner)
-        external
-        override
-        returns (uint256 requestId)
-    {
+    function requestRedeem(
+        uint256 shares,
+        address controller,
+        address owner
+    ) external override returns (uint256 requestId) {
         // Calculate assets at current rate (rate locking)
         uint256 assets = previewRedeem(shares);
 
@@ -290,7 +333,11 @@ contract ApyUSD is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return requestId ID of the request (always 0 for this implementation)
      */
-    function requestWithdraw(uint256 assets, address controller, address owner) external returns (uint256 requestId) {
+    function requestWithdraw(
+        uint256 assets,
+        address controller,
+        address owner
+    ) external returns (uint256 requestId) {
         // Calculate shares needed at current rate (rate locking)
         uint256 shares = previewWithdraw(assets);
 
@@ -306,11 +353,10 @@ contract ApyUSD is
     // Cooldown Helpers
     // ========================================
 
-    function _cooldownRemaining(ApyUSDStorage storage $, Request storage request)
-        internal
-        view
-        returns (uint48 cooldown)
-    {
+    function _cooldownRemaining(
+        ApyUSDStorage storage $,
+        Request storage request
+    ) internal view returns (uint48 cooldown) {
         if (request.requestedAt == 0) {
             return 0;
         }
@@ -320,13 +366,19 @@ contract ApyUSD is
         return uint48(request.requestedAt + $.unlockingDelay - block.timestamp);
     }
 
-    function cooldownRemaining(uint256, address owner) external view returns (uint48 cooldown) {
+    function cooldownRemaining(
+        uint256,
+        address owner
+    ) external view returns (uint48 cooldown) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         Request storage request = $.redeemRequests[owner];
         return _cooldownRemaining($, request);
     }
 
-    function _isClaimable(ApyUSDStorage storage $, Request storage request) internal view returns (bool) {
+    function _isClaimable(
+        ApyUSDStorage storage $,
+        Request storage request
+    ) internal view returns (bool) {
         return request.requestedAt != 0 && _cooldownRemaining($, request) == 0;
     }
 
@@ -346,7 +398,10 @@ contract ApyUSD is
      * @return shares Pending share amount
      * @dev Accepts a uint256 requestId as the first param to meet the 7540 spec
      */
-    function pendingRedeemRequest(uint256, address owner) external view override returns (uint256 shares) {
+    function pendingRedeemRequest(
+        uint256,
+        address owner
+    ) external view override returns (uint256 shares) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         Request storage request = $.redeemRequests[owner];
 
@@ -362,7 +417,10 @@ contract ApyUSD is
      * @return shares Claimable share amount
      * @dev Accepts a uint256 requestId as the first param to meet the 7540 spec
      */
-    function claimableRedeemRequest(uint256, address owner) public view override returns (uint256 shares) {
+    function claimableRedeemRequest(
+        uint256,
+        address owner
+    ) public view override returns (uint256 shares) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         Request storage request = $.redeemRequests[owner];
 
@@ -428,11 +486,11 @@ contract ApyUSD is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return assets Amount of assets received
      */
-    function redeem(uint256 shares, address receiver, address owner)
-        public
-        override(ERC4626Upgradeable)
-        returns (uint256 assets)
-    {
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) public override(ERC4626Upgradeable) returns (uint256 assets) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         Request storage request = $.redeemRequests[owner];
 
@@ -445,11 +503,11 @@ contract ApyUSD is
         return request.assets;
     }
 
-    function withdraw(uint256 assets, address receiver, address owner)
-        public
-        override(ERC4626Upgradeable)
-        returns (uint256 shares)
-    {
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override(ERC4626Upgradeable) returns (uint256 shares) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         Request storage request = $.redeemRequests[owner];
 
@@ -519,7 +577,10 @@ contract ApyUSD is
         return address($.denyList);
     }
 
-    function _revertIfDenied(ApyUSDStorage storage $, address user) internal view {
+    function _revertIfDenied(
+        ApyUSDStorage storage $,
+        address user
+    ) internal view {
         if ($.denyList.contains(user)) {
             revert Denied(user);
         }
@@ -542,7 +603,9 @@ contract ApyUSD is
 
         // If there's an old Silo with assets, migrate them directly to new Silo
         if (address(oldSilo) != address(0)) {
-            uint256 oldSiloBalance = IERC20(asset()).balanceOf(address(oldSilo));
+            uint256 oldSiloBalance = IERC20(asset()).balanceOf(
+                address(oldSilo)
+            );
             if (oldSiloBalance > 0) {
                 // Transfer all assets from old Silo directly to new Silo
                 oldSilo.transferTo(address(newSilo), oldSiloBalance);
