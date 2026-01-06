@@ -12,6 +12,7 @@ import {ApyUSD} from "./ApyUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
+import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
 
 /**
  * @title Roles
@@ -38,6 +39,10 @@ library Roles {
     /// @dev Can call Vesting.depositYield() to add yield for vesting
     uint64 public constant YIELD_DISTRIBUTOR_ROLE = 6;
 
+    /// @notice Yield operator role - granted to addresses that can trigger yield deposits
+    /// @dev Can call YieldDistributor.depositYield() to deposit yield to vesting
+    uint64 public constant ROLE_YIELD_OPERATOR = 7;
+
     // ========================================
     // Extension Functions for AccessManager
     // ========================================
@@ -51,6 +56,7 @@ library Roles {
         self.setRoleAdmin(MINTER_ROLE, ADMIN_ROLE);
         self.setRoleAdmin(MINT_GUARD_ROLE, ADMIN_ROLE);
         self.setRoleAdmin(YIELD_DISTRIBUTOR_ROLE, ADMIN_ROLE);
+        self.setRoleAdmin(ROLE_YIELD_OPERATOR, ADMIN_ROLE);
     }
 
     /**
@@ -139,7 +145,25 @@ library Roles {
     }
 
     /**
-     * @notice Assigns minter function selectors for MinterV0 contract (extension function)
+     * @notice Assigns ADMIN_ROLE function selectors for YieldDistributor contract (extension function)
+     * @param self The AccessManager contract
+     * @param yieldDistributor The YieldDistributor contract
+     */
+    function assignAdminTargetsFor(
+        AccessManager self,
+        IYieldDistributor yieldDistributor
+    ) internal {
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = IYieldDistributor.setVesting.selector;
+        self.setTargetFunctionRole(
+            address(yieldDistributor),
+            selectors,
+            ADMIN_ROLE
+        );
+    }
+
+    /**
+     * @notice Assigns MINTER_ROLE function selectors for MinterV0 contract (extension function)
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
      */
@@ -205,6 +229,24 @@ library Roles {
             address(vestingContract),
             selectors,
             YIELD_DISTRIBUTOR_ROLE
+        );
+    }
+
+    /**
+     * @notice Assigns ROLE_YIELD_OPERATOR function selectors for YieldDistributor contract (extension function)
+     * @param self The AccessManager contract
+     * @param yieldDistributor The YieldDistributor contract
+     */
+    function assignYieldOperatorTargetsFor(
+        AccessManager self,
+        IYieldDistributor yieldDistributor
+    ) internal {
+        bytes4[] memory operatorSelectors = new bytes4[](1);
+        operatorSelectors[0] = IYieldDistributor.depositYield.selector;
+        self.setTargetFunctionRole(
+            address(yieldDistributor),
+            operatorSelectors,
+            ROLE_YIELD_OPERATOR
         );
     }
 }
