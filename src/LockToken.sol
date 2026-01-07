@@ -406,7 +406,7 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
      * @notice Returns true if the operator is the controller
      * @inheritdoc IERC7540Operator
      */
-    function isOperator(address controller, address operator) public pure virtual returns (bool) {
+    function isOperator(address controller, address operator) public view virtual returns (bool) {
         return controller == operator;
     }
 }
