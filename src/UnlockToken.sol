@@ -23,11 +23,11 @@ contract UnlockToken is LockToken, IUnlockToken {
      * @notice Constructs the UnlockToken contract
      * @param authority_ Address of the AccessManager contract
      * @param asset_ Address of the underlying asset token
+     * @param vault_ Address of the vault that can act as an operator (immutable)
      * @param unlockingDelay_ Cooldown period for redeem requests in seconds
      * @param denyList_ Address of the AddressList contract for deny list checking
-     * @param vault_ Address of the vault that can act as an operator (immutable)
      */
-    constructor(address authority_, address asset_, uint48 unlockingDelay_, address denyList_, address vault_)
+    constructor(address authority_, address asset_, address vault_, uint48 unlockingDelay_, address denyList_)
         LockToken(authority_, asset_, unlockingDelay_, denyList_)
     {
         if (vault_ == address(0)) revert InvalidAddress("vault");

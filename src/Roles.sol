@@ -96,7 +96,7 @@ library Roles {
         selectors[3] = ApyUSD.unfreeze.selector;
 
         selectors[4] = ApyUSD.setDenyList.selector;
-        selectors[5] = ApyUSD.setLockToken.selector;
+        selectors[5] = ApyUSD.setUnlockToken.selector;
         selectors[6] = ApyUSD.setVesting.selector;
         self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);
     }

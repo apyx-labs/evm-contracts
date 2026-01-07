@@ -55,7 +55,7 @@ contract ApyUSD is
         /// @notice Reference to the AddressList contract for deny list checking
         IAddressList denyList;
         /// @notice Reference to the UnlockToken contract for unlocking delay
-        IUnlockToken lockToken;
+        IUnlockToken unlockToken;
         /// @notice Reference to the Vesting contract for yield distribution
         IVesting vesting;
     }
@@ -79,7 +79,7 @@ contract ApyUSD is
      * @param initialAuthority Address of the AccessManager contract
      * @param asset Address of the underlying asset (ApxUSD)
      * @param initialDenyList Address of the AddressList contract for deny list checking
-     * @dev LockToken must be set after deployment using setLockToken()
+     * @dev UnlockToken must be set after deployment using setUnlockToken()
      */
     function initialize(address initialAuthority, address asset, address initialDenyList) public initializer {
         require(initialAuthority != address(0), "authority is zero address");
@@ -94,7 +94,7 @@ contract ApyUSD is
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
         $.denyList = IAddressList(initialDenyList);
-        // lockToken will be set via setLockToken() after deployment
+        // unlockToken will be set via setUnlockToken() after deployment
         // vesting will be set via setVesting() after deployment
 
         emit DenyListUpdated(address(0), initialDenyList);
@@ -210,9 +210,9 @@ contract ApyUSD is
         _revertIfDenied($, receiver);
         _revertIfDenied($, owner);
 
-        // Require lockToken is set
-        if (address($.lockToken) == address(0)) {
-            revert AddressNotSet("lockToken");
+        // Require unlockToken is set
+        if (address($.unlockToken) == address(0)) {
+            revert AddressNotSet("unlockToken");
         }
 
         // Pull all vested yield from vesting contract if available
@@ -225,11 +225,11 @@ contract ApyUSD is
 
         // Deposit assets into the UnlockToken to the receiver so the receiver receives
         // the shares of the UnlockToken instead of the assets of the ApyUSD vault
-        IERC4626(address($.lockToken)).deposit(assets, receiver);
+        IERC4626(address($.unlockToken)).deposit(assets, receiver);
 
         // Start redeem request on UnlockToken (vault acts as operator)
         // The vault can act as operator because it's set in UnlockToken constructor
-        $.lockToken.requestRedeem(assets, receiver, receiver);
+        $.unlockToken.requestRedeem(assets, receiver, receiver);
     }
 
     // ========================================
@@ -241,14 +241,14 @@ contract ApyUSD is
      * @dev Only callable through AccessManager with ADMIN_ROLE
      * @param newDenyList Address of the new AddressList contract
      */
-    function setDenyList(address newDenyList) external restricted {
-        require(newDenyList != address(0), "newDenyList is zero address");
+    function setDenyList(IAddressList newDenyList) external restricted {
+        require(address(newDenyList) != address(0), "newDenyList is zero address");
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
         address oldDenyList = address($.denyList);
-        $.denyList = IAddressList(newDenyList);
+        $.denyList = newDenyList;
 
-        emit DenyListUpdated(oldDenyList, newDenyList);
+        emit DenyListUpdated(oldDenyList, address(newDenyList));
     }
 
     /**
@@ -267,28 +267,28 @@ contract ApyUSD is
     }
 
     /**
-     * @notice Sets the LockToken contract
+     * @notice Sets the UnlockToken contract
      * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @dev No fund migration is performed - outstanding requests remain on old LockToken
-     * @param newLockToken The new LockToken contract
+     * @dev No fund migration is performed - outstanding requests remain on old UnlockToken
+     * @param newUnlockToken The new UnlockToken contract
      */
-    function setLockToken(IUnlockToken newLockToken) external restricted {
-        require(address(newLockToken) != address(0), "lockToken is zero address");
+    function setUnlockToken(IUnlockToken newUnlockToken) external restricted {
+        require(address(newUnlockToken) != address(0), "unlockToken is zero address");
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
-        address oldLockToken = address($.lockToken);
-        $.lockToken = newLockToken;
+        address oldUnlockToken = address($.unlockToken);
+        $.unlockToken = newUnlockToken;
 
-        emit LockTokenUpdated(oldLockToken, address(newLockToken));
+        emit UnlockTokenUpdated(oldUnlockToken, address(newUnlockToken));
     }
 
     /**
-     * @notice Returns the current LockToken contract address
-     * @return Address of the LockToken contract
+     * @notice Returns the current UnlockToken contract address
+     * @return Address of the UnlockToken contract
      */
-    function lockToken() external view returns (address) {
+    function unlockToken() external view returns (address) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
-        return address($.lockToken);
+        return address($.unlockToken);
     }
 
     /**

@@ -13,10 +13,10 @@ interface IApyUSD {
 
     /**
      * @notice Emitted when the LockToken contract is updated
-     * @param oldLockToken Previous LockToken contract address
-     * @param newLockToken New LockToken contract address
+     * @param oldUnlockToken Previous LockToken contract address
+     * @param newUnlockToken New LockToken contract address
      */
-    event LockTokenUpdated(address indexed oldLockToken, address indexed newLockToken);
+    event UnlockTokenUpdated(address indexed oldUnlockToken, address indexed newUnlockToken);
 
     /**
      * @notice Emitted when the deny list contract is updated
