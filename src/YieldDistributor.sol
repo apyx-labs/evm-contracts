@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {
-    AccessManaged
-} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {Roles} from "./Roles.sol";
@@ -49,11 +45,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @param authority_ Address of the AccessManager contract
      * @param vesting_ Address of the Vesting contract
      */
-    constructor(
-        address asset_,
-        address authority_,
-        address vesting_
-    ) AccessManaged(authority_) {
+    constructor(address asset_, address authority_, address vesting_) AccessManaged(authority_) {
         if (asset_ == address(0)) revert InvalidZeroAddress();
         if (authority_ == address(0)) revert InvalidZeroAddress();
         if (vesting_ == address(0)) revert InvalidZeroAddress();
@@ -124,10 +116,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
         // Approve vesting contract to pull tokens
         // Reset allowance to 0 first, then approve new amount
         // This handles tokens that require zero allowance before setting new value
-        uint256 currentAllowance = _asset.allowance(
-            address(this),
-            address(_vesting)
-        );
+        uint256 currentAllowance = _asset.allowance(address(this), address(_vesting));
         if (currentAllowance > 0) {
             _asset.safeDecreaseAllowance(address(_vesting), currentAllowance);
         }

@@ -30,10 +30,7 @@ interface IApyUSD {
      * @param oldUnlockingDelay Previous unlocking delay period in seconds
      * @param newUnlockingDelay New unlocking delay period in seconds
      */
-    event UnlockingDelayUpdated(
-        uint48 oldUnlockingDelay,
-        uint48 newUnlockingDelay
-    );
+    event UnlockingDelayUpdated(uint48 oldUnlockingDelay, uint48 newUnlockingDelay);
 
     /**
      * @notice Emitted when the Silo contract is updated

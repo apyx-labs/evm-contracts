@@ -27,10 +27,7 @@ interface IYieldDistributor is IError {
      * @param oldVesting Previous vesting contract address
      * @param newVesting New vesting contract address
      */
-    event VestingContractUpdated(
-        address indexed oldVesting,
-        address indexed newVesting
-    );
+    event VestingContractUpdated(address indexed oldVesting, address indexed newVesting);
 
     /**
      * @notice Emitted when yield is deposited to the vesting contract

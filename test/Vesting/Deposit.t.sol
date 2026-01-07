@@ -15,16 +15,8 @@ contract VestingDepositTest is VestingTest {
 
         depositYield(yieldDistributor, amount);
 
-        assertEq(
-            vesting.vestingAmount(),
-            amount,
-            "Vesting amount should equal deposit"
-        );
-        assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            amount,
-            "Vesting contract should hold assets"
-        );
+        assertEq(vesting.vestingAmount(), amount, "Vesting amount should equal deposit");
+        assertEq(apxUSD.balanceOf(address(vesting)), amount, "Vesting contract should hold assets");
     }
 
     function test_DepositYield_ResetsVestingPeriod(uint256 amount) public {
@@ -33,17 +25,10 @@ contract VestingDepositTest is VestingTest {
 
         depositYield(yieldDistributor, amount);
 
-        assertEq(
-            vesting.lastDepositTimestamp(),
-            initialTimestamp,
-            "Timestamp should be reset"
-        );
+        assertEq(vesting.lastDepositTimestamp(), initialTimestamp, "Timestamp should be reset");
     }
 
-    function test_DepositYield_AddsToUnvested(
-        uint256 firstAmount,
-        uint256 secondAmount
-    ) public {
+    function test_DepositYield_AddsToUnvested(uint256 firstAmount, uint256 secondAmount) public {
         firstAmount = bound(firstAmount, 1, LARGE_AMOUNT);
         secondAmount = bound(secondAmount, 1, LARGE_AMOUNT);
 
@@ -61,11 +46,7 @@ contract VestingDepositTest is VestingTest {
         depositYield(yieldDistributor, secondAmount);
 
         uint256 expectedVestingAmount = unvestedBefore + secondAmount;
-        assertEq(
-            vesting.vestingAmount(),
-            expectedVestingAmount,
-            "Vesting amount should include unvested + new deposit"
-        );
+        assertEq(vesting.vestingAmount(), expectedVestingAmount, "Vesting amount should include unvested + new deposit");
     }
 
     function test_DepositYield_EmitsEvent(uint256 amount) public {
@@ -89,22 +70,11 @@ contract VestingDepositTest is VestingTest {
         uint256 balanceBefore = apxUSD.balanceOf(yieldDistributor);
         depositYield(yieldDistributor, amount);
 
-        assertEq(
-            apxUSD.balanceOf(yieldDistributor),
-            balanceBefore - amount,
-            "Depositor balance should decrease"
-        );
-        assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            amount,
-            "Vesting contract should receive assets"
-        );
+        assertEq(apxUSD.balanceOf(yieldDistributor), balanceBefore - amount, "Depositor balance should decrease");
+        assertEq(apxUSD.balanceOf(address(vesting)), amount, "Vesting contract should receive assets");
     }
 
-    function test_MultipleDeposits(
-        uint256 firstAmount,
-        uint256 secondAmount
-    ) public {
+    function test_MultipleDeposits(uint256 firstAmount, uint256 secondAmount) public {
         firstAmount = bound(firstAmount, 1, LARGE_AMOUNT);
         secondAmount = bound(secondAmount, 1, LARGE_AMOUNT);
 
@@ -118,17 +88,10 @@ contract VestingDepositTest is VestingTest {
         depositYield(yieldDistributor, secondAmount);
         uint256 timestamp2 = vesting.lastDepositTimestamp();
 
-        assertGt(
-            timestamp2,
-            timestamp1,
-            "Timestamp should be reset on second deposit"
-        );
+        assertGt(timestamp2, timestamp1, "Timestamp should be reset on second deposit");
     }
 
-    function test_DepositDuringVesting(
-        uint256 firstAmount,
-        uint256 secondAmount
-    ) public {
+    function test_DepositDuringVesting(uint256 firstAmount, uint256 secondAmount) public {
         firstAmount = bound(firstAmount, 1 gwei, LARGE_AMOUNT);
         secondAmount = bound(secondAmount, 1 gwei, LARGE_AMOUNT);
 
@@ -180,9 +143,7 @@ contract VestingDepositTest is VestingTest {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_DepositInsufficientAllowance(
-        uint256 amount
-    ) public {
+    function test_RevertWhen_DepositInsufficientAllowance(uint256 amount) public {
         amount = bound(amount, 1 gwei, LARGE_AMOUNT);
         deal(address(apxUSD), yieldDistributor, amount);
 

@@ -4,12 +4,8 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {Vm} from "forge-std/src/Vm.sol";
 import {VmExt} from "../utils/VmExt.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
 import {LinearVestV0} from "../../src/LinearVestV0.sol";
@@ -75,14 +71,8 @@ abstract contract VestingTest is Test {
 
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize,
-            (address(accessManager), APX_SUPPLY_CAP)
-        );
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
-            address(apxUSDImpl),
-            apxUSDInitData
-        );
+        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), APX_SUPPLY_CAP));
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy AddressList
@@ -91,30 +81,16 @@ abstract contract VestingTest is Test {
         // Deploy ApyUSD (vault) first with no Silo
         ApyUSD apyUSDImpl = new ApyUSD();
         bytes memory apyUSDInitData = abi.encodeCall(
-            apyUSDImpl.initialize,
-            (
-                address(accessManager),
-                address(apxUSD),
-                UNLOCKING_DELAY,
-                address(denyList)
-            )
+            apyUSDImpl.initialize, (address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(denyList))
         );
-        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(
-            address(apyUSDImpl),
-            apyUSDInitData
-        );
+        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
         apyUSD = ApyUSD(address(apyUSDProxy));
 
         // Deploy Silo with ApyUSD as owner
         silo = new Silo(address(apxUSD), address(apyUSD));
 
         // Deploy Vesting contract
-        vesting = new LinearVestV0(
-            address(apxUSD),
-            address(accessManager),
-            address(apyUSD),
-            VESTING_PERIOD
-        );
+        vesting = new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), VESTING_PERIOD);
 
         // Configure roles
         setUpRoles();
@@ -153,11 +129,7 @@ abstract contract VestingTest is Test {
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
 
         // Grant YIELD_DISTRIBUTOR_ROLE to yieldDistributor (no delay)
-        accessManager.grantRole(
-            Roles.YIELD_DISTRIBUTOR_ROLE,
-            yieldDistributor,
-            0
-        );
+        accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, yieldDistributor, 0);
 
         vm.stopPrank();
     }
@@ -200,10 +172,7 @@ abstract contract VestingTest is Test {
      * @param assets Amount of ApxUSD to deposit
      * @return shares Amount of apyUSD shares received
      */
-    function deposit(
-        address user,
-        uint256 assets
-    ) internal returns (uint256 shares) {
+    function deposit(address user, uint256 assets) internal returns (uint256 shares) {
         vm.startPrank(user);
         apxUSD.approve(address(apyUSD), assets);
         shares = apyUSD.deposit(assets, user);

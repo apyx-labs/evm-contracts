@@ -2,12 +2,8 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/src/Test.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {Roles} from "../../src/Roles.sol";
 
@@ -44,10 +40,7 @@ abstract contract ApxUSDBaseTest is Test {
         ApxUSD impl = new ApxUSD();
 
         // Deploy proxy with initialization (pass AccessManager address)
-        bytes memory initData = abi.encodeCall(
-            impl.initialize,
-            (address(accessManager), SUPPLY_CAP)
-        );
+        bytes memory initData = abi.encodeCall(impl.initialize, (address(accessManager), SUPPLY_CAP));
         ERC1967Proxy proxyContract = new ERC1967Proxy(address(impl), initData);
         apxUSD = ApxUSD(address(proxyContract));
 

@@ -29,20 +29,14 @@ interface ILockToken is IERC7540Redeem {
      * @param oldUnlockingDelay Previous unlocking delay period in seconds
      * @param newUnlockingDelay New unlocking delay period in seconds
      */
-    event UnlockingDelayUpdated(
-        uint48 oldUnlockingDelay,
-        uint48 newUnlockingDelay
-    );
+    event UnlockingDelayUpdated(uint48 oldUnlockingDelay, uint48 newUnlockingDelay);
 
     /**
      * @notice Emitted when the deny list contract is updated
      * @param oldDenyList Previous deny list contract address
      * @param newDenyList New deny list contract address
      */
-    event DenyListUpdated(
-        address indexed oldDenyList,
-        address indexed newDenyList
-    );
+    event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
 
     // ========================================
     // Errors
@@ -94,11 +88,7 @@ interface ILockToken is IERC7540Redeem {
      * @param owner Address that owns the shares (must be msg.sender)
      * @return requestId ID of the request (always 0)
      */
-    function requestWithdraw(
-        uint256 assets,
-        address controller,
-        address owner
-    ) external returns (uint256 requestId);
+    function requestWithdraw(uint256 assets, address controller, address owner) external returns (uint256 requestId);
 
     /**
      * @notice Returns the remaining cooldown time for a request
@@ -106,10 +96,7 @@ interface ILockToken is IERC7540Redeem {
      * @param owner Address that owns the shares (must be msg.sender)
      * @return cooldown Remaining cooldown time in seconds
      */
-    function cooldownRemaining(
-        uint256 requestId,
-        address owner
-    ) external view returns (uint48 cooldown);
+    function cooldownRemaining(uint256 requestId, address owner) external view returns (uint48 cooldown);
 
     /**
      * @notice Returns true if a request is claimable
@@ -117,8 +104,5 @@ interface ILockToken is IERC7540Redeem {
      * @param owner Address that owns the shares (must be msg.sender)
      * @return true if the request is claimable, false otherwise
      */
-    function isClaimable(
-        uint256 requestId,
-        address owner
-    ) external view returns (bool);
+    function isClaimable(uint256 requestId, address owner) external view returns (bool);
 }

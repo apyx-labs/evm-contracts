@@ -1,12 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {
-    IAccessManager
-} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "./ApxUSD.sol";
 import {ApyUSD} from "./ApyUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
@@ -79,18 +75,11 @@ library Roles {
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
      */
-    function assignAdminTargetsFor(
-        AccessManager self,
-        IMinterV0 minterContract
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IMinterV0.setMaxMintAmount.selector;
         selectors[1] = IMinterV0.setRateLimit.selector;
-        self.setTargetFunctionRole(
-            address(minterContract),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(minterContract), selectors, ADMIN_ROLE);
     }
 
     /**
@@ -115,18 +104,11 @@ library Roles {
      * @param self The AccessManager contract
      * @param vestingContract The Vesting contract
      */
-    function assignAdminTargetsFor(
-        AccessManager self,
-        IVesting vestingContract
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, IVesting vestingContract) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IVesting.setVestingPeriod.selector;
         selectors[1] = IVesting.setBeneficiary.selector;
-        self.setTargetFunctionRole(
-            address(vestingContract),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(vestingContract), selectors, ADMIN_ROLE);
     }
 
     /**
@@ -134,10 +116,7 @@ library Roles {
      * @param self The AccessManager contract
      * @param denyList The AddressList contract
      */
-    function assignAdminTargetsFor(
-        AccessManager self,
-        IAddressList denyList
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, IAddressList denyList) internal {
         bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IAddressList.add.selector;
         selectors[1] = IAddressList.remove.selector;
@@ -149,17 +128,10 @@ library Roles {
      * @param self The AccessManager contract
      * @param yieldDistributor The YieldDistributor contract
      */
-    function assignAdminTargetsFor(
-        AccessManager self,
-        IYieldDistributor yieldDistributor
-    ) internal {
+    function assignAdminTargetsFor(AccessManager self, IYieldDistributor yieldDistributor) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IYieldDistributor.setVesting.selector;
-        self.setTargetFunctionRole(
-            address(yieldDistributor),
-            selectors,
-            ADMIN_ROLE
-        );
+        self.setTargetFunctionRole(address(yieldDistributor), selectors, ADMIN_ROLE);
     }
 
     /**
@@ -167,19 +139,12 @@ library Roles {
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
      */
-    function assignMinterTargetsFor(
-        AccessManager self,
-        IMinterV0 minterContract
-    ) internal {
+    function assignMinterTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
         bytes4[] memory selectors = new bytes4[](3);
         selectors[0] = IMinterV0.requestMint.selector;
         selectors[1] = IMinterV0.executeMint.selector;
         selectors[2] = IMinterV0.cleanMintHistory.selector;
-        self.setTargetFunctionRole(
-            address(minterContract),
-            selectors,
-            MINTER_ROLE
-        );
+        self.setTargetFunctionRole(address(minterContract), selectors, MINTER_ROLE);
     }
 
     /**
@@ -187,17 +152,10 @@ library Roles {
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
      */
-    function assignMintGuardTargetsFor(
-        AccessManager self,
-        IMinterV0 minterContract
-    ) internal {
+    function assignMintGuardTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IMinterV0.cancelMint.selector;
-        self.setTargetFunctionRole(
-            address(minterContract),
-            selectors,
-            MINT_GUARD_ROLE
-        );
+        self.setTargetFunctionRole(address(minterContract), selectors, MINT_GUARD_ROLE);
     }
 
     /**
@@ -205,10 +163,7 @@ library Roles {
      * @param self The AccessManager contract
      * @param apxUSD The ApxUSD contract
      */
-    function assignMintingContractTargetsFor(
-        AccessManager self,
-        ApxUSD apxUSD
-    ) internal {
+    function assignMintingContractTargetsFor(AccessManager self, ApxUSD apxUSD) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = ApxUSD.mint.selector;
         self.setTargetFunctionRole(address(apxUSD), selectors, MINT_STRAT_ROLE);
@@ -219,17 +174,10 @@ library Roles {
      * @param self The AccessManager contract
      * @param vestingContract The Vesting contract
      */
-    function assignYieldDistributorTargetsFor(
-        AccessManager self,
-        IVesting vestingContract
-    ) internal {
+    function assignYieldDistributorTargetsFor(AccessManager self, IVesting vestingContract) internal {
         bytes4[] memory selectors = new bytes4[](1);
         selectors[0] = IVesting.depositYield.selector;
-        self.setTargetFunctionRole(
-            address(vestingContract),
-            selectors,
-            YIELD_DISTRIBUTOR_ROLE
-        );
+        self.setTargetFunctionRole(address(vestingContract), selectors, YIELD_DISTRIBUTOR_ROLE);
     }
 
     /**
@@ -237,16 +185,9 @@ library Roles {
      * @param self The AccessManager contract
      * @param yieldDistributor The YieldDistributor contract
      */
-    function assignYieldOperatorTargetsFor(
-        AccessManager self,
-        IYieldDistributor yieldDistributor
-    ) internal {
+    function assignYieldOperatorTargetsFor(AccessManager self, IYieldDistributor yieldDistributor) internal {
         bytes4[] memory operatorSelectors = new bytes4[](1);
         operatorSelectors[0] = IYieldDistributor.depositYield.selector;
-        self.setTargetFunctionRole(
-            address(yieldDistributor),
-            operatorSelectors,
-            ROLE_YIELD_OPERATOR
-        );
+        self.setTargetFunctionRole(address(yieldDistributor), operatorSelectors, ROLE_YIELD_OPERATOR);
     }
 }

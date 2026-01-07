@@ -8,9 +8,7 @@ import {IYieldDistributor} from "../../src/interfaces/IYieldDistributor.sol";
 import {IError} from "../../src/interfaces/IError.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
 import {Roles} from "../../src/Roles.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 
 /**
  * @title YieldDistributorTest
@@ -23,30 +21,14 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     // ========================================
 
     function test_Initialization() public {
-        assertEq(
-            address(yieldDistributor.asset()),
-            address(apxUSD),
-            "Asset should be apxUSD"
-        );
-        assertEq(
-            address(yieldDistributor.vesting()),
-            address(vesting),
-            "Vesting should be set"
-        );
-        assertEq(
-            yieldDistributor.availableBalance(),
-            0,
-            "Initial balance should be zero"
-        );
+        assertEq(address(yieldDistributor.asset()), address(apxUSD), "Asset should be apxUSD");
+        assertEq(address(yieldDistributor.vesting()), address(vesting), "Vesting should be set");
+        assertEq(yieldDistributor.availableBalance(), 0, "Initial balance should be zero");
     }
 
     function test_RevertWhen_ConstructorWithZeroAsset() public {
         vm.expectRevert(IError.InvalidZeroAddress.selector);
-        new YieldDistributor(
-            address(0),
-            address(accessManager),
-            address(vesting)
-        );
+        new YieldDistributor(address(0), address(accessManager), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroAuthority() public {
@@ -56,11 +38,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
     function test_RevertWhen_ConstructorWithZeroVesting() public {
         vm.expectRevert(IError.InvalidZeroAddress.selector);
-        new YieldDistributor(
-            address(apxUSD),
-            address(accessManager),
-            address(0)
-        );
+        new YieldDistributor(address(apxUSD), address(accessManager), address(0));
     }
 
     // ========================================
@@ -82,21 +60,12 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     }
 
     function test_AdminCanSetVesting() public {
-        LinearVestV0 newVesting = new LinearVestV0(
-            address(apxUSD),
-            address(accessManager),
-            admin,
-            VESTING_PERIOD
-        );
+        LinearVestV0 newVesting = new LinearVestV0(address(apxUSD), address(accessManager), admin, VESTING_PERIOD);
 
         vm.prank(admin);
         yieldDistributor.setVesting(address(newVesting));
 
-        assertEq(
-            address(yieldDistributor.vesting()),
-            address(newVesting),
-            "Vesting should be updated"
-        );
+        assertEq(address(yieldDistributor.vesting()), address(newVesting), "Vesting should be updated");
     }
 
     function test_OperatorCanDepositYield() public {
@@ -109,9 +78,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            vestingBalanceBefore + YIELD_AMOUNT,
-            "Vesting should receive tokens"
+            apxUSD.balanceOf(address(vesting)), vestingBalanceBefore + YIELD_AMOUNT, "Vesting should receive tokens"
         );
         assertEq(
             yieldDistributor.availableBalance(),
@@ -131,18 +98,10 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     }
 
     function test_SetVestingEmitsEvent() public {
-        LinearVestV0 newVesting = new LinearVestV0(
-            address(apxUSD),
-            address(accessManager),
-            admin,
-            VESTING_PERIOD
-        );
+        LinearVestV0 newVesting = new LinearVestV0(address(apxUSD), address(accessManager), admin, VESTING_PERIOD);
 
         vm.expectEmit(true, true, false, false);
-        emit IYieldDistributor.VestingContractUpdated(
-            address(vesting),
-            address(newVesting)
-        );
+        emit IYieldDistributor.VestingContractUpdated(address(vesting), address(newVesting));
 
         vm.prank(admin);
         yieldDistributor.setVesting(address(newVesting));
@@ -155,9 +114,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     function test_DepositYieldTransfersTokens() public {
         mintToYieldDistributor(YIELD_AMOUNT);
 
-        uint256 distributorBalanceBefore = apxUSD.balanceOf(
-            address(yieldDistributor)
-        );
+        uint256 distributorBalanceBefore = apxUSD.balanceOf(address(yieldDistributor));
         uint256 vestingBalanceBefore = apxUSD.balanceOf(address(vesting));
 
         vm.prank(operator);
@@ -169,9 +126,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
             "Distributor balance should decrease"
         );
         assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            vestingBalanceBefore + YIELD_AMOUNT,
-            "Vesting balance should increase"
+            apxUSD.balanceOf(address(vesting)), vestingBalanceBefore + YIELD_AMOUNT, "Vesting balance should increase"
         );
     }
 
@@ -184,11 +139,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         // Vesting amount should increase (may include unvested from previous deposits)
-        assertGe(
-            vesting.vestingAmount(),
-            vestingAmountBefore,
-            "Vesting amount should increase"
-        );
+        assertGe(vesting.vestingAmount(), vestingAmountBefore, "Vesting amount should increase");
     }
 
     function test_DepositYieldEmitsEvent() public {
@@ -210,20 +161,12 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         vm.prank(operator);
         yieldDistributor.depositYield(amount1);
 
-        assertEq(
-            yieldDistributor.availableBalance(),
-            amount2,
-            "Remaining balance should be correct"
-        );
+        assertEq(yieldDistributor.availableBalance(), amount2, "Remaining balance should be correct");
 
         vm.prank(operator);
         yieldDistributor.depositYield(amount2);
 
-        assertEq(
-            yieldDistributor.availableBalance(),
-            0,
-            "Balance should be zero after all deposits"
-        );
+        assertEq(yieldDistributor.availableBalance(), 0, "Balance should be zero after all deposits");
     }
 
     // ========================================
@@ -287,46 +230,23 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         vm.prank(operator);
         yieldDistributor.depositYield(mint3);
 
-        assertEq(
-            yieldDistributor.availableBalance(),
-            0,
-            "All tokens should be deposited"
-        );
-        assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            mint1 + mint2 + mint3,
-            "Vesting should have all tokens"
-        );
+        assertEq(yieldDistributor.availableBalance(), 0, "All tokens should be deposited");
+        assertEq(apxUSD.balanceOf(address(vesting)), mint1 + mint2 + mint3, "Vesting should have all tokens");
     }
 
     function test_Integration_ChangeVestingThenDeposit() public {
         mintToYieldDistributor(YIELD_AMOUNT);
 
         // Create new vesting contract
-        LinearVestV0 newVesting = new LinearVestV0(
-            address(apxUSD),
-            address(accessManager),
-            admin,
-            VESTING_PERIOD
-        );
+        LinearVestV0 newVesting = new LinearVestV0(address(apxUSD), address(accessManager), admin, VESTING_PERIOD);
 
         // Configure new vesting
         vm.startPrank(admin);
         accessManager.assignAdminTargetsFor(IVesting(address(newVesting)));
-        accessManager.assignYieldDistributorTargetsFor(
-            IVesting(address(newVesting))
-        );
-        accessManager.assignAdminTargetsFor(
-            IYieldDistributor(address(yieldDistributor))
-        );
-        accessManager.assignYieldOperatorTargetsFor(
-            IYieldDistributor(address(yieldDistributor))
-        );
-        accessManager.grantRole(
-            Roles.YIELD_DISTRIBUTOR_ROLE,
-            address(yieldDistributor),
-            0
-        );
+        accessManager.assignYieldDistributorTargetsFor(IVesting(address(newVesting)));
+        accessManager.assignAdminTargetsFor(IYieldDistributor(address(yieldDistributor)));
+        accessManager.assignYieldOperatorTargetsFor(IYieldDistributor(address(yieldDistributor)));
+        accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, address(yieldDistributor), 0);
         vm.stopPrank();
 
         // Change vesting
@@ -337,15 +257,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         vm.prank(operator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
-        assertEq(
-            apxUSD.balanceOf(address(newVesting)),
-            YIELD_AMOUNT,
-            "New vesting should receive tokens"
-        );
-        assertEq(
-            apxUSD.balanceOf(address(vesting)),
-            0,
-            "Old vesting should not have tokens"
-        );
+        assertEq(apxUSD.balanceOf(address(newVesting)), YIELD_AMOUNT, "New vesting should receive tokens");
+        assertEq(apxUSD.balanceOf(address(vesting)), 0, "Old vesting should not have tokens");
     }
 }

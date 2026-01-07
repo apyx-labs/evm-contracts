@@ -4,12 +4,8 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {Vm} from "forge-std/src/Vm.sol";
 import {VmExt} from "../utils/VmExt.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {MinterV0} from "../../src/MinterV0.sol";
 import {IMinterV0} from "../../src/interfaces/IMinterV0.sol";
@@ -68,32 +64,17 @@ abstract contract MinterTest is Test {
 
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize,
-            (address(accessManager), SUPPLY_CAP)
-        );
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
-            address(apxUSDImpl),
-            apxUSDInitData
-        );
+        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), SUPPLY_CAP));
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy MinterV0
         MinterV0 minterImpl = new MinterV0();
         bytes memory minterInitData = abi.encodeCall(
             minterImpl.initialize,
-            (
-                address(accessManager),
-                address(apxUSD),
-                MAX_MINT_AMOUNT,
-                RATE_LIMIT_AMOUNT,
-                RATE_LIMIT_PERIOD
-            )
+            (address(accessManager), address(apxUSD), MAX_MINT_AMOUNT, RATE_LIMIT_AMOUNT, RATE_LIMIT_PERIOD)
         );
-        ERC1967Proxy minterProxy = new ERC1967Proxy(
-            address(minterImpl),
-            minterInitData
-        );
+        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minterImpl), minterInitData);
         minterV0 = MinterV0(address(minterProxy));
 
         // Configure roles
@@ -118,11 +99,7 @@ abstract contract MinterTest is Test {
         accessManager.assignAdminTargetsFor(minterV0);
 
         // Grant roles with no delay
-        accessManager.grantRole(
-            Roles.MINT_STRAT_ROLE,
-            address(minterV0),
-            MINT_DELAY
-        );
+        accessManager.grantRole(Roles.MINT_STRAT_ROLE, address(minterV0), MINT_DELAY);
         accessManager.grantRole(Roles.MINTER_ROLE, minter, 0);
         accessManager.grantRole(Roles.MINT_GUARD_ROLE, guardian, 0);
 
@@ -136,21 +113,20 @@ abstract contract MinterTest is Test {
      * @param amount Amount of tokens to mint
      * @return order The created mint order
      */
-    function _createOrder(
-        address beneficiary,
-        uint48 nonce,
-        uint208 amount
-    ) internal view returns (IMinterV0.Order memory) {
+    function _createOrder(address beneficiary, uint48 nonce, uint208 amount)
+        internal
+        view
+        returns (IMinterV0.Order memory)
+    {
         uint256 currentTimestamp = vm.clone(block.timestamp);
 
-        return
-            IMinterV0.Order({
-                beneficiary: beneficiary,
-                notBefore: uint48(currentTimestamp),
-                notAfter: uint48(currentTimestamp + 24 hours), // Long enough to not expire during tests
-                nonce: nonce,
-                amount: amount
-            });
+        return IMinterV0.Order({
+            beneficiary: beneficiary,
+            notBefore: uint48(currentTimestamp),
+            notAfter: uint48(currentTimestamp + 24 hours), // Long enough to not expire during tests
+            nonce: nonce,
+            amount: amount
+        });
     }
 
     /**
@@ -159,10 +135,7 @@ abstract contract MinterTest is Test {
      * @param privateKey Private key to sign with
      * @return signature The EIP-712 signature
      */
-    function _signOrder(
-        IMinterV0.Order memory order,
-        uint256 privateKey
-    ) internal view returns (bytes memory) {
+    function _signOrder(IMinterV0.Order memory order, uint256 privateKey) internal view returns (bytes memory) {
         bytes32 digest = minterV0.hashOrder(order);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);

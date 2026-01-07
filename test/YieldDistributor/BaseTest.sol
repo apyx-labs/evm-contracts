@@ -2,12 +2,8 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/src/Test.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {MinterV0} from "../../src/MinterV0.sol";
 import {LinearVestV0} from "../../src/LinearVestV0.sol";
@@ -57,14 +53,8 @@ abstract contract YieldDistributorBaseTest is Test {
 
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize,
-            (address(accessManager), SUPPLY_CAP)
-        );
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
-            address(apxUSDImpl),
-            apxUSDInitData
-        );
+        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), SUPPLY_CAP));
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy MinterV0
@@ -79,10 +69,7 @@ abstract contract YieldDistributorBaseTest is Test {
                 RATE_LIMIT_PERIOD
             )
         );
-        ERC1967Proxy minterProxy = new ERC1967Proxy(
-            address(minterImpl),
-            minterInitData
-        );
+        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minterImpl), minterInitData);
         minterV0 = MinterV0(address(minterProxy));
 
         // Deploy Vesting contract (with ApyUSD as beneficiary - using admin as placeholder)
@@ -94,11 +81,7 @@ abstract contract YieldDistributorBaseTest is Test {
         );
 
         // Deploy YieldDistributor
-        yieldDistributor = new YieldDistributor(
-            address(apxUSD),
-            address(accessManager),
-            address(vesting)
-        );
+        yieldDistributor = new YieldDistributor(address(apxUSD), address(accessManager), address(vesting));
 
         // Configure roles
         setUpRoles();
@@ -126,11 +109,7 @@ abstract contract YieldDistributorBaseTest is Test {
         accessManager.assignYieldOperatorTargetsFor(yieldDistributor);
 
         // Grant MINT_STRAT_ROLE to MinterV0 contract (with delay)
-        accessManager.grantRole(
-            Roles.MINT_STRAT_ROLE,
-            address(minterV0),
-            MINT_DELAY
-        );
+        accessManager.grantRole(Roles.MINT_STRAT_ROLE, address(minterV0), MINT_DELAY);
 
         // Grant MINT_STRAT_ROLE to admin (no delay) for direct minting in tests
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
@@ -143,11 +122,7 @@ abstract contract YieldDistributorBaseTest is Test {
 
         // Grant YIELD_DISTRIBUTOR_ROLE to YieldDistributor contract (no delay)
         // This allows YieldDistributor to call vesting.depositYield()
-        accessManager.grantRole(
-            Roles.YIELD_DISTRIBUTOR_ROLE,
-            address(yieldDistributor),
-            0
-        );
+        accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, address(yieldDistributor), 0);
 
         vm.stopPrank();
     }

@@ -2,19 +2,11 @@
 pragma solidity 0.8.30;
 
 import {IERC20, ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {
-    ERC20Pausable
-} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
-import {
-    IERC20Metadata
-} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import {
-    ERC4626
-} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import {ERC20Pausable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Pausable.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {
-    AccessManaged
-} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
 
@@ -23,14 +15,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IError} from "./interfaces/IError.sol";
 
 // @dev TODO: Add support for freezing
-contract LockToken is
-    ERC4626,
-    IError,
-    IERC7540Redeem,
-    AccessManaged,
-    ILockToken,
-    ERC20Pausable
-{
+contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken, ERC20Pausable {
     // ========================================
     // Storage
     // ========================================
@@ -47,12 +32,7 @@ contract LockToken is
     // Functions
     // ========================================
 
-    constructor(
-        address authority_,
-        address asset_,
-        uint48 unlockingDelay_,
-        address denyList_
-    )
+    constructor(address authority_, address asset_, uint48 unlockingDelay_, address denyList_)
         AccessManaged(authority_)
         ERC4626(IERC20(asset_))
         ERC20(
@@ -142,11 +122,7 @@ contract LockToken is
      * @notice Lock tokens are not transferable and only support minting and burning
      * @inheritdoc ERC20
      */
-    function _update(
-        address from,
-        address to,
-        uint256 value
-    ) internal override(ERC20, ERC20Pausable) {
+    function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {
         // Only support minting and burning
         if (from != address(0) && to != address(0)) {
             revert NotSupported();
@@ -163,10 +139,7 @@ contract LockToken is
      * @param assets The amount of assets to convert to shares
      * @return shares The amount of shares
      */
-    function _convertToShares(
-        uint256 assets,
-        Math.Rounding
-    ) internal view override returns (uint256 shares) {
+    function _convertToShares(uint256 assets, Math.Rounding) internal view override returns (uint256 shares) {
         return assets;
     }
 
@@ -175,10 +148,7 @@ contract LockToken is
      * @param shares The amount of shares to convert to assets
      * @return assets The amount of assets
      */
-    function _convertToAssets(
-        uint256 shares,
-        Math.Rounding
-    ) internal view override returns (uint256 assets) {
+    function _convertToAssets(uint256 shares, Math.Rounding) internal view override returns (uint256 assets) {
         return shares;
     }
 
@@ -193,12 +163,11 @@ contract LockToken is
      * @param assets The amount of assets to deposit
      * @param shares The amount of shares to deposit
      */
-    function _deposit(
-        address caller,
-        address receiver,
-        uint256 assets,
-        uint256 shares
-    ) internal override whenNotPaused {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
+        internal
+        override
+        whenNotPaused
+    {
         _revertIfDenied(caller);
         _revertIfDenied(receiver);
         super._deposit(caller, receiver, assets, shares);
@@ -211,13 +180,9 @@ contract LockToken is
     /**
      * Shared functionality for requestRedeem and requestWithdraw
      */
-    function _requestRedeem(
-        Request storage request,
-        address controller,
-        address owner,
-        uint256 assets,
-        uint256 shares
-    ) internal {
+    function _requestRedeem(Request storage request, address controller, address owner, uint256 assets, uint256 shares)
+        internal
+    {
         // Verify caller authorization
         if (owner != msg.sender || controller != msg.sender) {
             revert InvalidCaller();
@@ -245,11 +210,11 @@ contract LockToken is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return requestId ID of the request (always 0 for this implementation)
      */
-    function requestRedeem(
-        uint256 shares,
-        address controller,
-        address owner
-    ) external override returns (uint256 requestId) {
+    function requestRedeem(uint256 shares, address controller, address owner)
+        external
+        override
+        returns (uint256 requestId)
+    {
         // Calculate assets at current rate (rate locking)
         uint256 assets = previewRedeem(shares);
 
@@ -262,11 +227,7 @@ contract LockToken is
     /**
      * @inheritdoc ILockToken
      */
-    function requestWithdraw(
-        uint256 assets,
-        address controller,
-        address owner
-    ) external returns (uint256 requestId) {
+    function requestWithdraw(uint256 assets, address controller, address owner) external returns (uint256 requestId) {
         // Calculate shares needed at current rate (rate locking)
         uint256 shares = previewWithdraw(assets);
 
@@ -280,9 +241,7 @@ contract LockToken is
     // Cooldown Helpers
     // ========================================
 
-    function _cooldownRemaining(
-        Request storage request
-    ) internal view returns (uint48 cooldown) {
+    function _cooldownRemaining(Request storage request) internal view returns (uint48 cooldown) {
         if (request.requestedAt == 0) {
             return 0;
         }
@@ -295,17 +254,12 @@ contract LockToken is
     /**
      * @inheritdoc ILockToken
      */
-    function cooldownRemaining(
-        uint256,
-        address owner
-    ) external view returns (uint48 cooldown) {
+    function cooldownRemaining(uint256, address owner) external view returns (uint48 cooldown) {
         Request storage request = redeemRequests[owner];
         return _cooldownRemaining(request);
     }
 
-    function _isClaimable(
-        Request storage request
-    ) internal view returns (bool) {
+    function _isClaimable(Request storage request) internal view returns (bool) {
         return request.requestedAt != 0 && _cooldownRemaining(request) == 0;
     }
 
@@ -327,10 +281,7 @@ contract LockToken is
      * @return shares Pending share amount
      * @dev Accepts a uint256 requestId as the first param to meet the 7540 spec
      */
-    function pendingRedeemRequest(
-        uint256,
-        address owner
-    ) external view override returns (uint256 shares) {
+    function pendingRedeemRequest(uint256, address owner) external view override returns (uint256 shares) {
         Request storage request = redeemRequests[owner];
         if (_isClaimable(request)) {
             return 0;
@@ -344,10 +295,7 @@ contract LockToken is
      * @return shares Claimable share amount
      * @dev Accepts a uint256 requestId as the first param to meet the 7540 spec
      */
-    function claimableRedeemRequest(
-        uint256,
-        address owner
-    ) public view override returns (uint256 shares) {
+    function claimableRedeemRequest(uint256, address owner) public view override returns (uint256 shares) {
         Request storage request = redeemRequests[owner];
         if (request.requestedAt == 0) {
             return 0;
@@ -371,12 +319,7 @@ contract LockToken is
     // ERC4626 Withdraw Functions (Claim Only)
     // ========================================
 
-    function _withdraw(
-        Request storage request,
-        address caller,
-        address receiver,
-        address owner
-    ) internal {
+    function _withdraw(Request storage request, address caller, address receiver, address owner) internal {
         if (caller != msg.sender || owner != msg.sender) {
             revert InvalidCaller();
         }
@@ -415,11 +358,7 @@ contract LockToken is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return assets Amount of assets received
      */
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override returns (uint256 assets) {
+    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256 assets) {
         Request storage request = redeemRequests[owner];
 
         // Verify shares match request
@@ -439,11 +378,7 @@ contract LockToken is
      * @param owner Address that owns the shares (must be msg.sender)
      * @return shares Amount of shares burned to receive assets
      */
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override returns (uint256 shares) {
+    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256 shares) {
         Request storage request = redeemRequests[owner];
 
         // Verify assets match request

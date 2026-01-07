@@ -2,12 +2,8 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/src/Test.sol";
-import {
-    ERC1967Proxy
-} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import {
-    AccessManager
-} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
 import {Silo} from "../../src/Silo.sol";
@@ -68,14 +64,8 @@ abstract contract ApyUSDTest is Test {
 
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize,
-            (address(accessManager), APX_SUPPLY_CAP)
-        );
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(
-            address(apxUSDImpl),
-            apxUSDInitData
-        );
+        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), APX_SUPPLY_CAP));
+        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy AddressList
@@ -84,18 +74,9 @@ abstract contract ApyUSDTest is Test {
         // Deploy ApyUSD (vault) first with no Silo
         ApyUSD apyUSDImpl = new ApyUSD();
         bytes memory apyUSDInitData = abi.encodeCall(
-            apyUSDImpl.initialize,
-            (
-                address(accessManager),
-                address(apxUSD),
-                UNLOCKING_DELAY,
-                address(denyList)
-            )
+            apyUSDImpl.initialize, (address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(denyList))
         );
-        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(
-            address(apyUSDImpl),
-            apyUSDInitData
-        );
+        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
         apyUSD = ApyUSD(address(apyUSDProxy));
 
         // Deploy Silo with ApyUSD as owner
@@ -161,10 +142,7 @@ abstract contract ApyUSDTest is Test {
      * @param assets Amount of ApxUSD to deposit
      * @return shares Amount of apyUSD shares received
      */
-    function deposit(
-        address user,
-        uint256 assets
-    ) internal returns (uint256 shares) {
+    function deposit(address user, uint256 assets) internal returns (uint256 shares) {
         vm.startPrank(user);
         apxUSD.approve(address(apyUSD), assets);
         shares = apyUSD.deposit(assets, user);
@@ -177,10 +155,7 @@ abstract contract ApyUSDTest is Test {
      * @param shares Amount of apyUSD shares to mint
      * @return assets Amount of ApxUSD deposited
      */
-    function mint(
-        address user,
-        uint256 shares
-    ) internal returns (uint256 assets) {
+    function mint(address user, uint256 shares) internal returns (uint256 assets) {
         vm.startPrank(user);
         assets = apyUSD.previewMint(shares);
         apxUSD.approve(address(apyUSD), assets);

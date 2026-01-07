@@ -20,11 +20,7 @@ contract VestingCalculationTest is VestingTest {
 
         warpPastVestingPeriod();
 
-        assertEq(
-            vesting.vestedAmount(),
-            amount,
-            "All yield should be vested after period"
-        );
+        assertEq(vesting.vestedAmount(), amount, "All yield should be vested after period");
     }
 
     function test_UnvestedAmount_DecreasesOverTime(uint256 amount) public {
@@ -60,11 +56,7 @@ contract VestingCalculationTest is VestingTest {
             uint256 unvested = vesting.unvestedAmount();
             uint256 total = vesting.vestingAmount();
 
-            assertEq(
-                vested + unvested,
-                total,
-                "Vested + unvested should equal vestingAmount"
-            );
+            assertEq(vested + unvested, total, "Vested + unvested should equal vestingAmount");
 
             uint256 expectedVested = (amount * i) / 10;
             assertApproxEqRel(
@@ -84,11 +76,7 @@ contract VestingCalculationTest is VestingTest {
 
         skip(VESTING_PERIOD);
 
-        assertEq(
-            vesting.vestedAmount(),
-            amount,
-            "Should be fully vested at period end"
-        );
+        assertEq(vesting.vestedAmount(), amount, "Should be fully vested at period end");
     }
 
     function test_RoundingError_VerySmallAmount() public {
@@ -101,11 +89,7 @@ contract VestingCalculationTest is VestingTest {
         uint256 unvested = vesting.unvestedAmount();
         uint256 total = vesting.vestingAmount();
 
-        assertEq(
-            vested + unvested,
-            total,
-            "Invariant should hold even with 1 wei"
-        );
+        assertEq(vested + unvested, total, "Invariant should hold even with 1 wei");
     }
 
     function test_RoundingError_VeryShortPeriod() public {
@@ -119,19 +103,13 @@ contract VestingCalculationTest is VestingTest {
         // We'll set the role after deployment
         vm.stopPrank();
 
-        LinearVestV0 shortVesting = new LinearVestV0(
-            address(apxUSD),
-            address(accessManager),
-            address(apyUSD),
-            shortPeriod
-        );
+        LinearVestV0 shortVesting =
+            new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), shortPeriod);
 
         // Grant role for the new contract
         vm.startPrank(admin);
         accessManager.setTargetFunctionRole(
-            address(shortVesting),
-            yieldDistributorSelectors,
-            Roles.YIELD_DISTRIBUTOR_ROLE
+            address(shortVesting), yieldDistributorSelectors, Roles.YIELD_DISTRIBUTOR_ROLE
         );
         vm.stopPrank();
 
@@ -147,11 +125,7 @@ contract VestingCalculationTest is VestingTest {
         uint256 unvested = shortVesting.unvestedAmount();
         uint256 total = shortVesting.vestingAmount();
 
-        assertEq(
-            vested + unvested,
-            total,
-            "Invariant should hold with very short period"
-        );
+        assertEq(vested + unvested, total, "Invariant should hold with very short period");
     }
 
     function test_RoundingError_IntegerDivision() public {
@@ -165,11 +139,7 @@ contract VestingCalculationTest is VestingTest {
         uint256 total = vesting.vestingAmount();
 
         // Verify invariant holds despite integer division rounding
-        assertEq(
-            vested + unvested,
-            total,
-            "Invariant should hold with integer division"
-        );
+        assertEq(vested + unvested, total, "Invariant should hold with integer division");
     }
 
     function testFuzz_VestedAmount(uint256 amount, uint256 timeElapsed) public {
@@ -188,11 +158,7 @@ contract VestingCalculationTest is VestingTest {
         uint256 total = vesting.vestingAmount();
 
         // Invariant should always hold
-        assertEq(
-            vested + unvested,
-            total,
-            "Invariant should hold with fuzzed inputs"
-        );
+        assertEq(vested + unvested, total, "Invariant should hold with fuzzed inputs");
 
         // Vested should not exceed total
         assertLe(vested, total, "Vested should not exceed total");
