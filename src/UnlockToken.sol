@@ -40,7 +40,7 @@ contract UnlockToken is LockToken, IUnlockToken {
      * @dev Overrides LockToken's name() which returns "{AssetName} Lock Token"
      */
     function name() public view override(ERC20, IERC20Metadata) returns (string memory) {
-        return string.concat(IERC20Metadata(vault).name(), " Unlock Token");
+        return string.concat(IERC20Metadata(asset()).name(), " Unlock Token");
     }
 
     /**
@@ -49,7 +49,7 @@ contract UnlockToken is LockToken, IUnlockToken {
      * @dev Overrides LockToken's symbol() which returns "LT-{AssetSymbol}"
      */
     function symbol() public view override(ERC20, IERC20Metadata) returns (string memory) {
-        return string.concat(IERC20Metadata(asset()).symbol(), "unlock");
+        return string.concat(IERC20Metadata(asset()).symbol(), "_unlock");
     }
 
     /**
