@@ -8,7 +8,7 @@ import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.so
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
-import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
+import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
 
 import {ILockToken} from "./interfaces/ILockToken.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -183,8 +183,8 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
     function _requestRedeem(Request storage request, address controller, address owner, uint256 assets, uint256 shares)
         internal
     {
-        // Verify caller authorization
-        if (owner != msg.sender || controller != msg.sender) {
+        // Verify the controller is an operator of the owner, and the msg.sender is an operator of the controller
+        if (!isOperator(owner, controller) || !isOperator(controller, msg.sender)) {
             revert InvalidCaller();
         }
         // Verify owner has enough additional shares
@@ -396,15 +396,17 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
 
     /**
      * @notice Not implemented in v0 - owner and controller must be msg.sender
+     * @inheritdoc IERC7540Operator
      */
-    function setOperator(address, bool) external pure returns (bool) {
+    function setOperator(address, bool) external pure virtual returns (bool) {
         revert NotSupported();
     }
 
     /**
-     * @notice Not implemented in v0 - always returns false
+     * @notice Returns true if the operator is the controller
+     * @inheritdoc IERC7540Operator
      */
-    function isOperator(address, address) external pure returns (bool) {
-        return false;
+    function isOperator(address controller, address operator) public pure virtual returns (bool) {
+        return controller == operator;
     }
 }
