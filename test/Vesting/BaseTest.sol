@@ -10,6 +10,8 @@ import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
 import {LinearVestV0} from "../../src/LinearVestV0.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
+import {UnlockToken} from "../../src/UnlockToken.sol";
+import {IUnlockToken} from "../../src/interfaces/IUnlockToken.sol";
 import {AddressList} from "../../src/AddressList.sol";
 import {Roles} from "../../src/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -30,6 +32,7 @@ abstract contract VestingTest is Test {
     ApxUSD public apxUSD;
     ApyUSD public apyUSD;
     LinearVestV0 public vesting;
+    UnlockToken public unlockToken;
     AddressList public denyList;
     AccessManager public accessManager;
 
@@ -85,8 +88,17 @@ abstract contract VestingTest is Test {
         // Deploy Vesting contract
         vesting = new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), VESTING_PERIOD);
 
+        // Deploy UnlockToken contract
+        unlockToken = new UnlockToken(
+            address(accessManager), address(apxUSD), address(apyUSD), UNLOCKING_DELAY, address(denyList)
+        );
+
         // Configure roles
         setUpRoles();
+
+        // Set UnlockToken on ApyUSD
+        vm.prank(admin);
+        apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
 
         // Set Vesting on ApyUSD
         vm.prank(admin);
