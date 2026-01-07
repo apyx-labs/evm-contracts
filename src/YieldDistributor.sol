@@ -46,9 +46,9 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @param vesting_ Address of the Vesting contract
      */
     constructor(address asset_, address authority_, address vesting_) AccessManaged(authority_) {
-        if (asset_ == address(0)) revert InvalidZeroAddress();
-        if (authority_ == address(0)) revert InvalidZeroAddress();
-        if (vesting_ == address(0)) revert InvalidZeroAddress();
+        if (asset_ == address(0)) revert InvalidAddress("asset");
+        if (authority_ == address(0)) revert InvalidAddress("authority");
+        if (vesting_ == address(0)) revert InvalidAddress("vesting");
 
         _asset = IERC20(asset_);
         _vesting = IVesting(vesting_);
@@ -92,7 +92,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @param newVesting New vesting contract address
      */
     function setVesting(address newVesting) external restricted {
-        if (newVesting == address(0)) revert InvalidZeroAddress();
+        if (newVesting == address(0)) revert InvalidAddress("newVesting");
 
         address oldVesting = address(_vesting);
         _vesting = IVesting(newVesting);
