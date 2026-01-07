@@ -211,33 +211,25 @@ contract ApyUSD is
         _revertIfDenied($, owner);
 
         // Require lockToken is set
-        require(address($.lockToken) != address(0), "lockToken not set");
+        if (address($.lockToken) == address(0)) {
+            revert AddressNotSet("lockToken");
+        }
 
         // Pull all vested yield from vesting contract if available
         if (address($.vesting) != address(0)) {
             $.vesting.transferVestedYield();
         }
 
-        // Burn ApyUSD shares
-        _burn(owner, shares);
+        // Withdraw (burn) shares from the vault by transferring assets to the vault
+        super._withdraw(caller, address(this), owner, assets, shares);
 
-        // Transfer assets from vault to UnlockToken via deposit
-        // This mints UnlockToken shares to the receiver
-        IERC20 assetToken = IERC20(asset());
-        uint256 currentAllowance = assetToken.allowance(address(this), address($.lockToken));
-        if (currentAllowance > 0) {
-            assetToken.safeDecreaseAllowance(address($.lockToken), currentAllowance);
-        }
-        assetToken.safeIncreaseAllowance(address($.lockToken), assets);
-        uint256 lockTokenShares = IERC4626(address($.lockToken)).deposit(assets, receiver);
-        assetToken.safeDecreaseAllowance(address($.lockToken), assets);
+        // Deposit assets into the UnlockToken to the receiver so the receiver receives
+        // the shares of the UnlockToken instead of the assets of the ApyUSD vault
+        IERC4626(address($.lockToken)).deposit(assets, receiver);
 
         // Start redeem request on UnlockToken (vault acts as operator)
         // The vault can act as operator because it's set in UnlockToken constructor
-        $.lockToken.requestRedeem(lockTokenShares, receiver, receiver);
-
-        // Emit standard ERC4626 Withdraw event
-        emit Withdraw(caller, receiver, owner, assets, shares);
+        $.lockToken.requestRedeem(assets, receiver, receiver);
     }
 
     // ========================================

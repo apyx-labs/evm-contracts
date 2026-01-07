@@ -89,13 +89,15 @@ library Roles {
      */
     function assignAdminTargetsFor(AccessManager self, ApyUSD apyUSD) internal {
         bytes4[] memory selectors = new bytes4[](7);
-        selectors[0] = ApyUSD.setUnlockingDelay.selector;
-        selectors[1] = ApyUSD.pause.selector;
-        selectors[2] = ApyUSD.unpause.selector;
-        selectors[3] = ApyUSD.setSilo.selector;
-        selectors[4] = ApyUSD.setVesting.selector;
-        selectors[5] = ApyUSD.freeze.selector;
-        selectors[6] = ApyUSD.unfreeze.selector;
+        selectors[0] = ApyUSD.pause.selector;
+        selectors[1] = ApyUSD.unpause.selector;
+
+        selectors[2] = ApyUSD.freeze.selector;
+        selectors[3] = ApyUSD.unfreeze.selector;
+
+        selectors[4] = ApyUSD.setDenyList.selector;
+        selectors[5] = ApyUSD.setLockToken.selector;
+        selectors[6] = ApyUSD.setVesting.selector;
         self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);
     }
 

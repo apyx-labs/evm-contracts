@@ -36,4 +36,10 @@ interface IError {
      * @notice Error thrown when trying to deposit/receive shares while on deny list
      */
     error Denied(address denied);
+
+    /**
+     * @notice Error thrown when a required address is not set (zero address)
+     * @param name The name of the address parameter that is not set
+     */
+    error AddressNotSet(string name);
 }
