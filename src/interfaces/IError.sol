@@ -20,7 +20,7 @@ interface IError {
     /**
      * @notice Error thrown when a zero address is provided where it's not allowed
      */
-    error InvalidZeroAddress();
+    error InvalidAddress(string param);
 
     /**
      * @notice Error thrown when an invalid amount is provided (e.g., zero)
@@ -31,4 +31,9 @@ interface IError {
      * @notice Error thrown when balance is insufficient for operation
      */
     error InsufficientBalance();
+
+    /**
+     * @notice Error thrown when trying to deposit/receive shares while on deny list
+     */
+    error Denied(address denied);
 }
