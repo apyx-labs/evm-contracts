@@ -6,8 +6,6 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
-import {Silo} from "../../src/Silo.sol";
-import {ISilo} from "../../src/interfaces/ISilo.sol";
 import {AddressList} from "../../src/AddressList.sol";
 import {Roles} from "../../src/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -26,7 +24,6 @@ abstract contract ApyUSDTest is Test {
 
     ApxUSD public apxUSD;
     ApyUSD public apyUSD;
-    Silo public silo;
     AddressList public denyList;
     AccessManager public accessManager;
 
@@ -71,23 +68,15 @@ abstract contract ApyUSDTest is Test {
         // Deploy AddressList
         denyList = new AddressList(address(accessManager));
 
-        // Deploy ApyUSD (vault) first with no Silo
+        // Deploy ApyUSD (vault)
         ApyUSD apyUSDImpl = new ApyUSD();
-        bytes memory apyUSDInitData = abi.encodeCall(
-            apyUSDImpl.initialize, (address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(denyList))
-        );
+        bytes memory apyUSDInitData =
+            abi.encodeCall(apyUSDImpl.initialize, (address(accessManager), address(apxUSD), address(denyList)));
         ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
         apyUSD = ApyUSD(address(apyUSDProxy));
 
-        // Deploy Silo with ApyUSD as owner
-        silo = new Silo(address(apxUSD), address(apyUSD));
-
         // Configure roles
         setUpRoles();
-
-        // Set Silo on ApyUSD
-        vm.prank(admin);
-        apyUSD.setSilo(ISilo(address(silo)));
 
         // Mint ApxUSD to test accounts
         mintApxUSD();
@@ -164,19 +153,15 @@ abstract contract ApyUSDTest is Test {
     }
 
     /**
-     * @notice Helper to request redemption of apyUSD shares
-     * @param user User requesting redemption
+     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
+     * @param user User redeeming shares
      * @param shares Amount of shares to redeem
+     * @param receiver Address to receive UnlockToken shares
+     * @return assets Amount of assets redeemed
+     * @dev Note: This is now synchronous and deposits assets to UnlockToken
      */
-    function requestRedeem(address user, uint256 shares) internal {
+    function redeem(address user, uint256 shares, address receiver) internal returns (uint256 assets) {
         vm.prank(user);
-        apyUSD.requestRedeem(shares, user, user);
-    }
-
-    /**
-     * @notice Helper to warp time forward by the unlocking delay
-     */
-    function warpPastUnlockingDelay() internal {
-        vm.warp(block.timestamp + UNLOCKING_DELAY + 1);
+        assets = apyUSD.redeem(shares, receiver, user);
     }
 }

@@ -27,17 +27,17 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     }
 
     function test_RevertWhen_ConstructorWithZeroAsset() public {
-        vm.expectRevert(IError.InvalidZeroAddress.selector);
+        vm.expectRevert(IError.InvalidAddress.selector);
         new YieldDistributor(address(0), address(accessManager), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroAuthority() public {
-        vm.expectRevert(IError.InvalidZeroAddress.selector);
+        vm.expectRevert(IError.InvalidAddress.selector);
         new YieldDistributor(address(apxUSD), address(0), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroVesting() public {
-        vm.expectRevert(IError.InvalidZeroAddress.selector);
+        vm.expectRevert(IError.InvalidAddress.selector);
         new YieldDistributor(address(apxUSD), address(accessManager), address(0));
     }
 
@@ -92,7 +92,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     // ========================================
 
     function test_RevertWhen_SetVestingWithZeroAddress() public {
-        vm.expectRevert(IError.InvalidZeroAddress.selector);
+        vm.expectRevert(IError.InvalidAddress.selector);
         vm.prank(admin);
         yieldDistributor.setVesting(address(0));
     }

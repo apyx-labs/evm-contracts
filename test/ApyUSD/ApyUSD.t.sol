@@ -28,14 +28,8 @@ contract ApyUSDInitializationTest is ApyUSDTest {
         // Check authority
         assertEq(apyUSD.authority(), address(accessManager), "Authority should be accessManager");
 
-        // Check unlocking delay
-        assertEq(apyUSD.unlockingDelay(), UNLOCKING_DELAY, "Unlocking delay should match");
-
         // Check deny list
         assertEq(apyUSD.denyList(), address(denyList), "Deny list should match");
-
-        // Check silo
-        assertEq(apyUSD.silo(), address(silo), "Silo should be set");
     }
 
     function test_RevertWhen_InitializeWithZeroAuthority() public {
@@ -43,8 +37,7 @@ contract ApyUSDInitializationTest is ApyUSDTest {
         ApyUSD newImpl = new ApyUSD();
 
         // Try to initialize with zero authority (should revert)
-        bytes memory initData =
-            abi.encodeCall(newImpl.initialize, (address(0), address(apxUSD), UNLOCKING_DELAY, address(denyList)));
+        bytes memory initData = abi.encodeCall(newImpl.initialize, (address(0), address(apxUSD), address(denyList)));
 
         vm.expectRevert("authority is zero address");
         new ERC1967Proxy(address(newImpl), initData);
@@ -55,9 +48,8 @@ contract ApyUSDInitializationTest is ApyUSDTest {
         ApyUSD newImpl = new ApyUSD();
 
         // Try to initialize with zero asset (should revert)
-        bytes memory initData = abi.encodeCall(
-            newImpl.initialize, (address(accessManager), address(0), UNLOCKING_DELAY, address(denyList))
-        );
+        bytes memory initData =
+            abi.encodeCall(newImpl.initialize, (address(accessManager), address(0), address(denyList)));
 
         vm.expectRevert("asset is zero address");
         new ERC1967Proxy(address(newImpl), initData);
@@ -69,7 +61,7 @@ contract ApyUSDInitializationTest is ApyUSDTest {
 
         // Try to initialize with zero deny list (should revert)
         bytes memory initData =
-            abi.encodeCall(newImpl.initialize, (address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(0)));
+            abi.encodeCall(newImpl.initialize, (address(accessManager), address(apxUSD), address(0)));
 
         vm.expectRevert("denyList is zero address");
         new ERC1967Proxy(address(newImpl), initData);
@@ -78,6 +70,6 @@ contract ApyUSDInitializationTest is ApyUSDTest {
     function test_RevertWhen_InitializeTwice() public {
         // Try to initialize the already-initialized apyUSD contract again
         vm.expectRevert();
-        apyUSD.initialize(address(accessManager), address(apxUSD), UNLOCKING_DELAY, address(denyList));
+        apyUSD.initialize(address(accessManager), address(apxUSD), address(denyList));
     }
 }
