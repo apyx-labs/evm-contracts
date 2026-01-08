@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/src/Test.sol";
+import {BaseTest} from "../../BaseTest.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "../../../src/ApxUSD.sol";
@@ -19,88 +19,12 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   - Mock asset token (ApxUSD)
  *   - Standard test accounts
  */
-abstract contract ApyUSDTest is Test {
-    using Roles for AccessManager;
-
-    ApxUSD public apxUSD;
-    ApyUSD public apyUSD;
-    AddressList public denyList;
-    AccessManager public accessManager;
-
-    address public admin = address(0x1);
-
-    address public alice;
-    address public bob;
-    address public charlie;
-    uint256 public alicePrivateKey = 0xA11CE;
-    uint256 public bobPrivateKey = 0xB0B;
-    uint256 public charliePrivateKey = 0xC0C0;
-
-    // Cooldown periods
-    uint48 public constant LOCKING_DELAY = 10 minutes;
-    uint48 public constant UNLOCKING_DELAY = 14 days;
-
-    // ApxUSD supply cap for testing
-    uint256 public constant APX_SUPPLY_CAP = 10_000_000e18; // $10M
-
-    // Test amounts
-    uint256 public constant DEPOSIT_AMOUNT = 1000e18;
-    uint256 public constant LARGE_AMOUNT = 100_000e18;
-
-    function setUp() public virtual {
-        // Set block timestamp to avoid underflow
-        vm.warp(365 days);
-
-        alice = vm.addr(alicePrivateKey);
-        bob = vm.addr(bobPrivateKey);
-        charlie = vm.addr(charliePrivateKey);
-
-        // Deploy AccessManager
-        vm.prank(admin);
-        accessManager = new AccessManager(admin);
-
-        // Deploy ApxUSD (underlying asset)
-        ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), APX_SUPPLY_CAP));
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
-        apxUSD = ApxUSD(address(apxUSDProxy));
-
-        // Deploy AddressList
-        denyList = new AddressList(address(accessManager));
-
-        // Deploy ApyUSD (vault)
-        ApyUSD apyUSDImpl = new ApyUSD();
-        bytes memory apyUSDInitData =
-            abi.encodeCall(apyUSDImpl.initialize, (address(accessManager), address(apxUSD), address(denyList)));
-        ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
-        apyUSD = ApyUSD(address(apyUSDProxy));
-
-        // Configure roles
-        setUpRoles();
+abstract contract ApyUSDTest is BaseTest {
+    function setUp() public virtual override {
+        super.setUp();
 
         // Mint ApxUSD to test accounts
         mintApxUSD();
-    }
-
-    /**
-     * @notice Configures all roles and permissions for the test environment
-     * @dev Sets up role admins, grants roles, and configures function permissions
-     */
-    function setUpRoles() internal {
-        vm.startPrank(admin);
-
-        // Configure function permissions using Roles library helpers
-        accessManager.setRoleAdmins();
-
-        accessManager.assignMintingContractTargetsFor(apxUSD);
-        accessManager.assignAdminTargetsFor(apxUSD);
-        accessManager.assignAdminTargetsFor(apyUSD);
-        accessManager.assignAdminTargetsFor(denyList);
-
-        // Grant MINT_STRAT_ROLE to admin (no delay)
-        accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
-
-        vm.stopPrank();
     }
 
     /**

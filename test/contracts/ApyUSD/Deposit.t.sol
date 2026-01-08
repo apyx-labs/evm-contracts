@@ -13,7 +13,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     // ========================================
 
     function test_Deposit() public {
-        uint256 depositAmount = DEPOSIT_AMOUNT;
+        uint256 depositAmount = MEDIUM_AMOUNT;
 
         // Record balances before
         uint256 aliceApxBalanceBefore = apxUSD.balanceOf(alice);
@@ -41,7 +41,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     }
 
     function test_Mint() public {
-        uint256 sharesToMint = DEPOSIT_AMOUNT;
+        uint256 sharesToMint = MEDIUM_AMOUNT;
 
         // Record balances before
         uint256 aliceApxBalanceBefore = apxUSD.balanceOf(alice);
@@ -68,7 +68,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
 
     function test_MultipleUsersDepositAndMint() public {
         // Alice deposits
-        uint256 aliceDepositAmount = DEPOSIT_AMOUNT;
+        uint256 aliceDepositAmount = MEDIUM_AMOUNT;
         uint256 aliceShares = deposit(alice, aliceDepositAmount);
 
         assertEq(apyUSD.balanceOf(alice), aliceShares, "Alice should have shares from deposit");
@@ -76,7 +76,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         assertEq(apyUSD.totalAssets(), aliceDepositAmount, "Total assets should equal Alice's deposit");
 
         // Bob mints
-        uint256 bobSharesToMint = DEPOSIT_AMOUNT / 2;
+        uint256 bobSharesToMint = MEDIUM_AMOUNT / 2;
         uint256 bobAssets = mint(bob, bobSharesToMint);
 
         assertEq(apyUSD.balanceOf(bob), bobSharesToMint, "Bob should have minted shares");
@@ -84,7 +84,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         assertEq(apyUSD.totalAssets(), aliceDepositAmount + bobAssets, "Total assets should include both deposits");
 
         // Charlie deposits
-        uint256 charlieDepositAmount = DEPOSIT_AMOUNT * 2;
+        uint256 charlieDepositAmount = MEDIUM_AMOUNT * 2;
         uint256 charlieShares = deposit(charlie, charlieDepositAmount);
 
         assertEq(apyUSD.balanceOf(charlie), charlieShares, "Charlie should have shares from deposit");
@@ -104,7 +104,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     }
 
     function test_DepositForReceiver() public {
-        uint256 depositAmount = DEPOSIT_AMOUNT;
+        uint256 depositAmount = MEDIUM_AMOUNT;
 
         // Record balances before
         uint256 aliceApxBalanceBefore = apxUSD.balanceOf(alice);
@@ -127,7 +127,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     }
 
     function test_MintForReceiver() public {
-        uint256 sharesToMint = DEPOSIT_AMOUNT;
+        uint256 sharesToMint = MEDIUM_AMOUNT;
 
         // Record balances before
         uint256 aliceApxBalanceBefore = apxUSD.balanceOf(alice);
@@ -155,7 +155,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     // ========================================
 
     function test_PreviewDeposit() public {
-        uint256 depositAmount = DEPOSIT_AMOUNT;
+        uint256 depositAmount = MEDIUM_AMOUNT;
 
         // Preview deposit
         uint256 previewedShares = apyUSD.previewDeposit(depositAmount);
@@ -168,7 +168,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     }
 
     function test_PreviewMint() public {
-        uint256 sharesToMint = DEPOSIT_AMOUNT;
+        uint256 sharesToMint = MEDIUM_AMOUNT;
 
         // Preview mint
         uint256 previewedAssets = apyUSD.previewMint(sharesToMint);
@@ -239,7 +239,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     }
 
     function test_RevertWhen_DepositInsufficientAllowance() public {
-        uint256 depositAmount = DEPOSIT_AMOUNT;
+        uint256 depositAmount = MEDIUM_AMOUNT;
 
         vm.startPrank(alice);
         // Don't approve or approve less
