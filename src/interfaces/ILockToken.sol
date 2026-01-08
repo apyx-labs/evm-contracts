@@ -3,9 +3,22 @@ pragma solidity 0.8.30;
 
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IERC7540Redeem} from "forge-std/src/interfaces/IERC7540.sol";
-import {IAddressList} from "./IAddressList.sol";
 
-interface ILockToken is IERC7540Redeem {
+import {IAddressList} from "./IAddressList.sol";
+import {EInvalidAddress} from "../errors/InvalidAddress.sol";
+import {EInvalidAmount} from "../errors/InvalidAmount.sol";
+import {ENotSupported} from "../errors/NotSupported.sol";
+import {EInvalidCaller} from "../errors/InvalidCaller.sol";
+import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
+
+interface ILockToken is
+    IERC7540Redeem,
+    EInvalidAddress,
+    EInvalidAmount,
+    ENotSupported,
+    EInvalidCaller,
+    EInsufficientBalance
+{
     /**
      * @notice Request data structure used for both deposits and redeems
      * @dev The meaning of fields changes based on which mapping stores the request

@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+
 import {YieldDistributorBaseTest} from "./BaseTest.sol";
 import {YieldDistributor} from "../../../src/YieldDistributor.sol";
 import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {IYieldDistributor} from "../../../src/interfaces/IYieldDistributor.sol";
-import {IError} from "../../../src/interfaces/IError.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {Roles} from "../../../src/Roles.sol";
-import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title YieldDistributorTest
@@ -27,17 +28,17 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     }
 
     function test_RevertWhen_ConstructorWithZeroAsset() public {
-        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "asset"));
+        vm.expectRevert(Errors.invalidAddress("asset"));
         new YieldDistributor(address(0), address(accessManager), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroAuthority() public {
-        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "authority"));
+        vm.expectRevert(Errors.invalidAddress("authority"));
         new YieldDistributor(address(apxUSD), address(0), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroVesting() public {
-        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "vesting"));
+        vm.expectRevert(Errors.invalidAddress("vesting"));
         new YieldDistributor(address(apxUSD), address(accessManager), address(0));
     }
 
@@ -92,7 +93,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     // ========================================
 
     function test_RevertWhen_SetVestingWithZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "newVesting"));
+        vm.expectRevert(Errors.invalidAddress("newVesting"));
         vm.prank(admin);
         yieldDistributor.setVesting(address(0));
     }
@@ -176,7 +177,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     function test_RevertWhen_DepositZeroAmount() public {
         mintToYieldDistributor(YIELD_AMOUNT);
 
-        vm.expectRevert(IError.InvalidAmount.selector);
+        vm.expectRevert(Errors.invalidAmount("amount", 0));
         vm.prank(operator);
         yieldDistributor.depositYield(0);
     }
@@ -184,7 +185,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     function test_RevertWhen_DepositInsufficientBalance() public {
         mintToYieldDistributor(YIELD_AMOUNT);
 
-        vm.expectRevert(IError.InsufficientBalance.selector);
+        vm.expectRevert(Errors.insufficientBalance(address(yieldDistributor), YIELD_AMOUNT, YIELD_AMOUNT + 1));
         vm.prank(operator);
         yieldDistributor.depositYield(YIELD_AMOUNT + 1);
     }

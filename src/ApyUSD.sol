@@ -22,7 +22,6 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
-import {IError} from "./interfaces/IError.sol";
 
 /**
  * @title ApyUSD
@@ -45,8 +44,7 @@ contract ApyUSD is
     AccessManagedUpgradeable,
     UUPSUpgradeable,
     ERC4626Upgradeable,
-    IApyUSD,
-    IError
+    IApyUSD
 {
     using SafeERC20 for IERC20;
 

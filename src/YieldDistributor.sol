@@ -108,10 +108,10 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      */
     function depositYield(uint256 amount) external restricted {
         if (address(_vesting) == address(0)) revert VestingNotSet();
-        if (amount == 0) revert InvalidAmount();
+        if (amount == 0) revert InvalidAmount("amount", amount);
 
         uint256 balance = _asset.balanceOf(address(this));
-        if (amount > balance) revert InsufficientBalance();
+        if (balance < amount) revert InsufficientBalance(address(this), balance, amount);
 
         // Approve vesting contract to pull tokens
         // Reset allowance to 0 first, then approve new amount

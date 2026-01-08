@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {EAddressNotSet} from "../errors/AddressNotSet.sol";
+import {EDenied} from "../errors/Denied.sol";
+
 /**
  * @title IApyUSD
  * @notice Interface for apyUSD ERC4626 synchronous tokenized vault
  * @dev Defines events for the sync vault implementation
  */
-interface IApyUSD {
+interface IApyUSD is EAddressNotSet, EDenied {
     // ========================================
     // Events
     // ========================================

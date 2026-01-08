@@ -12,10 +12,9 @@ import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC754
 
 import {ILockToken} from "./interfaces/ILockToken.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
-import {IError} from "./interfaces/IError.sol";
 
 // @dev TODO: Add support for freezing
-contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken, ERC20Pausable {
+contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20Pausable {
     // ========================================
     // Storage
     // ========================================
@@ -40,10 +39,10 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
             string.concat("LT-", IERC20Metadata(asset_).symbol())
         )
     {
-        require(authority_ != address(0), "authority is zero address");
-        require(asset_ != address(0), "asset is zero address");
-        require(unlockingDelay_ > 0, "unlocking delay must be positive");
-        require(denyList_ != address(0), "deny list is zero address");
+        if (authority_ == address(0)) revert InvalidAddress("authority");
+        if (asset_ == address(0)) revert InvalidAddress("asset");
+        if (unlockingDelay_ == 0) revert InvalidAmount("unlockingDelay", unlockingDelay_);
+        if (denyList_ == address(0)) revert InvalidAddress("denyList");
 
         unlockingDelay = unlockingDelay_;
         denyList = IAddressList(denyList_);
@@ -189,7 +188,7 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
         }
         // Verify owner has enough additional shares
         if (balanceOf(owner) - request.shares < shares) {
-            revert InsufficientBalance();
+            revert InsufficientBalance(owner, balanceOf(owner), shares);
         }
         // Check if the controller or owner are deny listed
         _revertIfDenied(controller);

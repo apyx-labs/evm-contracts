@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {IError} from "./IError.sol";
+import {EInvalidAddress} from "../errors/InvalidAddress.sol";
+import {EInvalidAmount} from "../errors/InvalidAmount.sol";
+import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
 
 /**
  * @title IYieldDistributor
  * @notice Interface for the YieldDistributor contract that receives yield from MinterV0 and deposits it to Vesting
  * @dev Defines functions, events, and errors for yield distribution functionality
  */
-interface IYieldDistributor is IError {
+interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBalance {
     // ========================================
     // Errors
     // ========================================

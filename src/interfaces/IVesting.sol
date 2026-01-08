@@ -1,25 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {EInvalidAddress} from "../errors/InvalidAddress.sol";
+import {EInvalidAmount} from "../errors/InvalidAmount.sol";
+
 /**
  * @title IVesting
  * @notice Interface for the Vesting contract that handles yield distribution. Different implementations may have different vesting periods and yield distribution mechanisms.
  * @dev Defines functions, events, and errors for yield vesting functionality
  */
-interface IVesting {
+interface IVesting is EInvalidAddress, EInvalidAmount {
     // ========================================
     // Errors
     // ========================================
-
-    /**
-     * @notice Error thrown when an invalid amount is provided (e.g., zero)
-     */
-    error InvalidAmount();
-
-    /**
-     * @notice Error thrown when a zero address is provided where it's not allowed
-     */
-    error InvalidZeroAddress();
 
     /**
      * @notice Error thrown when an unauthorized address attempts to transfer vested yield

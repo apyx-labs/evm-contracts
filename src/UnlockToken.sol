@@ -7,7 +7,6 @@ import {IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
 
 import {LockToken} from "./LockToken.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
-import {IError} from "./interfaces/IError.sol";
 
 /**
  * @title UnlockToken

@@ -6,6 +6,7 @@ import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {Roles} from "../../../src/Roles.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title VestingInitializationTest
@@ -26,22 +27,22 @@ contract VestingInitializationTest is VestingTest {
     }
 
     function test_RevertWhen_InitializeWithZeroAsset() public {
-        vm.expectRevert(IVesting.InvalidZeroAddress.selector);
+        vm.expectRevert(Errors.invalidAddress("asset"));
         new LinearVestV0(address(0), address(accessManager), address(apyUSD), VESTING_PERIOD);
     }
 
     function test_RevertWhen_InitializeWithZeroAuthority() public {
-        vm.expectRevert(IVesting.InvalidZeroAddress.selector);
+        vm.expectRevert(Errors.invalidAddress("authority"));
         new LinearVestV0(address(apxUSD), address(0), address(apyUSD), VESTING_PERIOD);
     }
 
     function test_RevertWhen_InitializeWithZeroVault() public {
-        vm.expectRevert(IVesting.InvalidZeroAddress.selector);
+        vm.expectRevert(Errors.invalidAddress("vault"));
         new LinearVestV0(address(apxUSD), address(accessManager), address(0), VESTING_PERIOD);
     }
 
     function test_RevertWhen_InitializeWithZeroVestingPeriod() public {
-        vm.expectRevert(IVesting.InvalidAmount.selector);
+        vm.expectRevert(Errors.invalidAmount("vestingPeriod", 0));
         new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), 0);
     }
 
@@ -66,7 +67,7 @@ contract VestingInitializationTest is VestingTest {
     }
 
     function test_RevertWhen_SetVestingPeriodZero() public {
-        vm.expectRevert(IVesting.InvalidAmount.selector);
+        vm.expectRevert(Errors.invalidAmount("vestingPeriod", 0));
         vm.prank(admin);
         vesting.setVestingPeriod(0);
     }
@@ -87,7 +88,7 @@ contract VestingInitializationTest is VestingTest {
     }
 
     function test_RevertWhen_SetBeneficiaryToZeroAddress() public {
-        vm.expectRevert(IVesting.InvalidZeroAddress.selector);
+        vm.expectRevert(Errors.invalidAddress("beneficiary"));
         vm.prank(admin);
         vesting.setBeneficiary(address(0));
     }

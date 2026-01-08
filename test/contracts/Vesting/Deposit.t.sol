@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {console2 as console} from "forge-std/src/console2.sol";
 import {VestingTest} from "./BaseTest.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title VestingDepositTest
@@ -128,7 +129,7 @@ contract VestingDepositTest is VestingTest {
 
     function test_RevertWhen_DepositZero() public {
         vm.startPrank(yieldDistributor);
-        vm.expectRevert(IVesting.InvalidAmount.selector);
+        vm.expectRevert(Errors.invalidAmount("amount", 0));
         vesting.depositYield(0);
         vm.stopPrank();
     }

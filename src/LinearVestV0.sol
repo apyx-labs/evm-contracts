@@ -64,10 +64,10 @@ contract LinearVestV0 is AccessManaged, IVesting {
     constructor(address asset_, address _authority, address _beneficiary, uint256 _vestingPeriod)
         AccessManaged(_authority)
     {
-        if (asset_ == address(0)) revert InvalidZeroAddress();
-        if (_authority == address(0)) revert InvalidZeroAddress();
-        if (_beneficiary == address(0)) revert InvalidZeroAddress();
-        if (_vestingPeriod == 0) revert InvalidAmount();
+        if (asset_ == address(0)) revert InvalidAddress("asset");
+        if (_authority == address(0)) revert InvalidAddress("authority");
+        if (_beneficiary == address(0)) revert InvalidAddress("beneficiary");
+        if (_vestingPeriod == 0) revert InvalidAmount("vestingPeriod", _vestingPeriod);
 
         _asset = IERC20(asset_);
         beneficiary = _beneficiary;
@@ -134,7 +134,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @param amount Amount of yield to deposit
      */
     function depositYield(uint256 amount) external override restricted {
-        if (amount == 0) revert InvalidAmount();
+        if (amount == 0) revert InvalidAmount("amount", amount);
 
         // Calculate unvested amount BEFORE transferring (since transfer will modify vestingAmount)
         uint256 vested = vestedAmount();
@@ -183,7 +183,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @param newPeriod New vesting period in seconds
      */
     function setVestingPeriod(uint256 newPeriod) external override restricted {
-        if (newPeriod == 0) revert InvalidAmount();
+        if (newPeriod == 0) revert InvalidAmount("vestingPeriod", newPeriod);
 
         uint256 oldPeriod = vestingPeriod;
         vestingPeriod = newPeriod;
@@ -198,7 +198,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @param newBeneficiary New beneficiary contract address
      */
     function setBeneficiary(address newBeneficiary) external override restricted {
-        if (newBeneficiary == address(0)) revert InvalidZeroAddress();
+        if (newBeneficiary == address(0)) revert InvalidAddress("beneficiary");
 
         address oldBeneficiary = beneficiary;
         beneficiary = newBeneficiary;
