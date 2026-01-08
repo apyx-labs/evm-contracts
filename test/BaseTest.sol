@@ -285,6 +285,31 @@ abstract contract BaseTest is Test {
     }
 
     /**
+     * @notice Helper to withdraw apyUSD shares by depositing ApxUSD
+     * @param assets Amount of ApxUSD to withdraw
+     * @param receiver Address to receive the UnlockToken shares
+     * @param owner Address that owns the shares
+     * @return shares Amount of apyUSD shares withdrawn
+     */
+    function withdrawApxUSD(uint256 assets, address receiver, address owner) internal returns (uint256 shares) {
+        vm.startPrank(owner);
+        shares = apyUSD.previewWithdraw(assets);
+        apxUSD.approve(address(apyUSD), assets);
+        shares = apyUSD.withdraw(assets, receiver, owner);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Helper to withdraw apyUSD shares by depositing ApxUSD
+     * @param assets Amount of ApxUSD to withdraw
+     * @param owner Address that owns the shares
+     * @return shares Amount of apyUSD shares withdrawn
+     */
+    function withdrawApxUSD(uint256 assets, address owner) internal returns (uint256 shares) {
+        return withdrawApxUSD(assets, owner, owner);
+    }
+
+    /**
      * @notice Helper to mint apyUSD shares by depositing ApxUSD
      * @param user User performing the mint
      * @param shares Amount of apyUSD shares to mint
@@ -296,5 +321,28 @@ abstract contract BaseTest is Test {
         apxUSD.approve(address(apyUSD), assets);
         assets = apyUSD.mint(shares, user);
         vm.stopPrank();
+    }
+
+    /**
+     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
+     * @param shares Amount of shares to redeem
+     * @param receiver Address to receive UnlockToken shares
+     * @param owner Address that owns the shares
+     * @return assets Amount of assets redeemed
+     * @dev Note: This is now synchronous and deposits assets to UnlockToken
+     */
+    function redeemApyUSD(uint256 shares, address receiver, address owner) internal returns (uint256 assets) {
+        vm.prank(owner);
+        assets = apyUSD.redeem(shares, receiver, owner);
+    }
+
+    /**
+     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
+     * @param shares Amount of shares to redeem
+     * @param owner Address that owns the shares
+     * @return assets Amount of assets redeemed
+     */
+    function redeemApyUSD(uint256 shares, address owner) internal returns (uint256 assets) {
+        return redeemApyUSD(shares, owner, owner);
     }
 }

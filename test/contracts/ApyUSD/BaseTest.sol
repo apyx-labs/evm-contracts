@@ -33,17 +33,4 @@ abstract contract ApyUSDTest is BaseTest {
         apxUSD.mint(charlie, LARGE_AMOUNT);
         vm.stopPrank();
     }
-
-    /**
-     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
-     * @param user User redeeming shares
-     * @param shares Amount of shares to redeem
-     * @param receiver Address to receive UnlockToken shares
-     * @return assets Amount of assets redeemed
-     * @dev Note: This is now synchronous and deposits assets to UnlockToken
-     */
-    function redeem(address user, uint256 shares, address receiver) internal returns (uint256 assets) {
-        vm.prank(user);
-        assets = apyUSD.redeem(shares, receiver, user);
-    }
 }
