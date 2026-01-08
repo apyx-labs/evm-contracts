@@ -225,6 +225,7 @@ contract ApyUSD is
 
         // Deposit assets into the UnlockToken to the receiver so the receiver receives
         // the shares of the UnlockToken instead of the assets of the ApyUSD vault
+        IERC20(asset()).approve(address($.unlockToken), assets);
         IERC4626(address($.unlockToken)).deposit(assets, receiver);
 
         // Start redeem request on UnlockToken (vault acts as operator)
