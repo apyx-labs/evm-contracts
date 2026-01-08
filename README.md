@@ -1,57 +1,84 @@
 # Apyx - Preferred Share-Backed Stablecoin
 
-A stablecoin system backed by off-chain preferred shares with dividend yields, implementing delayed minting with signature-based attestations and comprehensive access controls.
+A stablecoin system backed by off-chain preferred shares with dividend yields, implementing delayed minting and comprehensive access controls.
 
 ## Overview
 
-apxUSD is a stable token backed by a basket of semi-stable preferred shares held off-chain. The system implements:
+The Apyx protocol consists of multiple interconnected contracts that enable stablecoin minting, yield distribution, and token locking mechanisms.
 
-- **apxUSD Token**: ERC-20 stablecoin with supply cap and pausability
-- **Minting Contract**: Signature-based delayed minting with compliance windows
-- **Upgradeable Architecture**: UUPS proxy pattern for future improvements
-
-## Features
-
-### apxUSD Token
-- ✅ ERC-20 compliant with 18 decimals
-- ✅ ERC-2612 Permit for gasless approvals
-- ✅ Role-based access control (MINTER_ROLE, PAUSER_ROLE, DEFAULT_ADMIN_ROLE)
-- ✅ Configurable supply cap ($1M default)
-- ✅ Emergency pause mechanism
-- ✅ UUPS upgradeable
-
-### Minting Contract
-- ✅ EIP-712 typed structured data signing
-- ✅ Order-based minting with beneficiary signatures
-- ✅ 1-hour delay window for compliance checks
-- ✅ Configurable max mint size ($10k default)
-- ✅ Nonce-based replay protection
-- ✅ Admin cancellation during delay period
-- ✅ UUPS upgradeable
+| Contract         | Description |
+|------------------|-------------|
+| **ApxUSD**       | The base ERC-20 stablecoin with supply cap, pause, and freeze functionality. Implements EIP-2612 permit for gasless approvals and uses the UUPS upgradeable pattern. |
+| **ApyUSD**       | An ERC-4626 yield-bearing vault that wraps apxUSD, allowing deposits to accrue yield from vesting distributions. |
+| **LockToken**    | An ERC-7540 async redeem vault with a configurable cooldown period for unlocking. Implements deny list checking and can lock arbitrary ERC-20 tokens for use in off-chain points systems. |
+| **UnlockToken**  | A LockToken subclass that allows a vault to initiate redeem requests on behalf of users, enabling automated withdrawal flows. |
+| **MinterV0**     | Handles apxUSD minting via EIP-712 signed orders with rate limiting and AccessManager integration for delayed execution. |
+| **LinearVestV0** | A linear vesting contract that gradually releases yield to the vault over a configurable period. |
+| **YieldDistributor** | Receives minting fees and deposits them to the vesting contract for gradual distribution. |
+| **AddressList**  | Provides centralized deny list management for compliance across all Apyx contracts. |
 
 ## Architecture
 
+The Apyx protocol consists of several interconnected systems. The following diagrams illustrate the key relationships and flows:
+
+### Minting Flow
+
+A signed EIP-712 order must be submitted by a "Minter" (an m-of-n wallet). The MinterV0 contract validates the order and mints apxUSD after AccessManager delays. The beneficiary must be checked against the AddressList before minting completes.
+
+```mermaid
+flowchart TB
+    User[User] -->|"signs EIP-712 order"| Minter["Minter (m-of-n wallet)"]
+    Minter -->|"submits order"| MinterV0
+    MinterV0 -->|"checks role + delay"| AccessManager
+    MinterV0 -->|"checks beneficiary"| AddressList
+    MinterV0 -->|"mint()"| ApxUSD
+    AccessManager -.->|"manages mint permissions"| ApxUSD
 ```
-┌─────────────────┐
-│  Beneficiary    │
-│  Signs Order    │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────────────────────────┐
-│     Minting Contract                │
-│  - Validates signature (EIP-712)    │
-│  - Creates pending mint request     │
-│  - 1 hour delay for compliance      │
-│  - Admin can cancel if needed       │
-└────────┬────────────────────────────┘
-         │ (after delay)
-         ▼
-┌─────────────────┐
-│  apxUSD Token   │
-│  - Mints tokens │
-│  - Enforces cap │
-└─────────────────┘
+
+
+### Token Relationships
+
+ApyUSD is an ERC-4626 vault that wraps apxUSD for yield-bearing deposits. Withdrawing from ApyUSD transfers the ApxUSD to the UnlockToken. The UnlockToken is an ERC-7540 vault that implements asynchronous redemptions. The UnlockToken allows ApyUSD to initiate redeem requests on behalf of users to start the unlocking period.
+
+```mermaid
+flowchart TB
+    ApxUSD[ApxUSD - ERC-20 Stablecoin]
+    ApyUSD[ApyUSD - ERC-4626 Vault]
+    UnlockToken[UnlockToken - Vault-Initiated Redeems]
+    AddressList[AddressList - Deny List]
+    AccessManager[AccessManager]
+    
+    ApyUSD -->|"deposit/withdraw"| ApxUSD
+    ApyUSD -->|"initiates redeems"| UnlockToken
+    ApyUSD -->|"checks transfers"| AddressList
+    UnlockToken -->|"checks transfers"| AddressList
+    AccessManager -.->|"manages admin functions"| ApyUSD
+```
+
+### Yield Distribution
+
+When the underlying offchain collateral (preferred shares) pay dividends the dividends are minted as apxUSD to YieldDistributor. The YieldDistributor sits between the MinterV0 and the LinearVestV0 to decouple the two contracts and allows a yield operator to trigger deposits into the vesting contract.
+
+```mermaid
+flowchart TB
+    MinterV0 -->|"fees on mint"| YieldDistributor
+    YieldDistributor -->|"depositYield()"| LinearVestV0
+    LinearVestV0 -->|"transferVestedYield()"| ApyUSD
+    ApyUSD -->|"increases share value"| Depositors
+```
+
+### Lock Tokens for Points
+
+LockToken is a standalone ERC-7540 vault that locks any ERC-20 token with a configurable unlocking period. Users deposit tokens to receive non-transferable lock tokens, which can be used for off-chain points systems.
+
+```mermaid
+flowchart TB
+    User -->|"deposit(assets)"| LockToken
+    LockToken -->|"mints shares"| User
+    User -->|"requestRedeem(shares)"| LockToken
+    LockToken -->|"starts cooldown"| CooldownPeriod[Cooldown Period]
+    CooldownPeriod -->|"after delay"| User
+    User -->|"redeem()"| Assets[Original Assets]
 ```
 
 ## Installation
@@ -116,14 +143,12 @@ just anvil
 In another terminal, deploy contracts:
 
 ```bash
-just deploy
-```
+# Deploy to local Anvil
+just deploy-local
 
-This will:
-1. Deploy apxUSD implementation and proxy
-2. Deploy Minting implementation and proxy
-3. Grant MINTER_ROLE to the Minting contract
-4. Log all deployment addresses and configuration
+# Deploy to devnet
+just deploy-devnet
+```
 
 ### Code Coverage
 
@@ -141,124 +166,17 @@ forge fmt
 just fmt
 ```
 
-## Usage
-
-### Minting Flow
-
-1. **Create Order**: Beneficiary creates an order struct with:
-   - `nonce`: Current nonce for replay protection
-   - `expiry`: Timestamp when order expires
-   - `beneficiary`: Address to receive tokens
-   - `amount`: Amount of apxUSD to mint
-
-2. **Sign Order**: Beneficiary signs the order using EIP-712:
-   ```solidity
-   Order memory order = Order({
-       nonce: 0,
-       expiry: block.timestamp + 1 hours,
-       beneficiary: address(0x...),
-       amount: 5000e18
-   });
-   bytes memory signature = signOrder(order, privateKey);
-   ```
-
-3. **Submit Mint Request**: Anyone can submit the signed order:
-   ```solidity
-   bytes32 requestId = minting.mint(order, signature);
-   ```
-
-4. **Wait for Delay**: 1 hour delay for compliance checks
-
-5. **Claim Mint**: After delay, anyone can claim:
-   ```solidity
-   minting.claimMint(requestId);
-   ```
-
-### Admin Functions
-
-**Cancel Pending Mint** (during delay period):
-```solidity
-minting.cancelMint(requestId);
-```
-
-**Update Max Mint Size**:
-```solidity
-minting.setMaxMintSize(20_000e18); // $20k
-```
-
-**Update Mint Delay**:
-```solidity
-minting.setMintDelay(7200); // 2 hours
-```
-
-**Update Supply Cap**:
-```solidity
-apxUSD.setSupplyCap(2_000_000e18); // $2M
-```
-
-**Pause/Unpause Transfers**:
-```solidity
-apxUSD.pause();
-apxUSD.unpause();
-```
-
 ## Testing
 
-Comprehensive test suite with 50 tests covering:
+The test suite is organized in the `test/` directory with the following structure:
 
-- **apxUSD Token Tests** (19 tests)
-  - Initialization and configuration
-  - Minting with supply cap enforcement
-  - Burning (burn and burnFrom)
-  - Pause/unpause functionality
-  - ERC-20 Permit (EIP-2612)
-  - Access control
-  - Upgrades
-  - Fuzz testing
+- **test/contracts/** - Tests organized by contract (ApxUSD, ApyUSD, LockToken, MinterV0, Vesting, YieldDistributor)
+- **test/exts/** - Extension tests (ERC20FreezeableUpgradable)
+- **test/mocks/** - Mock contracts for testing
+- **test/utils/** - Test utilities (VmExt, Formatter, Errors)
+- **test/reports/** - Report (csv) generation tests 
 
-- **Minting Contract Tests** (19 tests)
-  - Signature verification (EIP-712)
-  - Nonce management
-  - Order expiry validation
-  - Max mint size enforcement
-  - Delayed minting
-  - Admin cancellation
-  - Upgrades
-  - Fuzz testing
-
-- **Integration Tests** (10 tests)
-  - Full mint flow
-  - Multiple beneficiaries
-  - Mint, transfer, and burn flows
-  - Supply cap enforcement
-  - Pause during operations
-  - Parameter updates
-  - Cross-contract interactions
-
-All tests pass:
-```
-Ran 4 test suites: 50 tests passed, 0 failed
-```
-
-## Configuration
-
-### Default Values
-
-| Parameter | Value | Description |
-|-----------|-------|-------------|
-| Supply Cap | $1,000,000 (1e24 wei) | Maximum total supply of apxUSD |
-| Max Mint Size | $10,000 (1e22 wei) | Maximum single mint amount |
-| Mint Delay | 3600 seconds (1 hour) | Delay before mints can be claimed |
-| Decimals | 18 | Standard ERC-20 decimals |
-
-### Roles
-
-| Role | Description | Functions |
-|------|-------------|-----------|
-| `DEFAULT_ADMIN_ROLE` | Super admin | Grant/revoke roles, upgrade contracts, configure parameters |
-| `MINTER_ROLE` (apxUSD) | Can mint tokens | `mint()` |
-| `PAUSER_ROLE` (apxUSD) | Can pause/unpause | `pause()`, `unpause()` |
-| `ADMIN_ROLE` (Minting) | Can configure and cancel | `cancelMint()`, `setMaxMintSize()`, `setMintDelay()` |
+Each contract subdirectory contains a `BaseTest.sol` with shared setup and individual test files for specific functionality.
 
 ## Security Considerations
 
@@ -286,94 +204,36 @@ Before production deployment:
 5. **Multi-sig Setup**: Use multi-sig for admin roles
 6. **Timelock**: Consider timelock for upgrades
 
-## Deployment
-
-### Anvil (Local)
-
-```bash
-# Terminal 1: Start Anvil
-just anvil
-
-# Terminal 2: Deploy
-just deploy
-```
-
-### Testnet/Mainnet
-
-```bash
-# Set environment variables
-export PRIVATE_KEY=<your-private-key>
-export RPC_URL=<your-rpc-url>
-
-# Deploy
-forge script script/Deploy.s.sol:Deploy --rpc-url $RPC_URL --broadcast --verify
-```
-
-### Upgrade
-
-```bash
-# Export proxy address
-export PROXY_ADDRESS=<apxusd-proxy-address>
-
-# Upgrade apxUSD
-just upgrade-apxusd $PROXY_ADDRESS
-
-# Or upgrade Minting
-export PROXY_ADDRESS=<minting-proxy-address>
-just upgrade-minting $PROXY_ADDRESS
-```
-
-## Justfile Commands
-
-| Command | Description |
-|---------|-------------|
-| `just` | List all available commands |
-| `just build` | Build contracts |
-| `just test` | Run all tests |
-| `just test-gas` | Run tests with gas reporting |
-| `just test-verbose` | Run tests with verbose output |
-| `just coverage` | Generate coverage report |
-| `just fmt` | Format code |
-| `just anvil` | Start local Anvil node |
-| `just deploy` | Deploy to local Anvil |
-| `just dev` | Clean, build, and test |
-| `just check` | Format check + build + test |
-
 ## Project Structure
 
 ```
 ├── src/
-│   ├── PrefUSD.sol          # ERC-20 stablecoin token
-│   └── Minting.sol          # Delayed minting with signatures
-├── script/
-│   ├── Deploy.s.sol         # Deployment script
-│   └── Upgrade.s.sol        # Upgrade scripts
+│   ├── ApxUSD.sol           # ERC-20 stablecoin token
+│   ├── ApyUSD.sol           # ERC-4626 yield-bearing vault
+│   ├── LockToken.sol        # ERC-7540 async redeem vault
+│   ├── UnlockToken.sol      # LockToken for vault-initiated redeems
+│   ├── MinterV0.sol         # EIP-712 minting with AccessManager
+│   ├── LinearVestV0.sol    # Linear vesting contract
+│   ├── YieldDistributor.sol # Yield distribution contract
+│   ├── AddressList.sol      # Centralized deny list
+│   ├── interfaces/          # Contract interfaces
+│   ├── errors/              # Custom error definitions
+│   └── exts/                # Extension contracts
+├── cmds/
+│   ├── Deploy.s.sol         # Deployment scripts
+│   └── DeployApyUSD.s.sol   # ApyUSD deployment script
 ├── test/
-│   ├── PrefUSD.t.sol        # PrefUSD token tests
-│   ├── Minting.t.sol        # Minting contract tests
-│   └── Integration.t.sol    # Integration tests
-├── docs/
-│   └── overview.md          # System design document
+│   ├── contracts/           # Tests organized by contract
+│   ├── exts/                # Extension tests
+│   ├── mocks/               # Mock contracts
+│   ├── utils/               # Test utilities
+│   └── reports/             # Report generation tests
+├── scripts/
+│   └── deploy.sh            # Deployment script
+├── docs/                    # Documentation
 ├── Justfile                 # Development commands
-└── TODO.md                  # Future features and improvements
+└── foundry.toml             # Foundry configuration
 ```
-
-## Future Roadmap
-
-See [TODO.md](./TODO.md) for deferred features including:
-
-- Redemption mechanism
-- Fee structure
-- Challenge mechanism for disputed mints
-- apyUSD staking vault (ERC-4626/ERC-7540)
-- Yield distribution and vesting
-- Cross-chain support (L2s, Solana)
-- Governance (PREF token)
-- Gas optimizations
-
-## License
-
-MIT
 
 ## Dependencies
 
