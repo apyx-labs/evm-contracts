@@ -85,9 +85,12 @@ abstract contract BaseTest is Test {
     uint256 public constant VESTING_PERIOD = 8 hours;
 
     // Test amounts
+    uint256 public constant VERY_SMALL_AMOUNT = 1e18;
     uint256 public constant SMALL_AMOUNT = 1_000e18;
     uint256 public constant MEDIUM_AMOUNT = 10_000e18;
     uint256 public constant LARGE_AMOUNT = 100_000e18;
+    uint256 public constant VERY_LARGE_AMOUNT = 1_000_000e18;
+    uint256 public constant VERY_VERY_LARGE_AMOUNT = 10_000_000e18;
 
     function setUp() public virtual {
         // Set block timestamp to avoid underflow
