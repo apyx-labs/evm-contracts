@@ -231,4 +231,56 @@ abstract contract BaseTest is Test {
 
         vm.stopPrank();
     }
+
+    // ========================================
+    // ApxUSD Helpers
+    // ========================================
+
+    /**
+     * @notice Mints ApxUSD tokens to test accounts for testing
+     * @param user Address to mint to
+     * @param amount Amount of ApxUSD to mint
+     */
+    function mintApxUSD(address user, uint256 amount) internal {
+        vm.prank(admin);
+        apxUSD.mint(user, amount);
+    }
+
+    /**
+     * @notice Helper to approve ApxUSD spending for a user
+     * @param user User to approve from
+     * @param amount Amount to approve
+     */
+    function approveApxUSD(address user, uint256 amount) internal {
+        vm.prank(user);
+        apxUSD.approve(address(apyUSD), amount);
+    }
+
+    /**
+     * @notice Helper to transfer ApxUSD tokens from one user to another
+     * @param from Address to transfer from
+     * @param to Address to transfer to
+     * @param amount Amount of ApxUSD to transfer
+     */
+    function transferApxUSD(address from, address to, uint256 amount) internal {
+        vm.prank(from);
+        apxUSD.transfer(to, amount);
+    }
+
+    // ========================================
+    // ApyUSD Helpers
+    // ========================================
+
+    /**
+     * @notice Helper to deposit apxUSD and receive apyUSD shares
+     * @param user User performing the deposit
+     * @param assets Amount of ApxUSD to deposit
+     * @return shares Amount of apyUSD shares received
+     */
+    function depositApxUSD(address user, uint256 assets) internal returns (uint256 shares) {
+        vm.startPrank(user);
+        apxUSD.approve(address(apyUSD), assets);
+        shares = apyUSD.deposit(assets, user);
+        vm.stopPrank();
+    }
 }

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {console2 as console} from "forge-std/src/console2.sol";
+
+import {Formatter} from "../../utils/Formatter.sol";
 import {ApyUSDTest} from "./BaseTest.sol";
 
 /**
@@ -8,6 +11,8 @@ import {ApyUSDTest} from "./BaseTest.sol";
  * @notice Tests for ApyUSD deposit and mint functionality
  */
 contract ApyUSDDepositTest is ApyUSDTest {
+    using Formatter for uint256;
+
     // ========================================
     // 2. Deposit/Mint Tests
     // ========================================
@@ -180,13 +185,13 @@ contract ApyUSDDepositTest is ApyUSDTest {
         assertEq(actualAssets, previewedAssets, "Actual assets should match previewed assets");
     }
 
-    function test_MaxDeposit() public {
+    function test_MaxDeposit() public view {
         // MaxDeposit should return max uint256 for non-denied users
         uint256 maxDeposit = apyUSD.maxDeposit(alice);
         assertEq(maxDeposit, type(uint256).max, "Max deposit should be max uint256");
     }
 
-    function test_MaxMint() public {
+    function test_MaxMint() public view {
         // MaxMint should return max uint256 for non-denied users
         uint256 maxMint = apyUSD.maxMint(alice);
         assertEq(maxMint, type(uint256).max, "Max mint should be max uint256");
@@ -341,6 +346,42 @@ contract ApyUSDDepositTest is ApyUSDTest {
             apyUSD.totalAssets(),
             depositAmount1 + depositAmount2 + depositAmount3,
             "Total assets should match all deposits"
+        );
+    }
+
+    // ========================================
+    // Inflation Attack Resistance
+    // ========================================
+
+    /**
+     * @notice Scenario: Attacker tries to inflate share price by donating assets
+     */
+    function test_InflationAttack_CannotStealDeposits() public {
+        // victimDeposit = bound(victimDeposit, 1e18, LARGE_AMOUNT);
+        uint256 victimDeposit = MEDIUM_AMOUNT;
+
+        // Confirm that the LockToken has no assets
+        assertEq(apyUSD.totalAssets(), 0, "ApyUSD should have no assets");
+        assertEq(apyUSD.totalSupply(), 0, "ApyUSD should have no supply");
+
+        // Step 1: Attacker deposits assets directly to the vault
+        mintApxUSD(attacker, VERY_SMALL_AMOUNT);
+        uint256 attackerShares = depositApxUSD(attacker, VERY_SMALL_AMOUNT);
+
+        // Step 2: Attacker donates assets directly to the vault >= victim deposit
+        mintApxUSD(attacker, victimDeposit);
+        transferApxUSD(attacker, address(apyUSD), victimDeposit);
+
+        // Step 3: Victim deposits assets to the vault
+        uint256 victimShares = depositApxUSD(alice, victimDeposit);
+
+        // Verify victim still gets 1:1 shares despite the donation
+        assertGt(victimShares, 0, "Victim should get shares");
+        assertEq(apyUSD.balanceOf(alice), victimShares, "Victim should have shares");
+        assertEq(
+            apyUSD.totalAssets(),
+            victimDeposit + victimDeposit + VERY_SMALL_AMOUNT,
+            "Total assets should equal victim deposit + attacker deposits"
         );
     }
 }

@@ -35,16 +35,6 @@ abstract contract ApyUSDTest is BaseTest {
     }
 
     /**
-     * @notice Helper to approve ApxUSD spending for a user
-     * @param user User to approve from
-     * @param amount Amount to approve
-     */
-    function approveApxUSD(address user, uint256 amount) internal {
-        vm.prank(user);
-        apxUSD.approve(address(apyUSD), amount);
-    }
-
-    /**
      * @notice Helper to deposit ApxUSD and receive apyUSD shares
      * @param user User performing the deposit
      * @param assets Amount of ApxUSD to deposit
