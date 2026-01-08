@@ -3,6 +3,8 @@ pragma solidity 0.8.30;
 
 import {Test, console2} from "forge-std/src/Test.sol";
 import {Vm} from "forge-std/src/Vm.sol";
+
+import {Formatter} from "../utils/Formatter.sol";
 import {ReportBase} from "./ReportBase.sol";
 import {VestingTest} from "../contracts/Vesting/BaseTest.sol";
 import {VmExt} from "../utils/VmExt.sol";
@@ -22,6 +24,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
  */
 contract VestingReport is ReportBase, VestingTest {
     using VmExt for Vm;
+    using Formatter for uint256;
 
     /// @notice CSV filename for vesting report
     string public constant VESTING_REPORT_FILENAME = "vesting_report.csv";
@@ -151,14 +154,11 @@ contract VestingReport is ReportBase, VestingTest {
         uint256 vested = vesting.vestedAmount();
         uint256 unvested = vesting.unvestedAmount();
 
-        // Get token decimals
-        uint8 decimals = asset.decimals();
-
         string[] memory row = new string[](4);
         row[0] = vm.toString(timestamp);
-        row[1] = formatDecimalString(balance, decimals);
-        row[2] = formatDecimalString(unvested, decimals);
-        row[3] = formatDecimalString(vested, decimals);
+        row[1] = balance.formatDecimal();
+        row[2] = unvested.formatDecimal();
+        row[3] = vested.formatDecimal();
 
         return row;
     }
