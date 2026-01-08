@@ -283,4 +283,18 @@ abstract contract BaseTest is Test {
         shares = apyUSD.deposit(assets, user);
         vm.stopPrank();
     }
+
+    /**
+     * @notice Helper to mint apyUSD shares by depositing ApxUSD
+     * @param user User performing the mint
+     * @param shares Amount of apyUSD shares to mint
+     * @return assets Amount of ApxUSD deposited
+     */
+    function mintApyUSD(address user, uint256 shares) internal returns (uint256 assets) {
+        vm.startPrank(user);
+        assets = apyUSD.previewMint(shares);
+        apxUSD.approve(address(apyUSD), assets);
+        assets = apyUSD.mint(shares, user);
+        vm.stopPrank();
+    }
 }

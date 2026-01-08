@@ -35,33 +35,6 @@ abstract contract ApyUSDTest is BaseTest {
     }
 
     /**
-     * @notice Helper to deposit ApxUSD and receive apyUSD shares
-     * @param user User performing the deposit
-     * @param assets Amount of ApxUSD to deposit
-     * @return shares Amount of apyUSD shares received
-     */
-    function deposit(address user, uint256 assets) internal returns (uint256 shares) {
-        vm.startPrank(user);
-        apxUSD.approve(address(apyUSD), assets);
-        shares = apyUSD.deposit(assets, user);
-        vm.stopPrank();
-    }
-
-    /**
-     * @notice Helper to mint apyUSD shares by depositing ApxUSD
-     * @param user User performing the mint
-     * @param shares Amount of apyUSD shares to mint
-     * @return assets Amount of ApxUSD deposited
-     */
-    function mint(address user, uint256 shares) internal returns (uint256 assets) {
-        vm.startPrank(user);
-        assets = apyUSD.previewMint(shares);
-        apxUSD.approve(address(apyUSD), assets);
-        assets = apyUSD.mint(shares, user);
-        vm.stopPrank();
-    }
-
-    /**
      * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
      * @param user User redeeming shares
      * @param shares Amount of shares to redeem

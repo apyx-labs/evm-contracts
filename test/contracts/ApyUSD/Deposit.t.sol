@@ -26,7 +26,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         uint256 vaultApxBalanceBefore = apxUSD.balanceOf(address(apyUSD));
 
         // Perform deposit
-        uint256 shares = deposit(alice, depositAmount);
+        uint256 shares = depositApxUSD(alice, depositAmount);
 
         // Check balances after
         assertEq(apxUSD.balanceOf(alice), aliceApxBalanceBefore - depositAmount, "Alice apxUSD should decrease");
@@ -54,7 +54,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         uint256 vaultApxBalanceBefore = apxUSD.balanceOf(address(apyUSD));
 
         // Perform mint
-        uint256 assets = mint(alice, sharesToMint);
+        uint256 assets = mintApyUSD(alice, sharesToMint);
 
         // Check balances after
         assertEq(apxUSD.balanceOf(alice), aliceApxBalanceBefore - assets, "Alice apxUSD should decrease");
@@ -74,7 +74,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
     function test_MultipleUsersDepositAndMint() public {
         // Alice deposits
         uint256 aliceDepositAmount = MEDIUM_AMOUNT;
-        uint256 aliceShares = deposit(alice, aliceDepositAmount);
+        uint256 aliceShares = depositApxUSD(alice, aliceDepositAmount);
 
         assertEq(apyUSD.balanceOf(alice), aliceShares, "Alice should have shares from deposit");
         assertEq(apyUSD.totalSupply(), aliceShares, "Total supply should equal Alice's shares");
@@ -82,7 +82,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
 
         // Bob mints
         uint256 bobSharesToMint = MEDIUM_AMOUNT / 2;
-        uint256 bobAssets = mint(bob, bobSharesToMint);
+        uint256 bobAssets = mintApyUSD(bob, bobSharesToMint);
 
         assertEq(apyUSD.balanceOf(bob), bobSharesToMint, "Bob should have minted shares");
         assertEq(apyUSD.totalSupply(), aliceShares + bobSharesToMint, "Total supply should include both users");
@@ -90,7 +90,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
 
         // Charlie deposits
         uint256 charlieDepositAmount = MEDIUM_AMOUNT * 2;
-        uint256 charlieShares = deposit(charlie, charlieDepositAmount);
+        uint256 charlieShares = depositApxUSD(charlie, charlieDepositAmount);
 
         assertEq(apyUSD.balanceOf(charlie), charlieShares, "Charlie should have shares from deposit");
         assertEq(
@@ -166,7 +166,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         uint256 previewedShares = apyUSD.previewDeposit(depositAmount);
 
         // Perform actual deposit
-        uint256 actualShares = deposit(alice, depositAmount);
+        uint256 actualShares = depositApxUSD(alice, depositAmount);
 
         // Preview should match actual
         assertEq(actualShares, previewedShares, "Actual shares should match previewed shares");
@@ -179,7 +179,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         uint256 previewedAssets = apyUSD.previewMint(sharesToMint);
 
         // Perform actual mint
-        uint256 actualAssets = mint(alice, sharesToMint);
+        uint256 actualAssets = mintApyUSD(alice, sharesToMint);
 
         // Preview should match actual
         assertEq(actualAssets, previewedAssets, "Actual assets should match previewed assets");
@@ -263,7 +263,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         bobDepositAmount = bound(bobDepositAmount, 1e18, LARGE_AMOUNT / 3);
 
         // Alice deposits first
-        uint256 aliceShares = deposit(alice, aliceDepositAmount);
+        uint256 aliceShares = depositApxUSD(alice, aliceDepositAmount);
 
         // Simulate yield by directly transferring assets to vault
         vm.prank(admin);
@@ -274,7 +274,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         assertGt(totalAssetsBefore, aliceDepositAmount, "Total assets should be greater after yield");
 
         // Bob deposits
-        uint256 bobShares = deposit(bob, bobDepositAmount);
+        uint256 bobShares = depositApxUSD(bob, bobDepositAmount);
 
         // Bob should receive fewer shares per asset due to increased share price
         // Compare the share-to-asset ratio
@@ -301,7 +301,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
 
         // Perform deposit
-        uint256 shares = deposit(alice, depositAmount);
+        uint256 shares = depositApxUSD(alice, depositAmount);
 
         // Verify shares received
         assertGt(shares, 0, "Should receive shares");
@@ -314,7 +314,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         sharesToMint = bound(sharesToMint, 1e18, LARGE_AMOUNT);
 
         // Perform mint
-        uint256 assets = mint(alice, sharesToMint);
+        uint256 assets = mintApyUSD(alice, sharesToMint);
 
         // Verify assets used
         assertGt(assets, 0, "Should use assets");
@@ -329,9 +329,9 @@ contract ApyUSDDepositTest is ApyUSDTest {
         depositAmount3 = bound(depositAmount3, 1e18, LARGE_AMOUNT / 3);
 
         // Perform deposits
-        uint256 aliceShares = deposit(alice, depositAmount1);
-        uint256 bobShares = deposit(bob, depositAmount2);
-        uint256 charlieShares = deposit(charlie, depositAmount3);
+        uint256 aliceShares = depositApxUSD(alice, depositAmount1);
+        uint256 bobShares = depositApxUSD(bob, depositAmount2);
+        uint256 charlieShares = depositApxUSD(charlie, depositAmount3);
 
         // Verify balances
         assertEq(apyUSD.balanceOf(alice), aliceShares, "Alice should have shares");
