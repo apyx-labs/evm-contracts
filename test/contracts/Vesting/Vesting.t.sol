@@ -13,14 +13,14 @@ import {Errors} from "../../utils/Errors.sol";
  * @notice Tests for Vesting contract initialization and configuration
  */
 contract VestingInitializationTest is VestingTest {
-    function test_Initialization() public {
+    function test_Initialization() public view {
         assertEq(address(vesting.asset()), address(apxUSD), "Asset should be apxUSD");
         assertEq(vesting.vestingPeriod(), VESTING_PERIOD, "Vesting period should be set");
         assertEq(vesting.beneficiary(), address(apyUSD), "Beneficiary address should be set");
         assertEq(vesting.vestingAmount(), 0, "Initial vesting amount should be zero");
     }
 
-    function test_InitialState() public {
+    function test_InitialState() public view {
         assertEq(vesting.vestingAmount(), 0, "Initial vesting amount should be zero");
         assertEq(vesting.vestedAmount(), 0, "Initial vested amount should be zero");
         assertEq(vesting.unvestedAmount(), 0, "Initial unvested amount should be zero");
@@ -36,8 +36,8 @@ contract VestingInitializationTest is VestingTest {
         new LinearVestV0(address(apxUSD), address(0), address(apyUSD), VESTING_PERIOD);
     }
 
-    function test_RevertWhen_InitializeWithZeroVault() public {
-        vm.expectRevert(Errors.invalidAddress("vault"));
+    function test_RevertWhen_InitializeWithZeroBeneficiary() public {
+        vm.expectRevert(Errors.invalidAddress("beneficiary"));
         new LinearVestV0(address(apxUSD), address(accessManager), address(0), VESTING_PERIOD);
     }
 
