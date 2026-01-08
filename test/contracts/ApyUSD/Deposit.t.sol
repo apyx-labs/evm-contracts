@@ -376,8 +376,12 @@ contract ApyUSDDepositTest is ApyUSDTest {
         uint256 victimShares = depositApxUSD(alice, victimDeposit);
 
         // Verify victim still gets 1:1 shares despite the donation
-        assertGt(victimShares, 0, "Victim should get shares");
+        assertGt(victimShares, 0, "Victim should get some amount of shares");
         assertEq(apyUSD.balanceOf(alice), victimShares, "Victim should have shares");
+
+        // The victim should get roughly the same amount of shares as the attacker
+        assertApproxEqRel(victimShares, attackerShares, 0.0001e18);
+
         assertEq(
             apyUSD.totalAssets(),
             victimDeposit + victimDeposit + VERY_SMALL_AMOUNT,
