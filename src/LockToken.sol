@@ -82,7 +82,7 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
 
     function _revertIfDenied(address user) internal view {
         if (denyList.contains(user)) {
-            revert AccessDenied(user);
+            revert Denied(user);
         }
     }
 
@@ -362,7 +362,7 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
 
         // Verify shares match request
         if (shares != request.shares) {
-            revert InvalidShares();
+            revert InvalidAmount("shares", shares);
         }
 
         _withdraw(request, msg.sender, receiver, owner);
@@ -382,7 +382,7 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
 
         // Verify assets match request
         if (assets != request.assets) {
-            revert InvalidShares();
+            revert InvalidAmount("assets", assets);
         }
 
         _withdraw(request, msg.sender, receiver, owner);

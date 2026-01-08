@@ -10,9 +10,11 @@ import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 import {ENotSupported} from "../errors/NotSupported.sol";
 import {EInvalidCaller} from "../errors/InvalidCaller.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
+import {EDenied} from "../errors/Denied.sol";
 
 interface ILockToken is
     IERC7540Redeem,
+    EDenied,
     EInvalidAddress,
     EInvalidAmount,
     ENotSupported,
@@ -56,11 +58,6 @@ interface ILockToken is
     // ========================================
 
     /**
-     * @notice Error thrown when trying to deposit/receive shares while on deny list
-     */
-    error AccessDenied(address denied);
-
-    /**
      * @notice Error thrown when trying to claim a non-existent or non-claimable request
      */
     error NoClaimableRequest();
@@ -79,16 +76,6 @@ interface ILockToken is
      * @notice Error thrown when setting invalid cooldown values
      */
     error InvalidCooldown();
-
-    /**
-     * @notice Error thrown when asset amount doesn't match the request
-     */
-    error InvalidAssets();
-
-    /**
-     * @notice Error thrown when share amount doesn't match the request
-     */
-    error InvalidShares();
 
     // ========================================
     // Functions
