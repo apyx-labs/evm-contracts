@@ -4,13 +4,13 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {ApxUSD} from "../../src/ApxUSD.sol";
-import {MinterV0} from "../../src/MinterV0.sol";
-import {LinearVestV0} from "../../src/LinearVestV0.sol";
-import {YieldDistributor} from "../../src/YieldDistributor.sol";
-import {IVesting} from "../../src/interfaces/IVesting.sol";
-import {IYieldDistributor} from "../../src/interfaces/IYieldDistributor.sol";
-import {Roles} from "../../src/Roles.sol";
+import {ApxUSD} from "../../../src/ApxUSD.sol";
+import {MinterV0} from "../../../src/MinterV0.sol";
+import {LinearVestV0} from "../../../src/LinearVestV0.sol";
+import {YieldDistributor} from "../../../src/YieldDistributor.sol";
+import {IVesting} from "../../../src/interfaces/IVesting.sol";
+import {IYieldDistributor} from "../../../src/interfaces/IYieldDistributor.sol";
+import {Roles} from "../../../src/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**

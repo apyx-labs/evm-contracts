@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {ApyUSDTest} from "./BaseTest.sol";
-import {ApyUSD} from "../../src/ApyUSD.sol";
+import {ApyUSD} from "../../../src/ApyUSD.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**

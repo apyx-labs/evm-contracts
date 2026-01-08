@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {Test, console2} from "forge-std/src/Test.sol";
 import {Vm} from "forge-std/src/Vm.sol";
 import {ReportBase} from "./ReportBase.sol";
-import {VestingTest} from "../Vesting/BaseTest.sol";
+import {VestingTest} from "../contracts/Vesting/BaseTest.sol";
 import {VmExt} from "../utils/VmExt.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";

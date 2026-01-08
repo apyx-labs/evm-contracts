@@ -2,10 +2,10 @@
 pragma solidity 0.8.30;
 
 import {VestingTest} from "./BaseTest.sol";
-import {LinearVestV0} from "../../src/LinearVestV0.sol";
-import {IVesting} from "../../src/interfaces/IVesting.sol";
+import {LinearVestV0} from "../../../src/LinearVestV0.sol";
+import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {Roles} from "../../src/Roles.sol";
+import {Roles} from "../../../src/Roles.sol";
 
 /**
  * @title VestingInitializationTest

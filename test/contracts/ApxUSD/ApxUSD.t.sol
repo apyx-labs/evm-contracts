@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {ApxUSDBaseTest} from "./BaseTest.sol";
-import {ApxUSD} from "../../src/ApxUSD.sol";
+import {ApxUSD} from "../../../src/ApxUSD.sol";
 
 /**
  * @dev todo: move apxUSD minting tests into own file

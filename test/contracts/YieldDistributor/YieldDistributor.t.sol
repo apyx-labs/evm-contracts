@@ -2,12 +2,12 @@
 pragma solidity 0.8.30;
 
 import {YieldDistributorBaseTest} from "./BaseTest.sol";
-import {YieldDistributor} from "../../src/YieldDistributor.sol";
-import {LinearVestV0} from "../../src/LinearVestV0.sol";
-import {IYieldDistributor} from "../../src/interfaces/IYieldDistributor.sol";
-import {IError} from "../../src/interfaces/IError.sol";
-import {IVesting} from "../../src/interfaces/IVesting.sol";
-import {Roles} from "../../src/Roles.sol";
+import {YieldDistributor} from "../../../src/YieldDistributor.sol";
+import {LinearVestV0} from "../../../src/LinearVestV0.sol";
+import {IYieldDistributor} from "../../../src/interfaces/IYieldDistributor.sol";
+import {IError} from "../../../src/interfaces/IError.sol";
+import {IVesting} from "../../../src/interfaces/IVesting.sol";
+import {Roles} from "../../../src/Roles.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 
 /**

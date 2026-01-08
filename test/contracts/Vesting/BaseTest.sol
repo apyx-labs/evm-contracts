@@ -2,32 +2,42 @@
 pragma solidity 0.8.30;
 
 import {Test} from "forge-std/src/Test.sol";
+import {Vm} from "forge-std/src/Vm.sol";
+import {VmExt} from "../../utils/VmExt.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {ApxUSD} from "../../src/ApxUSD.sol";
-import {ApyUSD} from "../../src/ApyUSD.sol";
-import {AddressList} from "../../src/AddressList.sol";
-import {Roles} from "../../src/Roles.sol";
+import {ApxUSD} from "../../../src/ApxUSD.sol";
+import {ApyUSD} from "../../../src/ApyUSD.sol";
+import {LinearVestV0} from "../../../src/LinearVestV0.sol";
+import {IVesting} from "../../../src/interfaces/IVesting.sol";
+import {UnlockToken} from "../../../src/UnlockToken.sol";
+import {IUnlockToken} from "../../../src/interfaces/IUnlockToken.sol";
+import {AddressList} from "../../../src/AddressList.sol";
+import {Roles} from "../../../src/Roles.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
- * @title ApyUSDTest
- * @notice Base test contract for ApyUSD tests with shared setup and helper functions
+ * @title VestingTest
+ * @notice Base test contract for Vesting tests with shared setup and helper functions
  * @dev Provides common functionality:
  *   - Contract deployment and initialization
  *   - Role configuration
  *   - Mock asset token (ApxUSD)
  *   - Standard test accounts
  */
-abstract contract ApyUSDTest is Test {
+abstract contract VestingTest is Test {
+    using VmExt for Vm;
     using Roles for AccessManager;
 
     ApxUSD public apxUSD;
     ApyUSD public apyUSD;
+    LinearVestV0 public vesting;
+    UnlockToken public unlockToken;
     AddressList public denyList;
     AccessManager public accessManager;
 
     address public admin = address(0x1);
+    address public yieldDistributor = address(0x2);
 
     address public alice;
     address public bob;
@@ -36,9 +46,8 @@ abstract contract ApyUSDTest is Test {
     uint256 public bobPrivateKey = 0xB0B;
     uint256 public charliePrivateKey = 0xC0C0;
 
-    // Cooldown periods
-    uint48 public constant LOCKING_DELAY = 10 minutes;
-    uint48 public constant UNLOCKING_DELAY = 14 days;
+    // Vesting period for testing
+    uint256 public constant VESTING_PERIOD = 8 hours;
 
     // ApxUSD supply cap for testing
     uint256 public constant APX_SUPPLY_CAP = 10_000_000e18; // $10M
@@ -46,6 +55,7 @@ abstract contract ApyUSDTest is Test {
     // Test amounts
     uint256 public constant DEPOSIT_AMOUNT = 1000e18;
     uint256 public constant LARGE_AMOUNT = 100_000e18;
+    uint48 public constant UNLOCKING_DELAY = 14 days;
 
     function setUp() public virtual {
         // Set block timestamp to avoid underflow
@@ -65,6 +75,9 @@ abstract contract ApyUSDTest is Test {
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
+        vm.label(address(apxUSDImpl), "apxUSDImpl");
+        vm.label(address(apxUSDProxy), "apxUSDProxy");
+
         // Deploy AddressList
         denyList = new AddressList(address(accessManager));
 
@@ -75,8 +88,31 @@ abstract contract ApyUSDTest is Test {
         ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
         apyUSD = ApyUSD(address(apyUSDProxy));
 
+        vm.label(address(apyUSDImpl), "apyUSDImpl");
+        vm.label(address(apyUSDProxy), "apyUSDProxy");
+
+        // Deploy Vesting contract
+        vesting = new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), VESTING_PERIOD);
+
+        vm.label(address(vesting), "vesting");
+
+        // Deploy UnlockToken contract
+        unlockToken = new UnlockToken(
+            address(accessManager), address(apxUSD), address(apyUSD), UNLOCKING_DELAY, address(denyList)
+        );
+
+        vm.label(address(unlockToken), "unlockToken");
+
         // Configure roles
         setUpRoles();
+
+        // Set UnlockToken on ApyUSD
+        vm.prank(admin);
+        apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
+
+        // Set Vesting on ApyUSD
+        vm.prank(admin);
+        apyUSD.setVesting(IVesting(address(vesting)));
 
         // Mint ApxUSD to test accounts
         mintApxUSD();
@@ -92,13 +128,19 @@ abstract contract ApyUSDTest is Test {
         // Configure function permissions using Roles library helpers
         accessManager.setRoleAdmins();
 
-        accessManager.assignMintingContractTargetsFor(apxUSD);
         accessManager.assignAdminTargetsFor(apxUSD);
         accessManager.assignAdminTargetsFor(apyUSD);
         accessManager.assignAdminTargetsFor(denyList);
+        accessManager.assignAdminTargetsFor(vesting);
+
+        accessManager.assignMintingContractTargetsFor(apxUSD);
+        accessManager.assignYieldDistributorTargetsFor(vesting);
 
         // Grant MINT_STRAT_ROLE to admin (no delay)
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
+
+        // Grant YIELD_DISTRIBUTOR_ROLE to yieldDistributor (no delay)
+        accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, yieldDistributor, 0);
 
         vm.stopPrank();
     }
@@ -112,17 +154,27 @@ abstract contract ApyUSDTest is Test {
         apxUSD.mint(alice, LARGE_AMOUNT);
         apxUSD.mint(bob, LARGE_AMOUNT);
         apxUSD.mint(charlie, LARGE_AMOUNT);
+        apxUSD.mint(yieldDistributor, LARGE_AMOUNT);
         vm.stopPrank();
     }
 
     /**
-     * @notice Helper to approve ApxUSD spending for a user
-     * @param user User to approve from
-     * @param amount Amount to approve
+     * @notice Helper to deposit yield into vesting contract
+     * @param depositor Address depositing yield
+     * @param amount Amount of yield to deposit
      */
-    function approveApxUSD(address user, uint256 amount) internal {
-        vm.prank(user);
-        apxUSD.approve(address(apyUSD), amount);
+    function depositYield(address depositor, uint256 amount) internal {
+        vm.startPrank(depositor);
+        apxUSD.approve(address(vesting), amount);
+        vesting.depositYield(amount);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Helper to warp time forward by the vesting period
+     */
+    function warpPastVestingPeriod() internal {
+        vm.warp(vm.clone(block.timestamp) + VESTING_PERIOD + 1);
     }
 
     /**
@@ -135,20 +187,6 @@ abstract contract ApyUSDTest is Test {
         vm.startPrank(user);
         apxUSD.approve(address(apyUSD), assets);
         shares = apyUSD.deposit(assets, user);
-        vm.stopPrank();
-    }
-
-    /**
-     * @notice Helper to mint apyUSD shares by depositing ApxUSD
-     * @param user User performing the mint
-     * @param shares Amount of apyUSD shares to mint
-     * @return assets Amount of ApxUSD deposited
-     */
-    function mint(address user, uint256 shares) internal returns (uint256 assets) {
-        vm.startPrank(user);
-        assets = apyUSD.previewMint(shares);
-        apxUSD.approve(address(apyUSD), assets);
-        assets = apyUSD.mint(shares, user);
         vm.stopPrank();
     }
 

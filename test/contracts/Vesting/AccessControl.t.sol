@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {VestingTest} from "./BaseTest.sol";
-import {IVesting} from "../../src/interfaces/IVesting.sol";
+import {IVesting} from "../../../src/interfaces/IVesting.sol";
 
 /**
  * @title VestingAccessControlTest

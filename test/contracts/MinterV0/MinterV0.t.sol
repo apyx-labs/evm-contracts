@@ -4,10 +4,10 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {ApxUSD} from "../../src/ApxUSD.sol";
-import {MinterV0} from "../../src/MinterV0.sol";
-import {IMinterV0} from "../../src/interfaces/IMinterV0.sol";
-import {Roles} from "../../src/Roles.sol";
+import {ApxUSD} from "../../../src/ApxUSD.sol";
+import {MinterV0} from "../../../src/MinterV0.sol";
+import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
+import {Roles} from "../../../src/Roles.sol";
 
 contract MinterV0Test is Test {
     ApxUSD public apxUSD;
