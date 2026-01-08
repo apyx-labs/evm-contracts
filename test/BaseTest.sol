@@ -85,7 +85,8 @@ abstract contract BaseTest is Test {
     uint256 public constant VESTING_PERIOD = 8 hours;
 
     // Test amounts
-    uint256 public constant DEPOSIT_AMOUNT = 1000e18;
+    uint256 public constant SMALL_AMOUNT = 1_000e18;
+    uint256 public constant MEDIUM_AMOUNT = 10_000e18;
     uint256 public constant LARGE_AMOUNT = 100_000e18;
 
     function setUp() public virtual {
@@ -176,10 +177,6 @@ abstract contract BaseTest is Test {
         apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
         vm.prank(admin);
         apyUSD.setVesting(IVesting(address(vesting)));
-
-        // Mint tokens to test accounts
-        mintApxUSD();
-        mintMockAsset();
     }
 
     /**
@@ -230,29 +227,5 @@ abstract contract BaseTest is Test {
         accessManager.grantRole(Roles.ROLE_YIELD_OPERATOR, yieldOperator, 0);
 
         vm.stopPrank();
-    }
-
-    /**
-     * @notice Mints ApxUSD tokens to test accounts
-     * @dev Gives each test account enough ApxUSD to perform test operations
-     */
-    function mintApxUSD() internal {
-        vm.startPrank(admin);
-        apxUSD.mint(alice, LARGE_AMOUNT);
-        apxUSD.mint(bob, LARGE_AMOUNT);
-        apxUSD.mint(charlie, LARGE_AMOUNT);
-        apxUSD.mint(attacker, LARGE_AMOUNT);
-        vm.stopPrank();
-    }
-
-    /**
-     * @notice Mints MockERC20 tokens to test accounts (for LockToken tests)
-     * @dev Gives each test account enough mock assets to perform test operations
-     */
-    function mintMockAsset() internal {
-        mockAsset.mint(alice, LARGE_AMOUNT);
-        mockAsset.mint(bob, LARGE_AMOUNT);
-        mockAsset.mint(charlie, LARGE_AMOUNT);
-        mockAsset.mint(attacker, LARGE_AMOUNT);
     }
 }
