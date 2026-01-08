@@ -20,24 +20,24 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     // Initialization Tests
     // ========================================
 
-    function test_Initialization() public {
+    function test_Initialization() public view {
         assertEq(address(yieldDistributor.asset()), address(apxUSD), "Asset should be apxUSD");
         assertEq(address(yieldDistributor.vesting()), address(vesting), "Vesting should be set");
         assertEq(yieldDistributor.availableBalance(), 0, "Initial balance should be zero");
     }
 
     function test_RevertWhen_ConstructorWithZeroAsset() public {
-        vm.expectRevert(IError.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "asset"));
         new YieldDistributor(address(0), address(accessManager), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroAuthority() public {
-        vm.expectRevert(IError.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "authority"));
         new YieldDistributor(address(apxUSD), address(0), address(vesting));
     }
 
     function test_RevertWhen_ConstructorWithZeroVesting() public {
-        vm.expectRevert(IError.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "vesting"));
         new YieldDistributor(address(apxUSD), address(accessManager), address(0));
     }
 
@@ -92,7 +92,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
     // ========================================
 
     function test_RevertWhen_SetVestingWithZeroAddress() public {
-        vm.expectRevert(IError.InvalidAddress.selector);
+        vm.expectRevert(abi.encodeWithSelector(IError.InvalidAddress.selector, "newVesting"));
         vm.prank(admin);
         yieldDistributor.setVesting(address(0));
     }
