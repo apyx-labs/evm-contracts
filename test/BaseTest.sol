@@ -48,7 +48,7 @@ abstract contract BaseTest is Test {
     AddressList public denyList;
 
     // Mock ERC20 for LockToken tests
-    MockERC20 public mockAsset;
+    MockERC20 public mockToken;
 
     // ========================================
     // Test Accounts
@@ -164,9 +164,9 @@ abstract contract BaseTest is Test {
         vm.label(address(unlockToken), "unlockToken");
 
         // Deploy LockToken (for LockToken-specific tests)
-        mockAsset = new MockERC20();
-        vm.label(address(mockAsset), "mockToken");
-        lockToken = new LockToken(address(accessManager), address(mockAsset), UNLOCKING_DELAY, address(denyList));
+        mockToken = new MockERC20();
+        vm.label(address(mockToken), "mockToken");
+        lockToken = new LockToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList));
         vm.label(address(lockToken), "lockToken");
 
         // Configure roles for entire system

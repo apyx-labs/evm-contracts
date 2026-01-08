@@ -11,17 +11,9 @@ import {Roles} from "../../../src/Roles.sol";
 
 /**
  * @title ApxUSDBaseTest
- * @notice Base test contract for ApxUSD tests with shared setup and helper functions
- * @dev Provides common functionality:
- *   - Contract deployment and initialization
- *   - Role configuration
- *   - Standard test accounts
+ * @notice Base test contract for ApxUSD tests with helper functions
  */
 abstract contract ApxUSDBaseTest is BaseTest {
-    function setUp() public virtual override {
-        super.setUp();
-    }
-
     /**
      * @notice Helper to mint ApxUSD tokens to a user
      * @param to Address to receive the minted tokens

@@ -12,12 +12,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title ApyUSDTest
- * @notice Base test contract for ApyUSD tests with shared setup and helper functions
- * @dev Provides common functionality:
- *   - Contract deployment and initialization
- *   - Role configuration
- *   - Mock asset token (ApxUSD)
- *   - Standard test accounts
+ * @notice Base test contract for ApyUSD tests with helper functions
  */
 abstract contract ApyUSDTest is BaseTest {
     function setUp() public virtual override {
