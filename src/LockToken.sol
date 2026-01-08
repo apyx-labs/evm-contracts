@@ -139,7 +139,7 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
      * @param assets The amount of assets to convert to shares
      * @return shares The amount of shares
      */
-    function _convertToShares(uint256 assets, Math.Rounding) internal view override returns (uint256 shares) {
+    function _convertToShares(uint256 assets, Math.Rounding) internal pure override returns (uint256 shares) {
         return assets;
     }
 
@@ -148,7 +148,7 @@ contract LockToken is ERC4626, IError, IERC7540Redeem, AccessManaged, ILockToken
      * @param shares The amount of shares to convert to assets
      * @return assets The amount of assets
      */
-    function _convertToAssets(uint256 shares, Math.Rounding) internal view override returns (uint256 assets) {
+    function _convertToAssets(uint256 shares, Math.Rounding) internal pure override returns (uint256 assets) {
         return shares;
     }
 
