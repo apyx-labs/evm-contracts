@@ -188,7 +188,7 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
         }
         // Verify owner has enough additional shares
         if (balanceOf(owner) - request.shares < shares) {
-            revert InsufficientBalance(owner, balanceOf(owner), shares);
+            revert InsufficientBalance(owner, balanceOf(owner) - request.shares, shares);
         }
         // Check if the controller or owner are deny listed
         _revertIfDenied(controller);

@@ -14,30 +14,12 @@ import {Roles} from "../../../src/Roles.sol";
  * @notice Base test contract for LockToken tests with helper functions
  */
 abstract contract LockTokenBaseTest is BaseTest {
-    function setUp() public virtual override {
-        super.setUp();
-
-        // Mint asset tokens to test accounts
-        mintAsset();
-    }
-
-    /**
-     * @notice Mints asset tokens to test accounts for testing
-     * @dev Gives each test account enough assets to perform test operations
-     */
-    function mintAsset() internal {
-        mockToken.mint(alice, LARGE_AMOUNT);
-        mockToken.mint(bob, LARGE_AMOUNT);
-        mockToken.mint(charlie, LARGE_AMOUNT);
-        mockToken.mint(attacker, LARGE_AMOUNT);
-    }
-
     /**
      * @notice Helper to approve asset spending for a user
      * @param user User to approve from
      * @param amount Amount to approve
      */
-    function approveAsset(address user, uint256 amount) internal {
+    function approveMockToken(address user, uint256 amount) internal {
         vm.prank(user);
         mockToken.approve(address(lockToken), amount);
     }
@@ -73,10 +55,11 @@ abstract contract LockTokenBaseTest is BaseTest {
      * @notice Helper to request redemption of lock token shares
      * @param user User requesting redemption
      * @param shares Amount of shares to redeem
+     * @return requestId ID of the request
      */
-    function requestRedeem(address user, uint256 shares) internal {
+    function requestRedeem(address user, uint256 shares) internal returns (uint256 requestId) {
         vm.prank(user);
-        lockToken.requestRedeem(shares, user, user);
+        requestId = lockToken.requestRedeem(shares, user, user);
     }
 
     /**
@@ -84,9 +67,9 @@ abstract contract LockTokenBaseTest is BaseTest {
      * @param user User requesting withdrawal
      * @param assets Amount of assets to withdraw
      */
-    function requestWithdraw(address user, uint256 assets) internal {
+    function requestWithdraw(address user, uint256 assets) internal returns (uint256 requestId) {
         vm.prank(user);
-        lockToken.requestWithdraw(assets, user, user);
+        requestId = lockToken.requestWithdraw(assets, user, user);
     }
 
     /**
