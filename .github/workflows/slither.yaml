@@ -17,6 +17,12 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install Soldeer deps
+        run: forge soldeer install
+
       - name: Run Slither
         run: |
           docker run \
