@@ -46,9 +46,16 @@ fmt:
 fmt-check:
     forge fmt --check
 
+lint:
+    forge lint
+
 # Run static analysis with Slither (requires slither-analyzer installed)
 slither:
-    slither .
+    docker run \
+        --rm \
+        -v ${PWD}:/app \
+        ghcr.io/trailofbits/eth-security-toolbox:nightly-20260105 \
+        slither /app --filter-paths "(dependencies/|test/)"
 
 # Generate documentation
 doc:
