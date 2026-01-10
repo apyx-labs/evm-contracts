@@ -16,6 +16,7 @@ contract LockTokenDepositTest is LockTokenBaseTest {
     function testFuzz_Deposit_OneToOne(uint256 depositAmount) public {
         // Bound to reasonable amounts
         depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
 
         // Record balances before
         uint256 aliceAssetBalanceBefore = mockToken.balanceOf(alice);
@@ -49,6 +50,7 @@ contract LockTokenDepositTest is LockTokenBaseTest {
     function testFuzz_Mint_OneToOne(uint256 sharesToMint) public {
         // Bound to reasonable amounts
         sharesToMint = bound(sharesToMint, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, sharesToMint);
 
         // Record balances before
         uint256 aliceAssetBalanceBefore = mockToken.balanceOf(alice);
@@ -82,6 +84,7 @@ contract LockTokenDepositTest is LockTokenBaseTest {
     function testFuzz_PreviewDeposit_MatchesActual(uint256 depositAmount) public {
         // Bound to reasonable amounts
         depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
 
         // Preview deposit
         uint256 previewedShares = lockToken.previewDeposit(depositAmount);
@@ -97,6 +100,7 @@ contract LockTokenDepositTest is LockTokenBaseTest {
     function testFuzz_PreviewMint_MatchesActual(uint256 sharesToMint) public {
         // Bound to reasonable amounts
         sharesToMint = bound(sharesToMint, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, sharesToMint);
 
         // Preview mint
         uint256 previewedAssets = lockToken.previewMint(sharesToMint);
@@ -134,6 +138,7 @@ contract LockTokenDepositTest is LockTokenBaseTest {
      */
     function test_InflationAttack_CannotStealDeposits(uint256 victimDeposit) public {
         victimDeposit = bound(victimDeposit, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, victimDeposit);
 
         // Confirm that the LockToken has no assets
         assertEq(lockToken.totalAssets(), 0, "LockToken should have no assets");
