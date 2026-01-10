@@ -7,10 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
-import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
-
-import {console2 as console} from "forge-std/src/console2.sol";
 
 import {ILockToken} from "./interfaces/ILockToken.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -251,6 +248,8 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
         if (block.timestamp >= unlockTime) {
             return 0;
         }
+        // @dev This is save because we have already confirmed that unlockTime is greater than block.timestamp
+        // forge-lint: disable-next-line(unsafe-typecast)
         return uint48(unlockTime - block.timestamp);
     }
 

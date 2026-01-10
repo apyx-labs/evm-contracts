@@ -16,7 +16,7 @@ import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
  */
 contract UnlockToken is LockToken, IUnlockToken {
     /// @notice The vault address that can act as an operator (immutable)
-    address public immutable vault;
+    address public immutable VAULT;
 
     /**
      * @notice Constructs the UnlockToken contract
@@ -30,7 +30,7 @@ contract UnlockToken is LockToken, IUnlockToken {
         LockToken(authority_, asset_, unlockingDelay_, denyList_)
     {
         if (vault_ == address(0)) revert InvalidAddress("vault");
-        vault = vault_;
+        VAULT = vault_;
     }
 
     /**
@@ -63,7 +63,7 @@ contract UnlockToken is LockToken, IUnlockToken {
         override(LockToken, IERC7540Operator)
         returns (bool)
     {
-        return controller == operator || operator == vault;
+        return controller == operator || operator == VAULT;
     }
 }
 

@@ -26,7 +26,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /// @notice The asset token (apxUSD) held in vesting
-    IERC20 internal immutable _asset;
+    IERC20 internal immutable _ASSET;
 
     /// @notice Total amount currently vesting
     uint256 public vestingAmount;
@@ -44,7 +44,11 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // Modifiers
     // ========================================
 
-    /// @notice Ensures only vault contract can call transfer functions
+    /**
+     * @notice Ensures only vault contract can call transfer functions
+     * @dev This is only applied to the transferVestedYield function, so it is more efficient to inline
+     */
+    // forge-lint: disable-next-line(unwrapped-modifier-logic)
     modifier onlyBeneficiary() {
         if (msg.sender != beneficiary) revert UnauthorizedTransfer();
         _;
@@ -69,7 +73,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
         if (_beneficiary == address(0)) revert InvalidAddress("beneficiary");
         if (_vestingPeriod == 0) revert InvalidAmount("vestingPeriod", _vestingPeriod);
 
-        _asset = IERC20(asset_);
+        _ASSET = IERC20(asset_);
         beneficiary = _beneficiary;
         vestingPeriod = _vestingPeriod;
     }
@@ -83,7 +87,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @return Address of the asset token
      */
     function asset() external view override returns (address) {
-        return address(_asset);
+        return address(_ASSET);
     }
 
     /**
@@ -148,7 +152,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
         _transferVestedYield(vested);
 
         // Transfer assets from caller
-        _asset.safeTransferFrom(msg.sender, address(this), amount);
+        _ASSET.safeTransferFrom(msg.sender, address(this), amount);
         emit YieldDeposited(msg.sender, amount);
     }
 
@@ -173,7 +177,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
         if (_vestedAmount == 0) return;
 
         // Transfer vested yield to beneficiary
-        _asset.safeTransfer(beneficiary, _vestedAmount);
+        _ASSET.safeTransfer(beneficiary, _vestedAmount);
         emit VestedYieldTransferred(beneficiary, _vestedAmount);
     }
 

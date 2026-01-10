@@ -6,7 +6,6 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
-import {Roles} from "./Roles.sol";
 
 /**
  * @title YieldDistributor
@@ -30,7 +29,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
     // ========================================
 
     /// @notice The apxUSD token contract
-    IERC20 internal immutable _asset;
+    IERC20 internal immutable _ASSET;
 
     /// @notice The vesting contract address
     IVesting internal _vesting;
@@ -50,7 +49,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
         if (authority_ == address(0)) revert InvalidAddress("authority");
         if (vesting_ == address(0)) revert InvalidAddress("vesting");
 
-        _asset = IERC20(asset_);
+        _ASSET = IERC20(asset_);
         _vesting = IVesting(vesting_);
     }
 
@@ -63,7 +62,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @return Address of the asset token
      */
     function asset() external view returns (address) {
-        return address(_asset);
+        return address(_ASSET);
     }
 
     /**
@@ -79,7 +78,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @return Amount of apxUSD tokens available for deposit
      */
     function availableBalance() external view returns (uint256) {
-        return _asset.balanceOf(address(this));
+        return _ASSET.balanceOf(address(this));
     }
 
     // ========================================
@@ -110,17 +109,17 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
         if (address(_vesting) == address(0)) revert VestingNotSet();
         if (amount == 0) revert InvalidAmount("amount", amount);
 
-        uint256 balance = _asset.balanceOf(address(this));
+        uint256 balance = _ASSET.balanceOf(address(this));
         if (balance < amount) revert InsufficientBalance(address(this), balance, amount);
 
         // Approve vesting contract to pull tokens
         // Reset allowance to 0 first, then approve new amount
         // This handles tokens that require zero allowance before setting new value
-        uint256 currentAllowance = _asset.allowance(address(this), address(_vesting));
+        uint256 currentAllowance = _ASSET.allowance(address(this), address(_vesting));
         if (currentAllowance > 0) {
-            _asset.safeDecreaseAllowance(address(_vesting), currentAllowance);
+            _ASSET.safeDecreaseAllowance(address(_vesting), currentAllowance);
         }
-        _asset.safeIncreaseAllowance(address(_vesting), amount);
+        _ASSET.safeIncreaseAllowance(address(_vesting), amount);
 
         // Call depositYield on vesting contract, which will transfer tokens
         // Note: YieldDistributor must have YIELD_DISTRIBUTOR_ROLE to call this

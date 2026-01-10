@@ -10,6 +10,7 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
+
 import {ApxUSD} from "./ApxUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
 
@@ -129,11 +130,16 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @param order The mint order to hash
      * @return The EIP-712 typed hash
      */
-    function hashOrder(Order calldata order) public view returns (bytes32) {
+    function hashOrder(Order calldata order) public pure returns (bytes32) {
+        // @dev This is only done during minting, which is not a hot path
+        // forge-lint: disable-start(asm-keccak256)
         bytes32 structHash = keccak256(
-            abi.encode(ORDER_TYPEHASH, order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount)
+            abi.encodePacked(
+                ORDER_TYPEHASH, order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount
+            )
         );
-        return _hashTypedDataV4(structHash);
+        // forge-lint: disable-end(asm-keccak256)
+        return structHash;
     }
 
     /**
@@ -523,17 +529,18 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
     }
 
     /**
-     * @dev Encodes mint record into bytes32
+     * @dev Encodes mint record into bytes32: [timestamp:48][amount:208]
      */
     function _encodeMintRecord(uint48 timestamp, uint208 amount) internal pure returns (bytes32) {
         return bytes32(uint256(timestamp) << 208 | uint256(amount));
     }
 
     /**
-     * @dev Decodes bytes32 into mint record
+     * @dev Decodes bytes32 ([timestamp:48][amount:208]) into mint record
      */
     function _decodeMintRecord(bytes32 data) internal pure returns (MintRecord memory) {
         uint256 raw = uint256(data);
-        return MintRecord({timestamp: uint48(raw >> 208), amount: uint208(raw & ((1 << 208) - 1))});
+        // forge-lint: disable-next-line(unsafe-typecast)
+        return MintRecord({timestamp: uint48(raw >> 208), amount: uint208(raw)});
     }
 }
