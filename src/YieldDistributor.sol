@@ -29,10 +29,10 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
     // ========================================
 
     /// @notice The apxUSD token contract
-    IERC20 internal immutable _ASSET;
+    IERC20 public immutable asset;
 
     /// @notice The vesting contract address
-    IVesting internal _vesting;
+    IVesting public vesting;
 
     // ========================================
     // Constructor
@@ -40,17 +40,17 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
 
     /**
      * @notice Initializes the YieldDistributor contract
-     * @param asset_ Address of the apxUSD token contract
-     * @param authority_ Address of the AccessManager contract
-     * @param vesting_ Address of the Vesting contract
+     * @param _asset Address of the apxUSD token contract
+     * @param _authority Address of the AccessManager contract
+     * @param _vesting Address of the Vesting contract
      */
-    constructor(address asset_, address authority_, address vesting_) AccessManaged(authority_) {
-        if (asset_ == address(0)) revert InvalidAddress("asset");
-        if (authority_ == address(0)) revert InvalidAddress("authority");
-        if (vesting_ == address(0)) revert InvalidAddress("vesting");
+    constructor(address _asset, address _authority, address _vesting) AccessManaged(_authority) {
+        if (_asset == address(0)) revert InvalidAddress("asset");
+        if (_authority == address(0)) revert InvalidAddress("authority");
+        if (_vesting == address(0)) revert InvalidAddress("vesting");
 
-        _ASSET = IERC20(asset_);
-        _vesting = IVesting(vesting_);
+        asset = IERC20(_asset);
+        vesting = IVesting(_vesting);
     }
 
     // ========================================
@@ -58,27 +58,11 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
     // ========================================
 
     /**
-     * @notice Returns the asset token address (apxUSD)
-     * @return Address of the asset token
-     */
-    function asset() external view returns (address) {
-        return address(_ASSET);
-    }
-
-    /**
-     * @notice Returns the vesting contract address
-     * @return Address of the vesting contract
-     */
-    function vesting() external view returns (address) {
-        return address(_vesting);
-    }
-
-    /**
      * @notice Returns the available balance of apxUSD tokens
      * @return Amount of apxUSD tokens available for deposit
      */
     function availableBalance() external view returns (uint256) {
-        return _ASSET.balanceOf(address(this));
+        return asset.balanceOf(address(this));
     }
 
     // ========================================
@@ -93,8 +77,8 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
     function setVesting(address newVesting) external restricted {
         if (newVesting == address(0)) revert InvalidAddress("newVesting");
 
-        address oldVesting = address(_vesting);
-        _vesting = IVesting(newVesting);
+        address oldVesting = address(vesting);
+        vesting = IVesting(newVesting);
 
         emit VestingContractUpdated(oldVesting, newVesting);
     }
@@ -106,24 +90,24 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @param amount Amount of yield to deposit
      */
     function depositYield(uint256 amount) external restricted {
-        if (address(_vesting) == address(0)) revert VestingNotSet();
+        if (address(vesting) == address(0)) revert VestingNotSet();
         if (amount == 0) revert InvalidAmount("amount", amount);
 
-        uint256 balance = _ASSET.balanceOf(address(this));
+        uint256 balance = asset.balanceOf(address(this));
         if (balance < amount) revert InsufficientBalance(address(this), balance, amount);
 
         // Approve vesting contract to pull tokens
         // Reset allowance to 0 first, then approve new amount
         // This handles tokens that require zero allowance before setting new value
-        uint256 currentAllowance = _ASSET.allowance(address(this), address(_vesting));
+        uint256 currentAllowance = asset.allowance(address(this), address(vesting));
         if (currentAllowance > 0) {
-            _ASSET.safeDecreaseAllowance(address(_vesting), currentAllowance);
+            asset.safeDecreaseAllowance(address(vesting), currentAllowance);
         }
-        _ASSET.safeIncreaseAllowance(address(_vesting), amount);
+        asset.safeIncreaseAllowance(address(vesting), amount);
 
         // Call depositYield on vesting contract, which will transfer tokens
         // Note: YieldDistributor must have YIELD_DISTRIBUTOR_ROLE to call this
-        _vesting.depositYield(amount);
+        vesting.depositYield(amount);
 
         emit YieldDeposited(msg.sender, amount);
     }

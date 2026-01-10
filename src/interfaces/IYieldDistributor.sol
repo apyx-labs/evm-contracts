@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IVesting} from "./IVesting.sol";
+
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
@@ -46,13 +49,13 @@ interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBal
      * @notice Returns the asset token address (apxUSD)
      * @return Address of the asset token
      */
-    function asset() external view returns (address);
+    function asset() external view returns (IERC20);
 
     /**
      * @notice Returns the vesting contract address
      * @return Address of the vesting contract
      */
-    function vesting() external view returns (address);
+    function vesting() external view returns (IVesting);
 
     /**
      * @notice Returns the available balance of apxUSD tokens
