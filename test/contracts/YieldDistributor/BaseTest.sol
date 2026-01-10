@@ -55,19 +55,13 @@ abstract contract YieldDistributorBaseTest is Test {
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         // Deploy MinterV0
-        MinterV0 minterImpl = new MinterV0();
-        bytes memory minterInitData = abi.encodeCall(
-            minterImpl.initialize,
-            (
-                address(accessManager),
-                address(apxUSD),
-                uint208(MAX_MINT_AMOUNT),
-                uint208(RATE_LIMIT_AMOUNT),
-                RATE_LIMIT_PERIOD
-            )
+        minterV0 = new MinterV0(
+            address(accessManager),
+            address(apxUSD),
+            uint208(MAX_MINT_AMOUNT),
+            uint208(RATE_LIMIT_AMOUNT),
+            RATE_LIMIT_PERIOD
         );
-        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minterImpl), minterInitData);
-        minterV0 = MinterV0(address(minterProxy));
 
         // Deploy Vesting contract (with ApyUSD as beneficiary - using admin as placeholder)
         vesting = new LinearVestV0(

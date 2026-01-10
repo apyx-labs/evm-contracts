@@ -159,7 +159,7 @@ contract MinterV0_AccessManagedTest is MinterTest {
 
         // Cancel all expired orders
         for (uint256 i = 0; i < numOrders; i++) {
-            vm.prank(guardian);
+            vm.prank(minterGuardian);
             minterV0.cancelMint(operationIds[i]);
         }
 

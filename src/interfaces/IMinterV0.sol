@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
+import {EInvalidAddress} from "../errors/InvalidAddress.sol";
+import {EInvalidAmount} from "../errors/InvalidAmount.sol";
+
 /**
  * @title IMinterV0
  * @notice Interface for the MinterV0 contract
  * @dev Defines structs, enums, events, errors, and public functions for apxUSD minting
  */
-interface IMinterV0 {
+interface IMinterV0 is EInvalidAddress, EInvalidAmount {
     // ============================================
     // Structs
     // ============================================
@@ -100,22 +103,6 @@ interface IMinterV0 {
     // ============================================
 
     /**
-     * @notice Initializes the MinterV0 contract
-     * @param initialAuthority Address of the AccessManager contract
-     * @param _apxUSD Address of the ApxUSD token contract
-     * @param _maxMintAmount Maximum amount that can be minted in a single order
-     * @param _rateLimitAmount Maximum amount that can be minted within the rate limit period
-     * @param _rateLimitPeriod Duration of the rate limit period in seconds
-     */
-    function initialize(
-        address initialAuthority,
-        address _apxUSD,
-        uint208 _maxMintAmount,
-        uint208 _rateLimitAmount,
-        uint48 _rateLimitPeriod
-    ) external;
-
-    /**
      * @notice Returns the EIP-712 typed hash for an order
      * @param order The mint order to hash
      * @return The EIP-712 typed hash
@@ -175,14 +162,14 @@ interface IMinterV0 {
      * @param beneficiary Address to query nonce for
      * @return Current nonce value
      */
-    function nonces(address beneficiary) external view returns (uint48);
+    function nonce(address beneficiary) external view returns (uint48);
 
     /**
      * @notice Returns the details of a pending order
      * @param operationId The unique identifier of the scheduled operation
      * @return order The pending order details
      */
-    function getPendingOrder(bytes32 operationId) external view returns (Order memory);
+    function pendingOrder(bytes32 operationId) external view returns (Order memory);
 
     /**
      * @notice Returns the status of a mint operation

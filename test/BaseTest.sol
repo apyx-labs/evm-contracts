@@ -54,7 +54,7 @@ abstract contract BaseTest is Test {
 
     address public admin;
     address public minter;
-    address public guardian;
+    address public minterGuardian;
     address public yieldOperator;
 
     address public alice;
@@ -103,7 +103,7 @@ abstract contract BaseTest is Test {
         // Create system accounts
         admin = makeAddr("admin");
         minter = makeAddr("minter");
-        guardian = makeAddr("guardian");
+        minterGuardian = makeAddr("minterGuardian");
         yieldOperator = makeAddr("yieldOperator");
 
         // Deploy AccessManager
@@ -134,20 +134,9 @@ abstract contract BaseTest is Test {
         vm.label(address(apyUSD), "apyUSD");
 
         // Deploy MinterV0
-        MinterV0 minterImpl = new MinterV0();
-        bytes memory minterInitData = abi.encodeCall(
-            minterImpl.initialize,
-            (
-                address(accessManager),
-                address(apxUSD),
-                uint208(MAX_MINT_AMOUNT),
-                uint208(RATE_LIMIT_AMOUNT),
-                RATE_LIMIT_PERIOD
-            )
+        minterV0 = new MinterV0(
+            address(accessManager), address(apxUSD), MAX_MINT_AMOUNT, RATE_LIMIT_AMOUNT, RATE_LIMIT_PERIOD
         );
-        ERC1967Proxy minterProxy = new ERC1967Proxy(address(minterImpl), minterInitData);
-        minterV0 = MinterV0(address(minterProxy));
-        vm.label(address(minterImpl), "minterV0Impl");
         vm.label(address(minterV0), "minterV0");
 
         // Deploy Vesting contract
@@ -217,8 +206,8 @@ abstract contract BaseTest is Test {
         // MINTER_ROLE to minter address
         accessManager.grantRole(Roles.MINTER_ROLE, minter, 0);
 
-        // MINT_GUARD_ROLE to guardian address
-        accessManager.grantRole(Roles.MINT_GUARD_ROLE, guardian, 0);
+        // MINT_GUARD_ROLE to minterGuardian address
+        accessManager.grantRole(Roles.MINT_GUARD_ROLE, minterGuardian, 0);
 
         // YIELD_DISTRIBUTOR_ROLE to YieldDistributor contract and admin
         accessManager.grantRole(Roles.YIELD_DISTRIBUTOR_ROLE, address(yieldDistributor), 0);

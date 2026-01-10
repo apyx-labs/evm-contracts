@@ -1,13 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {
-    AccessManagedUpgradeable
-} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
-import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
+import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 
@@ -26,7 +22,7 @@ import {IMinterV0} from "./interfaces/IMinterV0.sol";
  * - Nonce tracking per beneficiary to prevent replay attacks
  * - EIP-712 typed structured data hashing
  */
-contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, EIP712Upgradeable, IMinterV0 {
+contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
     using ECDSA for bytes32;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
 
@@ -35,46 +31,33 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
     // ============================================
 
     /// @notice The apxUSD token contract
-    ApxUSD public apxUSD;
+    ApxUSD public immutable apxUSD;
 
-    /// @custom:storage-location erc7201:apyx.storage.Minting
-    struct MintingStorage {
-        /// @notice Mapping of beneficiary => nonce for replay protection
-        mapping(address => uint48) nonces;
-        /// @notice Mapping of operationId => Order for pending mints
-        mapping(bytes32 => Order) pendingOrders;
-        /// @notice Maximum amount that can be minted in a single order
-        uint208 maxMintAmount;
-        /// @notice Maximum amount that can be minted within the rate limit period
-        uint256 rateLimitAmount;
-        /// @notice Duration of the rate limit period in seconds (e.g., 86400 for 24 hours)
-        uint48 rateLimitPeriod;
-        /// @notice Queue of recent mints for rate limiting (stores encoded MintRecord)
-        /// @dev Should this be moved to it's own storage location?
-        DoubleEndedQueue.Bytes32Deque mintHistory;
-    }
+    /// @notice Mapping of beneficiary => nonce for replay protection
+    mapping(address => uint48) public nonce;
 
-    // keccak256(abi.encode(uint256(keccak256("apyx.storage.Minting")) - 1)) & ~bytes32(uint256(0xff))
-    bytes32 private constant MINTING_STORAGE_LOC = 0xe7970b00f75fff0286f3291c4477462e6093c6859942208b9038f6e9e6e87d00;
+    /// @notice Mapping of operationId => Order for pending mints
+    mapping(bytes32 => Order) internal pendingOrders;
 
-    function _getMintingStorage() private pure returns (MintingStorage storage $) {
-        assembly {
-            $.slot := MINTING_STORAGE_LOC
-        }
-    }
+    /// @notice Maximum amount that can be minted in a single order
+    uint208 public maxMintAmount;
+
+    /// @notice Maximum amount that can be minted within the rate limit period
+    uint256 public rateLimitAmount;
+    /// @notice Duration of the rate limit period in seconds (e.g., 86400 for 24 hours)
+    uint48 public rateLimitPeriod;
+
+    /// @notice Queue of recent mints for rate limiting (stores encoded MintRecord)
+    /// @dev Should this be moved to it's own storage location?
+    DoubleEndedQueue.Bytes32Deque mintHistory;
 
     /// @notice EIP-712 type hash for Order struct
     bytes32 public constant ORDER_TYPEHASH =
         keccak256("Order(address beneficiary,uint48 notBefore,uint48 notAfter,uint48 nonce,uint208 amount)");
 
     // ============================================
-    // Constructor and Initialization
+    // Constructor
     // ============================================
-
-    /// @custom:oz-upgrades-unsafe-allow constructor
-    constructor() {
-        _disableInitializers();
-    }
 
     /**
      * @notice Initializes the MinterV0 contract
@@ -84,42 +67,28 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @param _rateLimitAmount Maximum amount that can be minted within the rate limit period
      * @param _rateLimitPeriod Duration of the rate limit period in seconds (e.g., 86400 for 24 hours)
      */
-    function initialize(
+    constructor(
         address initialAuthority,
         address _apxUSD,
         uint208 _maxMintAmount,
         uint208 _rateLimitAmount,
         uint48 _rateLimitPeriod
-    ) public initializer {
-        require(initialAuthority != address(0), "MinterV0: authority is zero address");
-        require(_apxUSD != address(0), "MinterV0: apxUSD is zero address");
-        require(_maxMintAmount > 0, "MinterV0: max mint amount must be positive");
-        require(_rateLimitAmount > 0, "MinterV0: rate limit amount must be positive");
-        require(_rateLimitPeriod > 0, "MinterV0: rate limit period must be positive");
-
-        __AccessManaged_init(initialAuthority);
-        __EIP712_init("ApxUSD MinterV0", "1");
+    ) AccessManaged(initialAuthority) EIP712("ApxUSD MinterV0", "1") {
+        if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
+        if (_apxUSD == address(0)) revert InvalidAddress("apxUSD");
+        if (_maxMintAmount == 0) revert InvalidAmount("maxMintAmount", _maxMintAmount);
+        if (_rateLimitAmount == 0) revert InvalidAmount("rateLimitAmount", _rateLimitAmount);
+        if (_rateLimitPeriod == 0) revert InvalidAmount("rateLimitPeriod", _rateLimitPeriod);
 
         apxUSD = ApxUSD(_apxUSD);
 
-        MintingStorage storage $ = _getMintingStorage();
-        $.maxMintAmount = _maxMintAmount;
-        $.rateLimitAmount = _rateLimitAmount;
-        $.rateLimitPeriod = _rateLimitPeriod;
+        maxMintAmount = _maxMintAmount;
+        rateLimitAmount = _rateLimitAmount;
+        rateLimitPeriod = _rateLimitPeriod;
 
         emit MaxMintAmountUpdated(0, _maxMintAmount);
         emit RateLimitUpdated(0, 0, _rateLimitAmount, _rateLimitPeriod);
     }
-
-    // ============================================
-    // Upgrade Authorization
-    // ============================================
-
-    /**
-     * @notice Authorizes contract upgrades
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     */
-    function _authorizeUpgrade(address newImplementation) internal override restricted {}
 
     // ============================================
     // Order Validation and Signing
@@ -149,8 +118,6 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @return bool True if the order is valid
      */
     function validateOrder(Order calldata order, bytes calldata signature) public view returns (bool) {
-        MintingStorage storage $ = _getMintingStorage();
-
         // Check time window validity
         if (order.notAfter < order.notBefore) {
             revert OrderInvalidTimeWindow();
@@ -167,14 +134,14 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         }
 
         // Check nonce
-        uint48 currentNonce = $.nonces[order.beneficiary];
+        uint48 currentNonce = nonce[order.beneficiary];
         if (order.nonce != currentNonce) {
             revert InvalidNonce(currentNonce, order.nonce);
         }
 
         // Check amount
-        if (order.amount > $.maxMintAmount) {
-            revert MintAmountTooLarge(order.amount, $.maxMintAmount);
+        if (order.amount > maxMintAmount) {
+            revert MintAmountTooLarge(order.amount, maxMintAmount);
         }
 
         // Verify signature
@@ -188,13 +155,14 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         return true;
     }
 
-    /**
-     * @notice Returns the EIP-712 domain separator
-     * @return The domain separator hash
-     */
-    function DOMAIN_SEPARATOR() external view returns (bytes32) {
-        return _domainSeparatorV4();
-    }
+    // /**
+    //  * @notice Returns the EIP-712 domain separator
+    //  * @return The domain separator hash
+    //  */
+    // // slither-disable-next-line naming-convention
+    // function DOMAIN_SEPARATOR() external view returns (bytes32) {
+    //     return _domainSeparatorV4();
+    // }
 
     // ============================================
     // Mint Order Management
@@ -214,21 +182,19 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         // 1. Validate order (signature, nonce, expiry, amount)
         validateOrder(order, signature);
 
-        MintingStorage storage $ = _getMintingStorage();
-
         // 2. Check rate limiting
-        _cleanMintHistory($);
+        _cleanMintHistory();
         uint256 available = rateLimitAvailable();
         if (order.amount > available) {
             revert RateLimitExceeded(order.amount, available);
         }
 
         // 3. Increment nonce to prevent replay
-        $.nonces[order.beneficiary]++;
+        nonce[order.beneficiary]++;
 
         // 4. Record mint in history
         bytes32 mintRecord = _encodeMintRecord(uint48(block.timestamp), order.amount);
-        $.mintHistory.pushBack(mintRecord);
+        mintHistory.pushBack(mintRecord);
 
         // 5. Encode the order data
         bytes memory data = _encodeOrderData(order);
@@ -240,7 +206,7 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         (operationId,) = manager.schedule(address(apxUSD), data, 0);
 
         // 7. Store order for later execution
-        $.pendingOrders[operationId] = order;
+        pendingOrders[operationId] = order;
 
         // 8. Emit event
         emit MintRequested(operationId, order.beneficiary, order.amount, order.nonce, order.notBefore, order.notAfter);
@@ -253,10 +219,8 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @param operationId The unique identifier of the scheduled operation
      */
     function executeMint(bytes32 operationId) external restricted {
-        MintingStorage storage $ = _getMintingStorage();
-
         // 1. Retrieve stored order
-        Order memory order = $.pendingOrders[operationId];
+        Order memory order = pendingOrders[operationId];
         if (order.beneficiary == address(0)) {
             revert OrderNotFound();
         }
@@ -267,7 +231,7 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         }
 
         // 3. Clean up storage first (CEI pattern: effects before interactions)
-        delete $.pendingOrders[operationId];
+        delete pendingOrders[operationId];
 
         // 4. Encode the same order data (must match what was scheduled)
         bytes memory data = _encodeOrderData(order);
@@ -290,16 +254,14 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @param operationId The unique identifier of the scheduled operation
      */
     function cancelMint(bytes32 operationId) external restricted {
-        MintingStorage storage $ = _getMintingStorage();
-
         // 1. Retrieve stored order
-        Order memory order = $.pendingOrders[operationId];
+        Order memory order = pendingOrders[operationId];
         if (order.beneficiary == address(0)) {
             revert OrderNotFound();
         }
 
         // 2. Clean up storage first (CEI pattern)
-        delete $.pendingOrders[operationId];
+        delete pendingOrders[operationId];
 
         // 3. Encode the order data (must match what was scheduled)
         bytes memory data = _encodeOrderData(order);
@@ -313,24 +275,17 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         emit MintCancelled(operationId, order.beneficiary, msg.sender);
     }
 
-    /**
-     * @notice Returns the current nonce for a beneficiary
-     * @param beneficiary Address to query nonce for
-     * @return Current nonce value
-     */
-    function nonces(address beneficiary) external view returns (uint48) {
-        MintingStorage storage $ = _getMintingStorage();
-        return $.nonces[beneficiary];
-    }
+    // ============================================
+    // Order Getters
+    // ============================================
 
     /**
      * @notice Returns the details of a pending order
      * @param operationId The unique identifier of the scheduled operation
      * @return order The pending order details
      */
-    function getPendingOrder(bytes32 operationId) external view returns (Order memory) {
-        MintingStorage storage $ = _getMintingStorage();
-        return $.pendingOrders[operationId];
+    function pendingOrder(bytes32 operationId) public view returns (Order memory) {
+        return pendingOrders[operationId];
     }
 
     /**
@@ -344,8 +299,7 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      *         - Expired: Order pending but expired (after notAfter time)
      */
     function mintStatus(bytes32 operationId) external view returns (MintStatus) {
-        MintingStorage storage $ = _getMintingStorage();
-        Order memory order = $.pendingOrders[operationId];
+        Order memory order = pendingOrders[operationId];
 
         // Check if order exists in storage
         if (order.beneficiary == address(0)) {
@@ -383,20 +337,10 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
     function setMaxMintAmount(uint208 newMaxMintAmount) external restricted {
         require(newMaxMintAmount > 0, "MinterV0: max mint amount must be positive");
 
-        MintingStorage storage $ = _getMintingStorage();
-        uint256 oldMax = $.maxMintAmount;
-        $.maxMintAmount = newMaxMintAmount;
+        uint256 oldMax = maxMintAmount;
+        maxMintAmount = newMaxMintAmount;
 
         emit MaxMintAmountUpdated(oldMax, newMaxMintAmount);
-    }
-
-    /**
-     * @notice Returns the current max mint amount
-     * @return Maximum amount that can be minted in a single order
-     */
-    function maxMintAmount() external view returns (uint208) {
-        MintingStorage storage $ = _getMintingStorage();
-        return $.maxMintAmount;
     }
 
     // ============================================
@@ -412,15 +356,14 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
         require(newAmount > 0, "MinterV0: rate limit amount must be positive");
         require(newPeriod > 0, "MinterV0: rate limit period must be positive");
 
-        MintingStorage storage $ = _getMintingStorage();
-        uint256 oldAmount = $.rateLimitAmount;
-        uint48 oldPeriod = $.rateLimitPeriod;
+        uint256 oldAmount = rateLimitAmount;
+        uint48 oldPeriod = rateLimitPeriod;
 
-        $.rateLimitAmount = newAmount;
-        $.rateLimitPeriod = newPeriod;
+        rateLimitAmount = newAmount;
+        rateLimitPeriod = newPeriod;
 
         // Clean history with new period
-        _cleanMintHistory($);
+        _cleanMintHistory();
 
         emit RateLimitUpdated(oldAmount, oldPeriod, newAmount, newPeriod);
     }
@@ -431,8 +374,7 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @return period Duration of the rate limit period in seconds
      */
     function rateLimit() external view returns (uint256 amount, uint48 period) {
-        MintingStorage storage $ = _getMintingStorage();
-        return ($.rateLimitAmount, $.rateLimitPeriod);
+        return (rateLimitAmount, rateLimitPeriod);
     }
 
     /**
@@ -440,13 +382,12 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @return Total amount minted in the current period
      */
     function rateLimitMinted() public view returns (uint256) {
-        MintingStorage storage $ = _getMintingStorage();
-        uint48 cutoff = uint48(block.timestamp) - $.rateLimitPeriod;
+        uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
         uint256 total = 0;
 
-        uint256 length = $.mintHistory.length();
+        uint256 length = mintHistory.length();
         for (uint256 i = 0; i < length; i++) {
-            bytes32 data = $.mintHistory.at(i);
+            bytes32 data = mintHistory.at(i);
             MintRecord memory record = _decodeMintRecord(data);
 
             if (record.timestamp >= cutoff) {
@@ -462,9 +403,8 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @return Amount that can still be minted in the current period
      */
     function rateLimitAvailable() public view returns (uint256) {
-        MintingStorage storage $ = _getMintingStorage();
         uint256 minted = rateLimitMinted();
-        return $.rateLimitAmount > minted ? $.rateLimitAmount - minted : 0;
+        return rateLimitAmount > minted ? rateLimitAmount - minted : 0;
     }
 
     /**
@@ -475,8 +415,7 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
      * @return cleaned Number of records actually removed
      */
     function cleanMintHistory(uint32 n) external restricted returns (uint32 cleaned) {
-        MintingStorage storage $ = _getMintingStorage();
-        return _cleanMintHistoryUpTo($, n);
+        return _cleanMintHistoryUpTo(n);
     }
 
     // ============================================
@@ -497,31 +436,29 @@ contract MinterV0 is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, E
 
     /**
      * @dev Cleans expired mint records from the queue
-     * @param $ Storage pointer
      */
-    function _cleanMintHistory(MintingStorage storage $) internal {
-        _cleanMintHistoryUpTo($, type(uint32).max);
+    function _cleanMintHistory() internal {
+        _cleanMintHistoryUpTo(type(uint32).max);
     }
 
     /**
      * @dev Internal helper to clean up to n expired mint records from the queue
-     * @param $ Storage pointer
      * @param n Maximum number of records to clean (type(uint32).max for unlimited)
      * @return cleaned Number of records actually removed
      */
-    function _cleanMintHistoryUpTo(MintingStorage storage $, uint32 n) internal returns (uint32 cleaned) {
-        uint48 cutoff = uint48(block.timestamp) - $.rateLimitPeriod;
+    function _cleanMintHistoryUpTo(uint32 n) internal returns (uint32 cleaned) {
+        uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
 
         cleaned = 0;
-        while (cleaned < n && !$.mintHistory.empty()) {
-            bytes32 frontData = $.mintHistory.front();
+        while (cleaned < n && !mintHistory.empty()) {
+            bytes32 frontData = mintHistory.front();
             MintRecord memory record = _decodeMintRecord(frontData);
 
             if (record.timestamp >= cutoff) {
                 break; // Still within period, stop cleaning
             }
 
-            $.mintHistory.popFront();
+            mintHistory.popFront();
             cleaned++;
         }
 

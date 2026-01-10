@@ -55,7 +55,7 @@ slither:
         --rm \
         -v ${PWD}:/app \
         ghcr.io/trailofbits/eth-security-toolbox:nightly-20260105 \
-        slither /app --filter-paths "(dependencies/|test/)"
+        slither /app/ --filter-paths "(dependencies/|test/)"
 
 # Generate documentation
 doc:

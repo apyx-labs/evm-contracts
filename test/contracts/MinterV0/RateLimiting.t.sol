@@ -430,8 +430,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
         minterV0.requestMint(order2, sig2);
 
         // Verify separate nonces
-        assertEq(minterV0.nonces(alice), 1);
-        assertEq(minterV0.nonces(bob), 1);
+        assertEq(minterV0.nonce(alice), 1);
+        assertEq(minterV0.nonce(bob), 1);
 
         // But shared rate limit pool
         assertEq(minterV0.rateLimitMinted(), 80_000e18);

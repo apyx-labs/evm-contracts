@@ -26,7 +26,7 @@ contract MinterV0_MintTest is MinterTest {
 
         // 3. Verify request is pending
         assertEq(apxUSD.balanceOf(alice), 0);
-        IMinterV0.Order memory pendingOrder = minterV0.getPendingOrder(operationId);
+        IMinterV0.Order memory pendingOrder = minterV0.pendingOrder(operationId);
         assertEq(pendingOrder.beneficiary, alice);
         assertEq(pendingOrder.amount, amount);
 
@@ -102,12 +102,12 @@ contract MinterV0_MintTest is MinterTest {
     function test_MintUpToSupplyCap() public {
         // Update max mint amount and rate limit to allow larger mints
         vm.startPrank(admin);
-        minterV0.setMaxMintAmount(uint208(SUPPLY_CAP));
+        minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
         minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
         vm.stopPrank();
 
         // Mint up to supply cap
-        IMinterV0.Order memory order = _createOrder(alice, 0, uint208(SUPPLY_CAP));
+        IMinterV0.Order memory order = _createOrder(alice, 0, uint208(APX_SUPPLY_CAP));
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
         vm.prank(minter);
@@ -118,19 +118,19 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         minterV0.executeMint(operationId);
 
-        assertEq(apxUSD.totalSupply(), SUPPLY_CAP);
+        assertEq(apxUSD.totalSupply(), APX_SUPPLY_CAP);
         assertEq(apxUSD.supplyCapRemaining(), 0);
     }
 
     function test_RevertWhen_MintExceedsSupplyCapAfterExecution() public {
         // Update max mint amount and rate limit
         vm.startPrank(admin);
-        minterV0.setMaxMintAmount(uint208(SUPPLY_CAP));
+        minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
         minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
         vm.stopPrank();
 
         // Create two mint requests that together exceed supply cap
-        uint208 amount = uint208(SUPPLY_CAP / 2 + 1);
+        uint208 amount = uint208(APX_SUPPLY_CAP / 2 + 1);
 
         IMinterV0.Order memory order1 = _createOrder(alice, 0, amount);
         bytes memory signature1 = _signOrder(order1, alicePrivateKey);
@@ -222,11 +222,11 @@ contract MinterV0_MintTest is MinterTest {
     function test_IncreaseSupplyCapAndMintMore() public {
         // Mint close to supply cap
         vm.startPrank(admin);
-        minterV0.setMaxMintAmount(uint208(SUPPLY_CAP));
+        minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
         minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
         vm.stopPrank();
 
-        uint208 amount = uint208(SUPPLY_CAP - 1_000e18);
+        uint208 amount = uint208(APX_SUPPLY_CAP - 1_000e18);
 
         IMinterV0.Order memory order1 = _createOrder(alice, 0, amount);
         bytes memory signature1 = _signOrder(order1, alicePrivateKey);
@@ -267,7 +267,7 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         minterV0.requestMint(order1, signature1);
 
-        assertEq(minterV0.nonces(alice), 1);
+        assertEq(minterV0.nonce(alice), 1);
 
         // Second mint with incremented nonce
         IMinterV0.Order memory order2 = _createOrder(alice, 1, 2_000e18);
@@ -276,7 +276,7 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         minterV0.requestMint(order2, signature2);
 
-        assertEq(minterV0.nonces(alice), 2);
+        assertEq(minterV0.nonce(alice), 2);
     }
 
     function test_RevertWhen_UnauthorizedMinterCallsRequestMint() public {
@@ -371,7 +371,7 @@ contract MinterV0_MintTest is MinterTest {
 
         // Note: Order is NOT cleaned up when execution reverts (transaction rolled back)
         // This is expected behavior - the expired order remains in storage
-        IMinterV0.Order memory retrieved = minterV0.getPendingOrder(operationId);
+        IMinterV0.Order memory retrieved = minterV0.pendingOrder(operationId);
         assertEq(retrieved.beneficiary, alice); // Order still exists
     }
 
@@ -414,14 +414,14 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 opId2 = minterV0.requestMint(order2, sig2);
 
         // Verify both nonces independent
-        assertEq(minterV0.nonces(alice), 1);
-        assertEq(minterV0.nonces(bob), 1);
+        assertEq(minterV0.nonce(alice), 1);
+        assertEq(minterV0.nonce(bob), 1);
 
         // Verify both orders stored
-        IMinterV0.Order memory storedOrder1 = minterV0.getPendingOrder(opId1);
+        IMinterV0.Order memory storedOrder1 = minterV0.pendingOrder(opId1);
         assertEq(storedOrder1.beneficiary, alice);
 
-        IMinterV0.Order memory storedOrder2 = minterV0.getPendingOrder(opId2);
+        IMinterV0.Order memory storedOrder2 = minterV0.pendingOrder(opId2);
         assertEq(storedOrder2.beneficiary, bob);
     }
 
@@ -435,7 +435,7 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         minterV0.requestMint(order1, sig1);
 
-        assertEq(minterV0.nonces(alice), 1);
+        assertEq(minterV0.nonce(alice), 1);
 
         // Try to reuse nonce 0 (should fail)
         IMinterV0.Order memory order2 = _createOrder(alice, 0, amount + 1);
@@ -461,16 +461,15 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 operationId = minterV0.requestMint(order, signature);
 
         // Verify order is pending
-        IMinterV0.Order memory pendingOrder = minterV0.getPendingOrder(operationId);
+        IMinterV0.Order memory pendingOrder = minterV0.pendingOrder(operationId);
         assertEq(pendingOrder.beneficiary, alice);
         assertEq(pendingOrder.amount, amount);
 
         // Cancel by guardian
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId);
+        cancelMint(operationId);
 
         // Verify order is removed
-        IMinterV0.Order memory cancelledOrder = minterV0.getPendingOrder(operationId);
+        IMinterV0.Order memory cancelledOrder = minterV0.pendingOrder(operationId);
         assertEq(cancelledOrder.beneficiary, address(0));
         assertEq(cancelledOrder.amount, 0);
 
@@ -490,10 +489,9 @@ contract MinterV0_MintTest is MinterTest {
 
         // Expect MintCancelled event
         vm.expectEmit(true, true, true, true);
-        emit IMinterV0.MintCancelled(operationId, alice, guardian);
+        emit IMinterV0.MintCancelled(operationId, alice, minterGuardian);
 
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId);
+        cancelMint(operationId);
     }
 
     function test_CancelMint_DoesNotFreeRateLimitCapacity() public {
@@ -510,8 +508,7 @@ contract MinterV0_MintTest is MinterTest {
         assertEq(minterV0.rateLimitMinted(), amount);
 
         // Cancel the mint
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId);
+        cancelMint(operationId);
 
         // Rate limit should STILL include cancelled amount (prevents gaming)
         assertEq(minterV0.rateLimitMinted(), amount);
@@ -521,7 +518,7 @@ contract MinterV0_MintTest is MinterTest {
         // Try to cancel an operation that was never created
         bytes32 fakeOperationId = bytes32(uint256(99999));
 
-        vm.prank(guardian);
+        vm.prank(minterGuardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(fakeOperationId);
     }
@@ -537,11 +534,10 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 operationId = minterV0.requestMint(order, signature);
 
         // Cancel once
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId);
+        cancelMint(operationId);
 
         // Try to cancel again (should fail - order no longer exists)
-        vm.prank(guardian);
+        vm.prank(minterGuardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
@@ -565,7 +561,7 @@ contract MinterV0_MintTest is MinterTest {
         assertEq(apxUSD.balanceOf(alice), amount);
 
         // Try to cancel after execution (should fail - order no longer exists)
-        vm.prank(guardian);
+        vm.prank(minterGuardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
@@ -591,7 +587,7 @@ contract MinterV0_MintTest is MinterTest {
         minterV0.cancelMint(operationId);
 
         // Verify order still exists
-        IMinterV0.Order memory pendingOrder = minterV0.getPendingOrder(operationId);
+        IMinterV0.Order memory pendingOrder = minterV0.pendingOrder(operationId);
         assertEq(pendingOrder.beneficiary, alice);
     }
 
@@ -606,8 +602,7 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 operationId1 = minterV0.requestMint(order1, signature1);
 
         // Cancel the mint
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId1);
+        cancelMint(operationId1);
 
         // Create a new mint with next nonce (nonce 1)
         IMinterV0.Order memory order2 = _createOrder(alice, 1, amount);
@@ -645,18 +640,17 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 opId3 = minterV0.requestMint(order3, sig3);
 
         // Cancel the middle order
-        vm.prank(guardian);
-        minterV0.cancelMint(opId2);
+        cancelMint(opId2);
 
         // Verify order2 is cancelled
-        IMinterV0.Order memory cancelled = minterV0.getPendingOrder(opId2);
+        IMinterV0.Order memory cancelled = minterV0.pendingOrder(opId2);
         assertEq(cancelled.beneficiary, address(0));
 
         // Verify orders 1 and 3 still exist
-        IMinterV0.Order memory pending1 = minterV0.getPendingOrder(opId1);
+        IMinterV0.Order memory pending1 = minterV0.pendingOrder(opId1);
         assertEq(pending1.beneficiary, alice);
 
-        IMinterV0.Order memory pending3 = minterV0.getPendingOrder(opId3);
+        IMinterV0.Order memory pending3 = minterV0.pendingOrder(opId3);
         assertEq(pending3.beneficiary, alice);
 
         // Execute remaining orders
@@ -771,8 +765,7 @@ contract MinterV0_MintTest is MinterTest {
         bytes32 operationId = minterV0.requestMint(order, signature);
 
         // Cancel order
-        vm.prank(guardian);
-        minterV0.cancelMint(operationId);
+        cancelMint(operationId);
 
         // Status should be NotFound (order was deleted after cancellation)
         IMinterV0.MintStatus status = minterV0.mintStatus(operationId);
