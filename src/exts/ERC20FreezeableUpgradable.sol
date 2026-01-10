@@ -14,6 +14,7 @@ abstract contract ERC20FreezeableUpgradable is Initializable, ERC20Upgradeable {
         0xe66b3d99be4f71ea7aa9cf2bc9a8a4827bbe4f718fcfa5d183e05f8945211500;
 
     function _getFreezeableStorage() private pure returns (FreezeableStorage storage $) {
+        // slither-disable-next-line assembly
         assembly {
             $.slot := FREEZEABLE_STORAGE_LOC
         }

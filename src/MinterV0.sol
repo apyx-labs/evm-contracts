@@ -117,6 +117,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
      * @param signature The beneficiary's signature over the order
      * @return bool True if the order is valid
      */
+    // slither-disable-start timestamp
     function validateOrder(Order calldata order, bytes calldata signature) public view returns (bool) {
         // Check time window validity
         if (order.notAfter < order.notBefore) {
@@ -154,6 +155,8 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
 
         return true;
     }
+
+    // slither-disable-end timestamp
 
     // /**
     //  * @notice Returns the EIP-712 domain separator
@@ -203,6 +206,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         // Note: msg.sender to AccessManager is MinterV0 contract address
         // operationId = keccak256(abi.encode(address(this), address(apxUSD), data))
         IAccessManager manager = IAccessManager(authority());
+        // slither-disable-next-line unused-return
         (operationId,) = manager.schedule(address(apxUSD), data, 0);
 
         // 7. Store order for later execution
@@ -226,6 +230,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         }
 
         // 2. Check order has not expired
+        // slither-disable-next-line timestamp
         if (block.timestamp > order.notAfter) {
             revert OrderExpired();
         }
@@ -240,7 +245,11 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         // Note: msg.sender to AccessManager is MinterV0 contract address (same as schedule)
         // AccessManager will verify the operation was scheduled and delay has passed
         IAccessManager manager = IAccessManager(authority());
-        manager.execute(address(apxUSD), data);
+        uint256 executedNonce = manager.execute(address(apxUSD), data);
+        if (executedNonce == 0) {
+            // Do not allow execution if the delay has not been configured
+            revert AccessManagedRequiredDelay(msg.sender, 0);
+        }
 
         // 6. Emit event
         emit MintExecuted(operationId, order.beneficiary);
@@ -269,6 +278,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         // 4. Cancel through AccessManager
         // This frees the operation ID, allowing it to be reused
         IAccessManager manager = IAccessManager(authority());
+
+        // We do not use the returned nonce but it is returned by the interface
+        // slither-disable-next-line unused-return
         manager.cancel(address(this), address(apxUSD), data);
 
         // 5. Emit event
@@ -309,6 +321,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         uint48 currentTime = uint48(block.timestamp);
 
         // Check if order has expired (past notAfter)
+        // slither-disable-next-line timestamp
         if (currentTime > order.notAfter) {
             return MintStatus.Expired;
         }
@@ -318,6 +331,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
         uint48 scheduleTime = manager.getSchedule(operationId);
 
         // If schedule time is in the future or before notBefore, order is Scheduled but not Ready
+        // slither-disable-next-line timestamp
         if (scheduleTime > currentTime || currentTime < order.notBefore) {
             return MintStatus.Scheduled;
         }
@@ -380,6 +394,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
     /**
      * @notice Returns the total amount minted in the current rate limit period
      * @return Total amount minted in the current period
+     * @dev TODO: Optimize by iterating over the queue in reverse order and breaking when the cutoff is reached
      */
     function rateLimitMinted() public view returns (uint256) {
         uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
@@ -390,6 +405,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
             bytes32 data = mintHistory.at(i);
             MintRecord memory record = _decodeMintRecord(data);
 
+            // slither-disable-next-line timestamp
             if (record.timestamp >= cutoff) {
                 total += record.amount;
             }
@@ -454,10 +470,12 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
             bytes32 frontData = mintHistory.front();
             MintRecord memory record = _decodeMintRecord(frontData);
 
+            // slither-disable-next-line timestamp
             if (record.timestamp >= cutoff) {
                 break; // Still within period, stop cleaning
             }
 
+            // slither-disable-next-line unused-return
             mintHistory.popFront();
             cleaned++;
         }

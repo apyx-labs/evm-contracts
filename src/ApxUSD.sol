@@ -47,6 +47,7 @@ contract ApxUSD is
     bytes32 private constant APXUSD_STORAGE_LOC = 0xd4bd5aaf4064e82ca5c0ebf6f76b7f421377722e7c3f989b53116d58938a1600;
 
     function _getApxUSDStorage() private pure returns (ApxUSDStorage storage $) {
+        // slither-disable-next-line assembly
         assembly {
             $.slot := APXUSD_STORAGE_LOC
         }
