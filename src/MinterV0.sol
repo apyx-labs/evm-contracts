@@ -159,15 +159,6 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
 
     // slither-disable-end timestamp
 
-    // /**
-    //  * @notice Returns the EIP-712 domain separator
-    //  * @return The domain separator hash
-    //  */
-    // // slither-disable-next-line naming-convention
-    // function DOMAIN_SEPARATOR() external view returns (bytes32) {
-    //     return _domainSeparatorV4();
-    // }
-
     // ============================================
     // Mint Order Management
     // ============================================
