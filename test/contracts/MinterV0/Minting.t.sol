@@ -13,6 +13,14 @@ import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
  *   - Integration with AccessManager and ApxUSD
  */
 contract MinterV0_MintTest is MinterTest {
+    function setUp() public override {
+        super.setUp();
+
+        // Increase rate limit to max to allow testing non-rate limited behavior
+        vm.prank(admin);
+        minterV0.setRateLimit(type(uint208).max, RATE_LIMIT_PERIOD);
+    }
+
     function test_FullMintFlow() public {
         uint208 amount = 5_000e18;
 
@@ -101,10 +109,8 @@ contract MinterV0_MintTest is MinterTest {
 
     function test_MintUpToSupplyCap() public {
         // Update max mint amount and rate limit to allow larger mints
-        vm.startPrank(admin);
+        vm.prank(admin);
         minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
-        minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
-        vm.stopPrank();
 
         // Mint up to supply cap
         IMinterV0.Order memory order = _createOrder(alice, 0, uint208(APX_SUPPLY_CAP));
@@ -124,10 +130,8 @@ contract MinterV0_MintTest is MinterTest {
 
     function test_RevertWhen_MintExceedsSupplyCapAfterExecution() public {
         // Update max mint amount and rate limit
-        vm.startPrank(admin);
+        vm.prank(admin);
         minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
-        minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
-        vm.stopPrank();
 
         // Create two mint requests that together exceed supply cap
         uint208 amount = uint208(APX_SUPPLY_CAP / 2 + 1);
@@ -221,12 +225,10 @@ contract MinterV0_MintTest is MinterTest {
 
     function test_IncreaseSupplyCapAndMintMore() public {
         // Mint close to supply cap
-        vm.startPrank(admin);
+        vm.prank(admin);
         minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
-        minterV0.setRateLimit(2_000_000e18, RATE_LIMIT_PERIOD); // Increase to $2M
-        vm.stopPrank();
 
-        uint208 amount = uint208(APX_SUPPLY_CAP - 1_000e18);
+        uint208 amount = uint208(APX_SUPPLY_CAP - SMALL_AMOUNT);
 
         IMinterV0.Order memory order1 = _createOrder(alice, 0, amount);
         bytes memory signature1 = _signOrder(order1, alicePrivateKey);
@@ -240,9 +242,8 @@ contract MinterV0_MintTest is MinterTest {
         minterV0.executeMint(operationId1);
 
         // Increase supply cap
-        uint256 newSupplyCap = 2_000_000e18;
         vm.prank(admin);
-        apxUSD.setSupplyCap(newSupplyCap);
+        apxUSD.setSupplyCap(APX_SUPPLY_CAP * 2);
 
         // Mint more
         IMinterV0.Order memory order2 = _createOrder(alice, 1, uint208(500_000e18));
