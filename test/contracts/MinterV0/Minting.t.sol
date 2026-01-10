@@ -228,7 +228,7 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(admin);
         minterV0.setMaxMintAmount(uint208(APX_SUPPLY_CAP));
 
-        uint208 amount = uint208(APX_SUPPLY_CAP - SMALL_AMOUNT);
+        uint208 amount = uint208(APX_SUPPLY_CAP - 1_000e18);
 
         IMinterV0.Order memory order1 = _createOrder(alice, 0, amount);
         bytes memory signature1 = _signOrder(order1, alicePrivateKey);
@@ -490,7 +490,7 @@ contract MinterV0_MintTest is MinterTest {
 
         // Expect MintCancelled event
         vm.expectEmit(true, true, true, true);
-        emit IMinterV0.MintCancelled(operationId, alice, minterGuardian);
+        emit IMinterV0.MintCancelled(operationId, alice, guardian);
 
         cancelMint(operationId);
     }
@@ -519,7 +519,7 @@ contract MinterV0_MintTest is MinterTest {
         // Try to cancel an operation that was never created
         bytes32 fakeOperationId = bytes32(uint256(99999));
 
-        vm.prank(minterGuardian);
+        vm.prank(guardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(fakeOperationId);
     }
@@ -538,7 +538,7 @@ contract MinterV0_MintTest is MinterTest {
         cancelMint(operationId);
 
         // Try to cancel again (should fail - order no longer exists)
-        vm.prank(minterGuardian);
+        vm.prank(guardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
@@ -562,7 +562,7 @@ contract MinterV0_MintTest is MinterTest {
         assertEq(apxUSD.balanceOf(alice), amount);
 
         // Try to cancel after execution (should fail - order no longer exists)
-        vm.prank(minterGuardian);
+        vm.prank(guardian);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
