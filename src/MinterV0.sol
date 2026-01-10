@@ -6,6 +6,7 @@ import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManage
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {ApxUSD} from "./ApxUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
@@ -22,7 +23,7 @@ import {IMinterV0} from "./interfaces/IMinterV0.sol";
  * - Nonce tracking per beneficiary to prevent replay attacks
  * - EIP-712 typed structured data hashing
  */
-contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
+contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     using ECDSA for bytes32;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
 
@@ -180,6 +181,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
     function requestMint(Order calldata order, bytes calldata signature)
         external
         restricted
+        whenNotPaused
         returns (bytes32 operationId)
     {
         // 1. Validate order (signature, nonce, expiry, amount)
@@ -222,7 +224,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
      * @notice Executes a scheduled mint operation via AccessManager
      * @param operationId The unique identifier of the scheduled operation
      */
-    function executeMint(bytes32 operationId) external restricted {
+    function executeMint(bytes32 operationId) external restricted whenNotPaused {
         // 1. Retrieve stored order
         Order memory order = pendingOrders[operationId];
         if (order.beneficiary == address(0)) {
@@ -432,6 +434,24 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712 {
      */
     function cleanMintHistory(uint32 n) external restricted returns (uint32 cleaned) {
         return _cleanMintHistoryUpTo(n);
+    }
+
+    // ============================================
+    // Pausing
+    // ============================================
+
+    /**
+     * @notice Pauses the minting process
+     */
+    function pause() external restricted {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses the minting process
+     */
+    function unpause() external restricted {
+        _unpause();
     }
 
     // ============================================
