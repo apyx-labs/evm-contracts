@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 
@@ -59,7 +61,7 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
      * @notice Returns the asset token address
      * @return Address of the asset token
      */
-    function asset() external view returns (address);
+    function asset() external view returns (IERC20);
 
     /**
      * @notice Returns the current vesting period in seconds

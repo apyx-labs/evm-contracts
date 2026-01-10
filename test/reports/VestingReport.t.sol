@@ -145,8 +145,7 @@ contract VestingReport is ReportBase, VestingTest {
      * @return Array of string values for the CSV row
      */
     function _getReportRow(uint256 timestamp) internal view returns (string[] memory) {
-        address assetAddress = vesting.asset();
-        IERC20Metadata asset = IERC20Metadata(assetAddress);
+        IERC20 asset = vesting.asset();
 
         uint256 balance = asset.balanceOf(address(vesting));
         uint256 vested = vesting.vestedAmount();

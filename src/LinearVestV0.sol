@@ -26,7 +26,8 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /// @notice The asset token (apxUSD) held in vesting
-    IERC20 internal immutable _ASSET;
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
+    IERC20 public immutable asset;
 
     /// @notice Total amount currently vesting
     uint256 public vestingAmount;
@@ -60,20 +61,20 @@ contract LinearVestV0 is AccessManaged, IVesting {
 
     /**
      * @notice Initializes the LinearVestV0 contract
-     * @param asset_ Address of the asset token (apxUSD)
+     * @param _asset Address of the asset token (apxUSD)
      * @param _authority Address of the AccessManager contract
      * @param _beneficiary Address of the beneficiary contract
      * @param _vestingPeriod Initial vesting period in seconds
      */
-    constructor(address asset_, address _authority, address _beneficiary, uint256 _vestingPeriod)
+    constructor(address _asset, address _authority, address _beneficiary, uint256 _vestingPeriod)
         AccessManaged(_authority)
     {
-        if (asset_ == address(0)) revert InvalidAddress("asset");
+        if (_asset == address(0)) revert InvalidAddress("asset");
         if (_authority == address(0)) revert InvalidAddress("authority");
         if (_beneficiary == address(0)) revert InvalidAddress("beneficiary");
         if (_vestingPeriod == 0) revert InvalidAmount("vestingPeriod", _vestingPeriod);
 
-        _ASSET = IERC20(asset_);
+        asset = IERC20(_asset);
         beneficiary = _beneficiary;
         vestingPeriod = _vestingPeriod;
     }
@@ -83,25 +84,18 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /**
-     * @notice Returns the asset token address
-     * @return Address of the asset token
-     */
-    function asset() external view override returns (address) {
-        return address(_ASSET);
-    }
-
-    /**
      * @notice Returns the amount of yield that has vested and is available
      * @return Amount of vested yield
      */
     function vestedAmount() public view override returns (uint256) {
+        // slither-disable-next-line incorrect-equality
         if (vestingAmount == 0) return 0;
 
         uint256 timeSinceLastDeposit;
         unchecked {
             timeSinceLastDeposit = block.timestamp - lastDepositTimestamp;
         }
-
+        // slither-disable-next-line timestamp
         if (timeSinceLastDeposit >= vestingPeriod) {
             return vestingAmount; // Fully vested
         }
@@ -152,7 +146,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
         _transferVestedYield(vested);
 
         // Transfer assets from caller
-        _ASSET.safeTransferFrom(msg.sender, address(this), amount);
+        asset.safeTransferFrom(msg.sender, address(this), amount);
         emit YieldDeposited(msg.sender, amount);
     }
 
@@ -174,10 +168,11 @@ contract LinearVestV0 is AccessManaged, IVesting {
      */
     function _transferVestedYield(uint256 _vestedAmount) internal {
         // No-op if no vested yield available
+        // slither-disable-next-line incorrect-equality,timestamp
         if (_vestedAmount == 0) return;
 
         // Transfer vested yield to beneficiary
-        _ASSET.safeTransfer(beneficiary, _vestedAmount);
+        asset.safeTransfer(beneficiary, _vestedAmount);
         emit VestedYieldTransferred(beneficiary, _vestedAmount);
     }
 
