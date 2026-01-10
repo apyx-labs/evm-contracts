@@ -588,8 +588,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
         // Fill queue with a large number of mints
         // Use 100e18 per mint to avoid rate limit issues
         uint208 mintAmount = 100e18;
-        for (uint256 i = 0; i < LARGE_NUM_MINTS; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), mintAmount);
+        for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -616,8 +616,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
         // Fill queue with a large number of mints
         // Use 100e18 per mint to avoid rate limit issues
         uint208 mintAmount = 100e18;
-        for (uint256 i = 0; i < LARGE_NUM_MINTS; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), mintAmount);
+        for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -627,7 +627,7 @@ contract MinterV0_RateLimitingTest is MinterTest {
         vm.warp(block.timestamp + RATE_LIMIT_PERIOD + 1);
 
         // Manually clean 50 records at a time
-        for (uint256 i = 0; i < LARGE_NUM_MINTS / 50; i++) {
+        for (uint48 i = 0; i < LARGE_NUM_MINTS / 50; i++) {
             vm.prank(minter);
             uint256 gasBefore = gasleft();
             uint32 cleaned = minterV0.cleanMintHistory(50);
@@ -643,8 +643,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_PartialExpiry() public {
         // Add 50 old mints
-        for (uint256 i = 0; i < 50; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), 800e18);
+        for (uint48 i = 0; i < 50; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -654,8 +654,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
         vm.warp(block.timestamp + RATE_LIMIT_PERIOD / 2);
 
         // Add 50 new mints
-        for (uint256 i = 50; i < 100; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), 800e18);
+        for (uint48 i = 50; i < 100; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -674,8 +674,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_AccessControl() public {
         // Add some mints
-        for (uint256 i = 0; i < 10; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), 800e18);
+        for (uint48 i = 0; i < 10; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -698,8 +698,8 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_NoExpiredRecords() public {
         // Add recent mints
-        for (uint256 i = 0; i < 10; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, uint48(i), 800e18);
+        for (uint48 i = 0; i < 10; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
