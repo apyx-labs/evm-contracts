@@ -17,9 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          persist-credentials: false
-          submodules: recursive
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -30,11 +27,11 @@ jobs:
       - name: Run Forge fmt
         run: forge fmt --check
 
-      - name: Run Forge lint
-        run: forge lint src
-
       - name: Install Soldeer deps
         run: forge soldeer install
+
+      - name: Run Forge lint
+        run: forge lint src
 
       - name: Run Forge build
         run: forge build --sizes
