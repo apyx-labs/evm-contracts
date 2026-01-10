@@ -1,0 +1,25 @@
+name: Slither Static Analysis
+
+permissions:
+  contents: read
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  slither:
+    name: Slither Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Run Slither
+        continue-on-error: true
+        run: |
+          docker run \
+            --rm \
+            -v ${{ github.workspace }}:/app \
+            ghcr.io/trailofbits/eth-security-toolbox:nightly-20260105 \
+            slither /app/ --filter-paths "(dependencies/|test/)"
