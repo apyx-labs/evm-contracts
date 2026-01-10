@@ -30,6 +30,9 @@ jobs:
       - name: Run Forge fmt
         run: forge fmt --check
 
+      - name: Run Forge lint
+        run: forge lint src
+
       - name: Install Soldeer deps
         run: forge soldeer install
 
