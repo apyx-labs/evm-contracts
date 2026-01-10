@@ -11,6 +11,16 @@ import {EDenied} from "../errors/Denied.sol";
  */
 interface IApyUSD is EAddressNotSet, EDenied {
     // ========================================
+    // Errors
+    // ========================================
+
+    /**
+     * @notice Error thrown when the deposit to UnlockToken fails
+     * @param reason Reason for the error
+     */
+    error UnlockTokenError(string reason);
+
+    // ========================================
     // Events
     // ========================================
 
@@ -20,6 +30,13 @@ interface IApyUSD is EAddressNotSet, EDenied {
      * @param newUnlockToken New LockToken contract address
      */
     event UnlockTokenUpdated(address indexed oldUnlockToken, address indexed newUnlockToken);
+
+    /**
+     * @notice Emitted when the deposit to UnlockToken fails
+     * @param assets Amount of assets deposited
+     * @param unlockTokenShares Amount of unlockToken shares received
+     */
+    event UnlockTokenDepositError(uint256 assets, uint256 unlockTokenShares);
 
     /**
      * @notice Emitted when the deny list contract is updated

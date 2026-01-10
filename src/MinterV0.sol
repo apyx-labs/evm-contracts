@@ -32,6 +32,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     // ============================================
 
     /// @notice The apxUSD token contract
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     ApxUSD public immutable apxUSD;
 
     /// @notice Mapping of beneficiary => nonce for replay protection

@@ -62,6 +62,7 @@ contract ApyUSD is
     bytes32 private constant APYUSD_STORAGE_LOC = 0x1ff8d3deae3efb825bbaa861079c5ce537ca15be7f99d50a5b2800b88987f100;
 
     function _getApyUSDStorage() private pure returns (ApyUSDStorage storage $) {
+        // slither-disable-next-line assembly
         assembly {
             $.slot := APYUSD_STORAGE_LOC
         }
@@ -223,11 +224,28 @@ contract ApyUSD is
 
         // Deposit assets into the UnlockToken to the receiver so the receiver receives
         // the shares of the UnlockToken instead of the assets of the ApyUSD vault
+
+        // If approve fails the deposit will revert with InsufficientAllowance
+        // slither-disable-next-line unused-return
         IERC20(asset()).approve(address($.unlockToken), assets);
-        IERC4626(address($.unlockToken)).deposit(assets, receiver);
+
+        uint256 unlockTokenShares = IERC4626(address($.unlockToken)).deposit(assets, receiver);
+        if (unlockTokenShares != assets) {
+            // This should never happen because the deposit should always be 1:1
+            // but we check for safety. If this happens it implies there is a bug
+            // with the implementation of the UnlockToken contract.
+
+            // We can disable the reentrancy check because we revert immediately after emitting
+            // slither-disable-next-line reentrancy-events
+            emit UnlockTokenDepositError(assets, unlockTokenShares);
+            revert UnlockTokenError("assets and unlockToken shares do not match");
+        }
 
         // Start redeem request on UnlockToken (vault acts as operator)
         // The vault can act as operator because it's set in UnlockToken constructor
+
+        // return value is ignored because it is always 0 for this implementation
+        // slither-disable-next-line unused-return
         $.unlockToken.requestRedeem(assets, receiver, receiver);
     }
 

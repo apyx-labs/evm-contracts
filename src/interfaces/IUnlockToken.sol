@@ -12,6 +12,6 @@ interface IUnlockToken is ILockToken {
      * @notice Returns the vault address that can act as an operator
      * @return The vault address (immutable, set at construction)
      */
-    function VAULT() external view returns (address);
+    function vault() external view returns (address);
 }
 
