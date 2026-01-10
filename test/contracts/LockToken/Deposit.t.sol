@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {LockTokenBaseTest} from "./BaseTest.sol";
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title LockTokenDepositTest

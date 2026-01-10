@@ -5,8 +5,6 @@ import {LockTokenBaseTest} from "./BaseTest.sol";
 import {ILockToken} from "../../../src/interfaces/ILockToken.sol";
 import {Errors} from "../../utils/Errors.sol";
 
-import {console2 as console} from "forge-std/src/console2.sol";
-
 /**
  * @title LockTokenRedeemTest
  * @notice Tests for LockToken async redeem functionality

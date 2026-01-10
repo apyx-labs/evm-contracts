@@ -14,7 +14,6 @@ import {UnlockToken} from "../../../src/UnlockToken.sol";
 import {IUnlockToken} from "../../../src/interfaces/IUnlockToken.sol";
 import {AddressList} from "../../../src/AddressList.sol";
 import {Roles} from "../../../src/Roles.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title VestingTest

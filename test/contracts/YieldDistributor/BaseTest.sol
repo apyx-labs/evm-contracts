@@ -8,10 +8,7 @@ import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {MinterV0} from "../../../src/MinterV0.sol";
 import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {YieldDistributor} from "../../../src/YieldDistributor.sol";
-import {IVesting} from "../../../src/interfaces/IVesting.sol";
-import {IYieldDistributor} from "../../../src/interfaces/IYieldDistributor.sol";
 import {Roles} from "../../../src/Roles.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * @title YieldDistributorBaseTest

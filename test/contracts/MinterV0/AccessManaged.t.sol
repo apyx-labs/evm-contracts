@@ -2,7 +2,6 @@
 pragma solidity 0.8.30;
 
 import {MinterTest} from "./BaseTest.sol";
-import {MinterV0} from "../../../src/MinterV0.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
 
 /**
@@ -38,12 +37,12 @@ contract MinterV0_AccessManagedTest is MinterTest {
         uint256 numOrders = 256;
 
         // Create 256 orders with short expiry (MINT_DELAY + 1)
-        for (uint256 i = 0; i < numOrders; i++) {
+        for (uint48 i = 0; i < numOrders; i++) {
             IMinterV0.Order memory tempOrder = IMinterV0.Order({
                 beneficiary: alice,
                 notBefore: uint48(block.timestamp),
                 notAfter: uint48(block.timestamp + MINT_DELAY + 1),
-                nonce: uint48(i),
+                nonce: i,
                 amount: mintAmount
             });
             bytes memory tempSig = _signOrder(tempOrder, alicePrivateKey);

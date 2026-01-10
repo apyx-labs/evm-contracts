@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {Vm} from "forge-std/src/Vm.sol";
 import {VmExt} from "../../utils/VmExt.sol";
 import {MinterTest} from "./BaseTest.sol";
-import {MinterV0} from "../../../src/MinterV0.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
 
 /**

@@ -2,12 +2,6 @@
 pragma solidity 0.8.30;
 
 import {BaseTest} from "../../BaseTest.sol";
-import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {LockToken} from "../../../src/LockToken.sol";
-import {AddressList} from "../../../src/AddressList.sol";
-import {Roles} from "../../../src/Roles.sol";
 
 /**
  * @title LockTokenBaseTest
