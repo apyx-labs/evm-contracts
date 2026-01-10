@@ -5,6 +5,8 @@ import {LockTokenBaseTest} from "./BaseTest.sol";
 import {ILockToken} from "../../../src/interfaces/ILockToken.sol";
 import {Errors} from "../../utils/Errors.sol";
 
+import {console2 as console} from "forge-std/src/console2.sol";
+
 /**
  * @title LockTokenRedeemTest
  * @notice Tests for LockToken async redeem functionality
@@ -39,10 +41,8 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
         uint256 shares = deposit(alice, depositAmount);
 
-        uint256 requestId = requestRedeem(alice, shares);
-
         // Bound to available shares (converted to assets, 1:1)
-        withdrawAmount = bound(withdrawAmount, 1e18, shares);
+        withdrawAmount = bound(withdrawAmount, SMALL_AMOUNT, shares);
         uint256 requestId = requestWithdraw(alice, withdrawAmount);
 
         assertEq(requestId, 0, "Request ID should be 0");
@@ -80,6 +80,7 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         uint256 secondRequest
     ) public {
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
         uint256 shares = deposit(alice, depositAmount);
 
         // Bound requests to be less than balance individually
@@ -142,6 +143,7 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         uint256 secondShares
     ) public {
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
         uint256 shares = deposit(alice, depositAmount);
 
         // Bound requests
@@ -166,20 +168,24 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         assertEq(claimableAssets, firstAssets + secondAssets, "Assets should accumulate");
     }
 
-    function testFuzz_RevertWhen_RequestRedeem_ExceedsBalance(uint256 firstRequest, uint256 secondRequest) public {
-        uint256 aliceBalance = lockToken.balanceOf(alice);
+    function testFuzz_RevertWhen_RequestRedeem_ExceedsBalance(
+        uint256 depositAmount,
+        uint256 firstRequest,
+        uint256 secondRequest
+    ) public {
+        depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
+        uint256 shares = deposit(alice, depositAmount);
 
         // Bound first request to be valid
-        firstRequest = bound(firstRequest, 1e18, aliceBalance);
+        firstRequest = bound(firstRequest, 1e18, shares);
+        requestRedeem(alice, firstRequest); // succeeds
 
         // Bound second request such that total exceeds balance
-        secondRequest = bound(secondRequest, aliceBalance - firstRequest + 1, aliceBalance);
-
-        // First request succeeds
-        requestRedeem(alice, firstRequest);
+        secondRequest = bound(secondRequest, shares - firstRequest + 1, shares);
 
         // Second request should revert
-        vm.expectRevert(Errors.insufficientBalance(alice, aliceBalance - firstRequest, secondRequest));
+        vm.expectRevert(Errors.insufficientBalance(alice, shares - firstRequest, secondRequest));
         requestRedeem(alice, secondRequest);
     }
 
@@ -190,9 +196,8 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
     function testFuzz_CooldownRemaining_TracksCorrectly(uint256 depositAmount, uint256 warpTime) public {
         // Bound inputs
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
         uint256 shares = deposit(alice, depositAmount);
-
-        warpTime = bound(warpTime, 0, UNLOCKING_DELAY);
 
         // Request redeem
         requestRedeem(alice, shares);
@@ -202,7 +207,9 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         assertEq(cooldown, UNLOCKING_DELAY, "Cooldown should be full delay immediately after request");
 
         // 2. Warp partial time, check remaining
+        warpTime = bound(warpTime, 0, UNLOCKING_DELAY - 1);
         vm.warp(block.timestamp + warpTime);
+
         cooldown = lockToken.cooldownRemaining(0, alice);
         assertEq(cooldown, UNLOCKING_DELAY - uint48(warpTime), "Cooldown should decrease by warp time");
         assertFalse(lockToken.isClaimable(0, alice), "Should not be claimable during cooldown");
@@ -235,6 +242,7 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         uint256 partialWait
     ) public {
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
         uint256 shares = deposit(alice, depositAmount);
 
         firstShares = bound(firstShares, 1e18, shares / 2);
@@ -267,6 +275,7 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
 
     function testFuzz_Redeem_OneToOne(uint256 depositAmount) public {
         depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
         uint256 shares = deposit(alice, depositAmount);
 
         // Request and warp past cooldown
@@ -332,14 +341,15 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         assertEq(assetsReceived, assets, "Assets received should equal requested");
     }
 
-    function test_Redeem_ClearsRequest() public {
-        uint256 shares = MEDIUM_AMOUNT;
-        requestRedeem(alice, shares);
-        warpPastUnlockingDelay();
+    function test_Redeem_ClearsRequest(uint256 depositAmount) public {
+        depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
+        uint256 shares = deposit(alice, depositAmount);
 
-        // Redeem
-        vm.prank(alice);
-        lockToken.redeem(shares, alice, alice);
+        requestRedeem(alice, shares);
+
+        warpPastUnlockingDelay();
+        redeem(alice, shares);
 
         // Request should be cleared
         assertEq(lockToken.pendingRedeemRequest(0, alice), 0, "Pending request should be 0");
@@ -347,8 +357,11 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         assertFalse(lockToken.isClaimable(0, alice), "Should not be claimable after redeem");
     }
 
-    function test_RevertWhen_Redeem_SharesMismatch() public {
-        uint256 shares = MEDIUM_AMOUNT;
+    function test_RevertWhen_Redeem_SharesMismatch(uint256 depositAmount) public {
+        depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
+        uint256 shares = deposit(alice, depositAmount);
+
         requestRedeem(alice, shares);
         warpPastUnlockingDelay();
 
@@ -358,8 +371,12 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         lockToken.redeem(shares + 1, alice, alice);
     }
 
-    function test_RevertWhen_Withdraw_AssetsMismatch() public {
-        uint256 assets = MEDIUM_AMOUNT;
+    function test_RevertWhen_Withdraw_AssetsMismatch(uint256 depositAmount) public {
+        depositAmount = bound(depositAmount, SMALL_AMOUNT, LARGE_AMOUNT);
+        mockToken.mint(alice, depositAmount);
+
+        uint256 assets = deposit(alice, depositAmount);
+
         requestWithdraw(alice, assets);
         warpPastUnlockingDelay();
 
@@ -419,24 +436,14 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
 
     function testFuzz_MultipleUsersLockUnlock(uint256 aliceAmount, uint256 bobAmount, uint256 charlieAmount) public {
         // Bound amounts to ensure users have enough balance
-        aliceAmount = bound(aliceAmount, 1e18, LARGE_AMOUNT / 3);
-        bobAmount = bound(bobAmount, 1e18, LARGE_AMOUNT / 3);
-        charlieAmount = bound(charlieAmount, 1e18, LARGE_AMOUNT / 3);
+        aliceAmount = bound(aliceAmount, 1e18, LARGE_AMOUNT);
+        mockToken.mint(alice, aliceAmount);
 
-        // Ensure users have enough assets
-        uint256 aliceAssetBalance = mockToken.balanceOf(alice);
-        uint256 bobAssetBalance = mockToken.balanceOf(bob);
-        uint256 charlieAssetBalance = mockToken.balanceOf(charlie);
+        bobAmount = bound(bobAmount, 1e18, LARGE_AMOUNT);
+        mockToken.mint(bob, bobAmount);
 
-        if (aliceAssetBalance < aliceAmount) {
-            mockToken.mint(alice, aliceAmount - aliceAssetBalance + 1e18);
-        }
-        if (bobAssetBalance < bobAmount) {
-            mockToken.mint(bob, bobAmount - bobAssetBalance + 1e18);
-        }
-        if (charlieAssetBalance < charlieAmount) {
-            mockToken.mint(charlie, charlieAmount - charlieAssetBalance + 1e18);
-        }
+        charlieAmount = bound(charlieAmount, 1e18, LARGE_AMOUNT);
+        mockToken.mint(charlie, charlieAmount);
 
         // All users lock
         uint256 aliceShares = deposit(alice, aliceAmount);
@@ -444,9 +451,14 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         uint256 charlieShares = deposit(charlie, charlieAmount);
 
         // All users request unlock
-        requestRedeem(alice, aliceShares);
-        requestRedeem(bob, bobShares);
-        requestRedeem(charlie, charlieShares);
+        uint256 aliceRedeemAmount = aliceShares / 2;
+        requestRedeem(alice, aliceRedeemAmount);
+
+        uint256 bobRedeemAmount = bobShares / 3;
+        requestRedeem(bob, bobRedeemAmount);
+
+        uint256 charlieRedeemAmount = charlieShares / 4;
+        requestRedeem(charlie, charlieRedeemAmount);
 
         // Verify independent cooldowns
         assertEq(lockToken.cooldownRemaining(0, alice), UNLOCKING_DELAY, "Alice cooldown active");
@@ -457,18 +469,15 @@ contract LockTokenRedeemTest is LockTokenBaseTest {
         warpPastUnlockingDelay();
 
         // All users unlock
-        vm.prank(alice);
-        lockToken.redeem(aliceShares, alice, alice);
-        vm.prank(bob);
-        lockToken.redeem(bobShares, bob, bob);
-        vm.prank(charlie);
-        lockToken.redeem(charlieShares, charlie, charlie);
+        redeem(alice, aliceRedeemAmount);
+        redeem(bob, bobRedeemAmount);
+        redeem(charlie, charlieRedeemAmount);
 
         // Verify all unlocked (they should have their original shares from setUp plus new shares minus redeemed shares)
         // Note: alice, bob, and charlie already had LARGE_AMOUNT shares from setUp
-        uint256 aliceExpectedBalance = LARGE_AMOUNT + aliceShares - aliceShares;
-        uint256 bobExpectedBalance = LARGE_AMOUNT + bobShares - bobShares;
-        uint256 charlieExpectedBalance = LARGE_AMOUNT + charlieShares - charlieShares;
+        uint256 aliceExpectedBalance = aliceShares - aliceRedeemAmount;
+        uint256 bobExpectedBalance = bobShares - bobRedeemAmount;
+        uint256 charlieExpectedBalance = charlieShares - charlieRedeemAmount;
 
         assertEq(lockToken.balanceOf(alice), aliceExpectedBalance, "Alice should have expected balance");
         assertEq(lockToken.balanceOf(bob), bobExpectedBalance, "Bob should have expected balance");

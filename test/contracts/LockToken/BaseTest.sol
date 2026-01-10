@@ -52,6 +52,17 @@ abstract contract LockTokenBaseTest is BaseTest {
     }
 
     /**
+     * @notice Helper to redeem lock token shares
+     * @param user User redeeming shares
+     * @param shares Amount of shares to redeem
+     * @return assets Amount of assets redeemed
+     */
+    function redeem(address user, uint256 shares) internal returns (uint256 assets) {
+        vm.prank(user);
+        assets = lockToken.redeem(shares, user, user);
+    }
+
+    /**
      * @notice Helper to request redemption of lock token shares
      * @param user User requesting redemption
      * @param shares Amount of shares to redeem

@@ -10,6 +10,8 @@ import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManage
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
 
+import {console2 as console} from "forge-std/src/console2.sol";
+
 import {ILockToken} from "./interfaces/ILockToken.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
 
@@ -244,10 +246,12 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
         if (request.requestedAt == 0) {
             return 0;
         }
-        if (block.timestamp >= request.requestedAt + unlockingDelay) {
+        uint256 unlockTime = request.requestedAt + unlockingDelay;
+
+        if (block.timestamp >= unlockTime) {
             return 0;
         }
-        return uint48(request.requestedAt + unlockingDelay - block.timestamp);
+        return uint48(unlockTime - block.timestamp);
     }
 
     /**
