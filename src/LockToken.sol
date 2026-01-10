@@ -245,10 +245,11 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
         }
         uint256 unlockTime = request.requestedAt + unlockingDelay;
 
+        // slither-disable-next-line timestamp
         if (block.timestamp >= unlockTime) {
             return 0;
         }
-        // @dev This is save because we have already confirmed that unlockTime is greater than block.timestamp
+        // This is safe because we have already confirmed that unlockTime is greater than block.timestamp
         // forge-lint: disable-next-line(unsafe-typecast)
         return uint48(unlockTime - block.timestamp);
     }
@@ -262,6 +263,7 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
     }
 
     function _isClaimable(Request storage request) internal view returns (bool) {
+        // slither-disable-next-line incorrect-equality,timestamp
         return request.requestedAt != 0 && _cooldownRemaining(request) == 0;
     }
 
