@@ -29,6 +29,7 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
     // ========================================
 
     /// @notice The apxUSD token contract
+    // forge-lint: disable-next-line(screaming-snake-case-immutable)
     IERC20 public immutable asset;
 
     /// @notice The vesting contract address
