@@ -12,7 +12,7 @@ import {MinterV0} from "../src/MinterV0.sol";
 import {LinearVestV0} from "../src/LinearVestV0.sol";
 import {YieldDistributor} from "../src/YieldDistributor.sol";
 import {UnlockToken} from "../src/UnlockToken.sol";
-import {LockToken} from "../src/LockToken.sol";
+import {CommitToken} from "../src/CommitToken.sol";
 import {AddressList} from "../src/AddressList.sol";
 import {Roles} from "../src/Roles.sol";
 import {IUnlockToken} from "../src/interfaces/IUnlockToken.sol";
@@ -42,10 +42,10 @@ abstract contract BaseTest is Test {
     LinearVestV0 public vesting;
     YieldDistributor public yieldDistributor;
     UnlockToken public unlockToken;
-    LockToken public lockToken;
+    CommitToken public lockToken;
     AddressList public denyList;
 
-    // Mock ERC20 for LockToken tests
+    // Mock ERC20 for CommitToken tests
     MockERC20 public mockToken;
 
     // ========================================
@@ -153,10 +153,10 @@ abstract contract BaseTest is Test {
         );
         vm.label(address(unlockToken), "unlockToken");
 
-        // Deploy LockToken (for LockToken-specific tests)
+        // Deploy CommitToken (for CommitToken-specific tests)
         mockToken = new MockERC20();
         vm.label(address(mockToken), "mockToken");
-        lockToken = new LockToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList));
+        lockToken = new CommitToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList));
         vm.label(address(lockToken), "lockToken");
 
         // Configure roles for entire system

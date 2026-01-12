@@ -5,16 +5,16 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
 
-import {LockToken} from "./LockToken.sol";
+import {CommitToken} from "./CommitToken.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
 
 /**
  * @title UnlockToken
- * @notice LockToken subclass that allows a vault to initiate redeem requests on behalf of users
+ * @notice CommitToken subclass that allows a vault to initiate redeem requests on behalf of users
  * @dev The vault address is immutable and set at construction. The vault can act as an operator
  *      for any controller, enabling it to initiate redeem requests automatically.
  */
-contract UnlockToken is LockToken, IUnlockToken {
+contract UnlockToken is CommitToken, IUnlockToken {
     /// @notice The vault address that can act as an operator (immutable)
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable vault;
@@ -28,7 +28,7 @@ contract UnlockToken is LockToken, IUnlockToken {
      * @param denyList_ Address of the AddressList contract for deny list checking
      */
     constructor(address authority_, address asset_, address vault_, uint48 unlockingDelay_, address denyList_)
-        LockToken(authority_, asset_, unlockingDelay_, denyList_)
+        CommitToken(authority_, asset_, unlockingDelay_, denyList_)
     {
         if (vault_ == address(0)) revert InvalidAddress("vault");
         vault = vault_;
@@ -37,7 +37,7 @@ contract UnlockToken is LockToken, IUnlockToken {
     /**
      * @notice Returns the token name: "{VaultName} Unlock Token"
      * @return The token name
-     * @dev Overrides LockToken's name() which returns "{AssetName} Lock Token"
+     * @dev Overrides CommitToken's name() which returns "{AssetName} Lock Token"
      */
     function name() public view override(ERC20, IERC20Metadata) returns (string memory) {
         return string.concat(IERC20Metadata(asset()).name(), " Unlock Token");
@@ -46,7 +46,7 @@ contract UnlockToken is LockToken, IUnlockToken {
     /**
      * @notice Returns the token symbol: "{AssetSymbol}unlock"
      * @return The token symbol
-     * @dev Overrides LockToken's symbol() which returns "LT-{AssetSymbol}"
+     * @dev Overrides CommitToken's symbol() which returns "LT-{AssetSymbol}"
      */
     function symbol() public view override(ERC20, IERC20Metadata) returns (string memory) {
         return string.concat(IERC20Metadata(asset()).symbol(), "_unlock");
@@ -61,7 +61,7 @@ contract UnlockToken is LockToken, IUnlockToken {
     function isOperator(address controller, address operator)
         public
         view
-        override(LockToken, IERC7540Operator)
+        override(CommitToken, IERC7540Operator)
         returns (bool)
     {
         return controller == operator || operator == vault;

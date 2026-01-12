@@ -360,7 +360,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
         // victimDeposit = bound(victimDeposit, 1e18, LARGE_AMOUNT);
         uint256 victimDeposit = MEDIUM_AMOUNT;
 
-        // Confirm that the LockToken has no assets
+        // Confirm that the CommitToken has no assets
         assertEq(apyUSD.totalAssets(), 0, "ApyUSD should have no assets");
         assertEq(apyUSD.totalSupply(), 0, "ApyUSD should have no supply");
 

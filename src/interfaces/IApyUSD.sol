@@ -25,9 +25,9 @@ interface IApyUSD is EAddressNotSet, EDenied {
     // ========================================
 
     /**
-     * @notice Emitted when the LockToken contract is updated
-     * @param oldUnlockToken Previous LockToken contract address
-     * @param newUnlockToken New LockToken contract address
+     * @notice Emitted when the CommitToken contract is updated
+     * @param oldUnlockToken Previous CommitToken contract address
+     * @param newUnlockToken New CommitToken contract address
      */
     event UnlockTokenUpdated(address indexed oldUnlockToken, address indexed newUnlockToken);
 

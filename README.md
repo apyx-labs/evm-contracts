@@ -10,8 +10,8 @@ The Apyx protocol consists of multiple interconnected contracts that enable stab
 |------------------|-------------|
 | **ApxUSD**       | The base ERC-20 stablecoin with supply cap, pause, and freeze functionality. Implements EIP-2612 permit for gasless approvals and uses the UUPS upgradeable pattern. |
 | **ApyUSD**       | An ERC-4626 yield-bearing vault that wraps apxUSD, allowing deposits to accrue yield from vesting distributions. |
-| **LockToken**    | An ERC-7540 async redeem vault with a configurable cooldown period for unlocking. Implements deny list checking and can lock arbitrary ERC-20 tokens for use in off-chain points systems. |
-| **UnlockToken**  | A LockToken subclass that allows a vault to initiate redeem requests on behalf of users, enabling automated withdrawal flows. |
+| **CommitToken**    | An ERC-7540 async redeem vault with a configurable cooldown period for unlocking. Implements deny list checking and can lock arbitrary ERC-20 tokens for use in off-chain points systems. |
+| **UnlockToken**  | A CommitToken subclass that allows a vault to initiate redeem requests on behalf of users, enabling automated withdrawal flows. |
 | **MinterV0**     | Handles apxUSD minting via EIP-712 signed orders with rate limiting and AccessManager integration for delayed execution. |
 | **LinearVestV0** | A linear vesting contract that gradually releases yield to the vault over a configurable period. |
 | **YieldDistributor** | Receives minting fees and deposits them to the vesting contract for gradual distribution. |
@@ -69,14 +69,14 @@ flowchart TB
 
 ### Lock Tokens for Points
 
-LockToken is a standalone ERC-7540 vault that locks any ERC-20 token with a configurable unlocking period. Users deposit tokens to receive non-transferable lock tokens, which can be used for off-chain points systems.
+CommitToken is a standalone ERC-7540 vault that locks any ERC-20 token with a configurable unlocking period. Users deposit tokens to receive non-transferable lock tokens, which can be used for off-chain points systems.
 
 ```mermaid
 flowchart TB
-    User -->|"deposit(assets)"| LockToken
-    LockToken -->|"mints shares"| User
-    User -->|"requestRedeem(shares)"| LockToken
-    LockToken -->|"starts cooldown"| CooldownPeriod[Cooldown Period]
+    User -->|"deposit(assets)"| CommitToken
+    CommitToken -->|"mints shares"| User
+    User -->|"requestRedeem(shares)"| CommitToken
+    CommitToken -->|"starts cooldown"| CooldownPeriod[Cooldown Period]
     CooldownPeriod -->|"after delay"| User
     User -->|"redeem()"| Assets[Original Assets]
 ```
@@ -170,7 +170,7 @@ just fmt
 
 The test suite is organized in the `test/` directory with the following structure:
 
-- **test/contracts/** - Tests organized by contract (ApxUSD, ApyUSD, LockToken, MinterV0, Vesting, YieldDistributor)
+- **test/contracts/** - Tests organized by contract (ApxUSD, ApyUSD, CommitToken, MinterV0, Vesting, YieldDistributor)
 - **test/exts/** - Extension tests (ERC20FreezeableUpgradable)
 - **test/mocks/** - Mock contracts for testing
 - **test/utils/** - Test utilities (VmExt, Formatter, Errors)
@@ -210,8 +210,8 @@ Before production deployment:
 ├── src/
 │   ├── ApxUSD.sol           # ERC-20 stablecoin token
 │   ├── ApyUSD.sol           # ERC-4626 yield-bearing vault
-│   ├── LockToken.sol        # ERC-7540 async redeem vault
-│   ├── UnlockToken.sol      # LockToken for vault-initiated redeems
+│   ├── CommitToken.sol        # ERC-7540 async redeem vault
+│   ├── UnlockToken.sol      # CommitToken for vault-initiated redeems
 │   ├── MinterV0.sol         # EIP-712 minting with AccessManager
 │   ├── LinearVestV0.sol    # Linear vesting contract
 │   ├── YieldDistributor.sol # Yield distribution contract
