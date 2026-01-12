@@ -61,10 +61,7 @@ contract DeployApxUSD is DeployBase {
         console2.log("ApxUSD implementation deployed at:", address(apxUSDImpl));
 
         // 2. Deploy ApxUSD proxy with initialization
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize,
-            (accessManagerAddress, DEFAULT_SUPPLY_CAP)
-        );
+        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (accessManagerAddress, DEFAULT_SUPPLY_CAP));
         ERC1967Proxy apxUSDProxyContract = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSDProxy = address(apxUSDProxyContract);
         apxUSD = ApxUSD(apxUSDProxy);
