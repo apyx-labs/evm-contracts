@@ -110,3 +110,13 @@ check:
     forge build
     @echo "Running tests..."
     forge test
+
+copy-abis:
+    ./scripts/copy-abi.sh AddressList
+    ./scripts/copy-abi.sh ApxUSD
+    ./scripts/copy-abi.sh ApyUSD
+    ./scripts/copy-abi.sh CommitToken
+    ./scripts/copy-abi.sh IVesting
+    ./scripts/copy-abi.sh MinterV0
+    ./scripts/copy-abi.sh UnlockToken
+    ./scripts/copy-abi.sh YieldDistributor
