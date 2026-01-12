@@ -19,11 +19,11 @@ contract LockToken is ERC4626, IERC7540Redeem, AccessManaged, ILockToken, ERC20P
     // ========================================
 
     /// @notice Cooldown period for redeem requests (unlocking delay)
-    uint48 unlockingDelay;
+    uint48 public unlockingDelay;
     /// @notice Mapping of user addresses to their redeem requests
     mapping(address => Request) redeemRequests;
     /// @notice Reference to the AddressList contract for deny list checking
-    IAddressList denyList;
+    IAddressList public denyList;
     /// @notice Reference to the Silo contract for cooldown escrow
 
     // ========================================

@@ -8,15 +8,28 @@ default:
 anvil:
     anvil
 
-# Deploy contracts to local Anvil
+# Deploy contracts to local Anvil (all in sequence)
 deploy-local:
     ./scripts/deploy.sh local
 
 deploy-devnet:
     ./scripts/deploy.sh devnet
 
-deploy-apy:
-    forge script cmds/DeployApyUSD.s.sol:DeployApyUSD --rpc-url http://localhost:8545 --broadcast
+# Deploy individual components
+deploy-access NETWORK="local" RPC_URL="http://localhost:8545":
+    NETWORK={{NETWORK}} forge script cmds/DeployAccess.s.sol:DeployAccess --rpc-url {{RPC_URL}} --broadcast
+
+deploy-apxusd NETWORK="local" RPC_URL="http://localhost:8545":
+    NETWORK={{NETWORK}} forge script cmds/DeployApxUSD.s.sol:DeployApxUSD --rpc-url {{RPC_URL}} --broadcast
+
+deploy-apyusd NETWORK="local" RPC_URL="http://localhost:8545":
+    NETWORK={{NETWORK}} forge script cmds/DeployApyUSD.s.sol:DeployApyUSD --rpc-url {{RPC_URL}} --broadcast
+
+deploy-yield NETWORK="local" RPC_URL="http://localhost:8545":
+    NETWORK={{NETWORK}} forge script cmds/DeployYield.s.sol:DeployYield --rpc-url {{RPC_URL}} --broadcast
+
+# Deploy all contracts in sequence
+deploy-all NETWORK="local" RPC_URL="http://localhost:8545": deploy-access deploy-apxusd deploy-apyusd deploy-yield
 
 # Run all tests
 test:

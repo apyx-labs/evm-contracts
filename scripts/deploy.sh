@@ -27,7 +27,12 @@ if [ "$ACTUAL_CHAIN_ID" != "$EXPECTED_CHAIN_ID" ]; then
 fi
 
 echo "Chain ID verified: $ACTUAL_CHAIN_ID"
-NETWORK=$NETWORK forge script cmds/Deploy.s.sol:Deploy --rpc-url "$RPC_URL" --broadcast
+echo "Deploying all contracts in sequence..."
+NETWORK=$NETWORK forge script cmds/DeployAccess.s.sol:DeployAccess --rpc-url "$RPC_URL" --broadcast
+NETWORK=$NETWORK forge script cmds/DeployApxUSD.s.sol:DeployApxUSD --rpc-url "$RPC_URL" --broadcast
+NETWORK=$NETWORK forge script cmds/DeployApyUSD.s.sol:DeployApyUSD --rpc-url "$RPC_URL" --broadcast
+NETWORK=$NETWORK forge script cmds/DeployYield.s.sol:DeployYield --rpc-url "$RPC_URL" --broadcast
+echo "Deployment complete!"
 
 
 
