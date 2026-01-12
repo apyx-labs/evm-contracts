@@ -210,10 +210,10 @@ Before production deployment:
 ├── src/
 │   ├── ApxUSD.sol           # ERC-20 stablecoin token
 │   ├── ApyUSD.sol           # ERC-4626 yield-bearing vault
-│   ├── CommitToken.sol        # ERC-7540 async redeem vault
+│   ├── CommitToken.sol      # ERC-7540 async redeem vault
 │   ├── UnlockToken.sol      # CommitToken for vault-initiated redeems
 │   ├── MinterV0.sol         # EIP-712 minting with AccessManager
-│   ├── LinearVestV0.sol    # Linear vesting contract
+│   ├── LinearVestV0.sol     # Linear vesting contract
 │   ├── YieldDistributor.sol # Yield distribution contract
 │   ├── AddressList.sol      # Centralized deny list
 │   ├── interfaces/          # Contract interfaces
