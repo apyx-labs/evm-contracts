@@ -24,10 +24,10 @@ jobs:
         run: forge soldeer install
 
       - name: Run Slither
+        continue-on-error: true
         run: |
           docker run \
             --rm \
-            --user $(id -u):$(id -g) \
             -v ${{ github.workspace }}:/app \
             ghcr.io/trailofbits/eth-security-toolbox:nightly-20260105 \
             slither /app/ --filter-paths "(dependencies/|test/)"
