@@ -28,9 +28,17 @@
       "address": "0xdBfD38820686b738fc80E7aD26566F4B77c1B92D",
       "block": 9937224
     },
+    "linearVestV0": {
+      "address": "0x29c0fc99eeEfe3B6f0C2b08e59961C6F4f2f2EdE",
+      "block": 9954599
+    },
     "minterV0": {
       "address": "0xd91d0433c10291448a8DC00C3ba14Af8b94c7656",
       "block": 9937224
+    },
+    "yieldDistributor": {
+      "address": "0xe3f89724666d4220e816c80bafcC993337a5e1BF",
+      "block": 9954599
     }
   }
 }
