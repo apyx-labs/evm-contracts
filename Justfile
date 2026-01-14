@@ -8,6 +8,10 @@ default:
 anvil:
     anvil
 
+# Port forward the dev Kubernetes cluster Anvil node to localhost:8545
+anvil-port-forward:
+    kubectl --namespace anvil port-forward svc/anvil 8545:8545
+
 # Deploy contracts to local Anvil (all in sequence)
 deploy-local:
     ./scripts/deploy.sh local
