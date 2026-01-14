@@ -12,11 +12,25 @@
     }
   },
   "contracts": {
-    "accessManager": "0xff45Fcd36E04C07b53D909b00E915837fD1E3234",
-    "addressList": "0x11DAa049d4C16824487B0ED8021c6De88284F4bB",
-    "apxUSD": "0x71cEE012bA3B9642277f189c2C26488cAA28CF13",
-    "apyUSD": "0xdBfD38820686b738fc80E7aD26566F4B77c1B92D",
-    "minterV0": "0xd91d0433c10291448a8DC00C3ba14Af8b94c7656",
-    "silo": "0xF37DA4260891042bEF41e9434e1c1dEf811b5412"
+    "accessManager": {
+      "address": "0xff45Fcd36E04C07b53D909b00E915837fD1E3234",
+      "block": 9937224
+    },
+    "addressList": {
+      "address": "0x11DAa049d4C16824487B0ED8021c6De88284F4bB",
+      "block": 9937224
+    },
+    "apxUSD": {
+      "address": "0x71cEE012bA3B9642277f189c2C26488cAA28CF13",
+      "block": 9937224
+    },
+    "apyUSD": {
+      "address": "0xdBfD38820686b738fc80E7aD26566F4B77c1B92D",
+      "block": 9937224
+    },
+    "minterV0": {
+      "address": "0xd91d0433c10291448a8DC00C3ba14Af8b94c7656",
+      "block": 9937224
+    }
   }
 }
