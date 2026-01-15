@@ -9,6 +9,7 @@ import {ENotSupported} from "../errors/NotSupported.sol";
 import {EInvalidCaller} from "../errors/InvalidCaller.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
 import {EDenied} from "../errors/Denied.sol";
+import {ESupplyCapped} from "../errors/SupplyCapped.sol";
 
 interface ICommitToken is
     IERC7540Redeem,
@@ -17,7 +18,8 @@ interface ICommitToken is
     EInvalidAmount,
     ENotSupported,
     EInvalidCaller,
-    EInsufficientBalance
+    EInsufficientBalance,
+    ESupplyCapped
 {
     /**
      * @notice Request data structure used for both deposits and redeems
@@ -61,16 +63,6 @@ interface ICommitToken is
     // ========================================
     // Errors
     // ========================================
-
-    /**
-     * @notice Error thrown when minting would exceed the supply cap
-     */
-    error SupplyCapExceeded(uint256 requestedAmount, uint256 availableCapacity);
-
-    /**
-     * @notice Error thrown when setting an invalid supply cap
-     */
-    error InvalidSupplyCap();
 
     /**
      * @notice Error thrown when trying to claim a non-existent or non-claimable request

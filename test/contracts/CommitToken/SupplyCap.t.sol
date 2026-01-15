@@ -5,6 +5,7 @@ import {CommitTokenBaseTest} from "./BaseTest.sol";
 import {CommitToken} from "../../../src/CommitToken.sol";
 import {UnlockToken} from "../../../src/UnlockToken.sol";
 import {ICommitToken} from "../../../src/interfaces/ICommitToken.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title CommitTokenSupplyCapTest
@@ -46,7 +47,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
     }
 
     function test_SetSupplyCap() public {
-        uint256 newCap = 2_000_000e18;
+        uint256 newCap = VERY_VERY_LARGE_AMOUNT * 2;
 
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
@@ -61,7 +62,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
         mockToken.mint(alice, MEDIUM_AMOUNT);
         deposit(alice, MEDIUM_AMOUNT);
 
-        uint256 newCap = 20_000_000e18;
+        uint256 newCap = VERY_VERY_LARGE_AMOUNT * 2;
 
         vm.prank(admin);
         lockToken.setSupplyCap(newCap);
@@ -82,7 +83,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
 
         vm.startPrank(alice);
         mockToken.approve(address(smallCapToken), overCapAmount);
-        vm.expectRevert(abi.encodeWithSelector(ICommitToken.SupplyCapExceeded.selector, overCapAmount, smallCap));
+        vm.expectRevert(Errors.supplyCapExceeded(overCapAmount, smallCap));
         smallCapToken.deposit(overCapAmount, alice);
         vm.stopPrank();
     }
@@ -104,7 +105,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
         mockToken.mint(bob, 1);
         vm.startPrank(bob);
         mockToken.approve(address(smallCapToken), 1);
-        vm.expectRevert(abi.encodeWithSelector(ICommitToken.SupplyCapExceeded.selector, 1, 0));
+        vm.expectRevert(Errors.supplyCapExceeded(1, 0));
         smallCapToken.deposit(1, bob);
         vm.stopPrank();
     }
@@ -117,15 +118,15 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
         // Try to set cap below total supply
         uint256 invalidCap = MEDIUM_AMOUNT - 1;
 
+        vm.expectRevert(Errors.invalidSupplyCap());
         vm.prank(admin);
-        vm.expectRevert(ICommitToken.InvalidSupplyCap.selector);
         lockToken.setSupplyCap(invalidCap);
     }
 
     function test_RevertWhen_SetSupplyCapWithoutRole() public {
         vm.prank(alice);
         vm.expectRevert();
-        lockToken.setSupplyCap(2_000_000e18);
+        lockToken.setSupplyCap(VERY_VERY_LARGE_AMOUNT);
     }
 
     function test_UnlockToken_MaxSupplyCap() public {
@@ -137,7 +138,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
     function test_UnlockToken_CanMintWithMaxSupplyCap() public {
         // Mint apxUSD and deposit to test that max supply cap doesn't prevent minting
         mintApxUSD(alice, VERY_LARGE_AMOUNT);
-        
+
         vm.startPrank(alice);
         apxUSD.approve(address(unlockToken), VERY_LARGE_AMOUNT);
         unlockToken.deposit(VERY_LARGE_AMOUNT, alice);
@@ -145,7 +146,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
 
         // Verify tokens were minted
         assertEq(unlockToken.balanceOf(alice), VERY_LARGE_AMOUNT);
-        
+
         // Verify remaining capacity is still effectively max
         assertEq(unlockToken.supplyCapRemaining(), type(uint256).max - VERY_LARGE_AMOUNT);
     }

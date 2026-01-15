@@ -155,7 +155,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         if (from != address(0) && to != address(0)) {
             revert NotSupported();
         }
-        
+
         // Check supply cap when minting (from == address(0))
         if (from == address(0)) {
             uint256 currentSupply = totalSupply();
@@ -165,7 +165,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
                 revert SupplyCapExceeded(value, availableCapacity);
             }
         }
-        
+
         super._update(from, to, value);
     }
 

@@ -156,7 +156,9 @@ abstract contract BaseTest is Test {
         // Deploy CommitToken (for CommitToken-specific tests)
         mockToken = new MockERC20();
         vm.label(address(mockToken), "mockToken");
-        lockToken = new CommitToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList), VERY_VERY_LARGE_AMOUNT);
+        lockToken = new CommitToken(
+            address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList), VERY_VERY_LARGE_AMOUNT
+        );
         vm.label(address(lockToken), "lockToken");
 
         // Configure roles for entire system
@@ -186,6 +188,13 @@ abstract contract BaseTest is Test {
         accessManager.assignAdminTargetsFor(vesting);
         accessManager.assignAdminTargetsFor(yieldDistributor);
         accessManager.assignAdminTargetsFor(denyList);
+
+        // Configure admin targets for lockToken (CommitToken)
+        bytes4[] memory lockTokenSelectors = new bytes4[](3);
+        lockTokenSelectors[0] = CommitToken.setSupplyCap.selector;
+        lockTokenSelectors[1] = CommitToken.setDenyList.selector;
+        lockTokenSelectors[2] = CommitToken.setUnlockingDelay.selector;
+        accessManager.setTargetFunctionRole(address(lockToken), lockTokenSelectors, Roles.ADMIN_ROLE);
 
         // Configure minting contract targets
         accessManager.assignMintingContractTargetsFor(apxUSD);
