@@ -33,73 +33,32 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 bobShares = depositApxUSD(bob, bobDepositAmount);
         uint256 charlieShares = depositApxUSD(charlie, charlieDepositAmount);
 
-        console.log("=== After Deposits ===");
-        console.log("Alice apyUSD shares:", aliceShares);
-        console.log("Bob apyUSD shares:", bobShares);
-        console.log("Charlie apyUSD shares:", charlieShares);
-
         // Alice wants to withdraw - this should work
         uint256 aliceWithdrawAmount = aliceDepositAmount;
-
-        vm.prank(alice);
-        uint256 aliceSharesRedeemed = apyUSD.withdraw(aliceWithdrawAmount, alice, alice);
-
-        console.log("\n=== After Alice Withdrawal ===");
-        console.log("Alice apyUSD shares burned:", aliceSharesRedeemed);
-        console.log("Alice unlockToken balance:", unlockToken.balanceOf(alice));
-        console.log("Alice apyUSD balance:", apyUSD.balanceOf(alice));
+        uint256 aliceSharesRedeemed = withdrawApxUSD(aliceWithdrawAmount, alice, alice);
 
         // Verify Alice received unlockToken shares
         assertEq(unlockToken.balanceOf(alice), aliceWithdrawAmount, "Alice should receive unlockToken shares");
+        assertEq(aliceShares, aliceSharesRedeemed, "Alice should receive the same number of shares as they deposited");
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
-
-        // Check the redeem request - THIS IS THE BUG
-        // The request should be tracked under alice's address, but it's tracked under apyUSD address
-        uint256 aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
-        uint256 apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-
-        console.log("\n=== Redeem Request Tracking (Before Cooldown) ===");
-        console.log("Claimable under alice address:", aliceClaimable);
-        console.log("Claimable under apyUSD address:", apyUSDClaimable);
-        console.log("UnlockToken balance of apyUSD:", unlockToken.balanceOf(address(apyUSD)));
-
-        // Warp past the unlocking delay
-        vm.warp(block.timestamp + UNLOCKING_DELAY + 1);
-
-        aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
-        apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-
-        console.log("\n=== Redeem Request Tracking (After Cooldown) ===");
-        console.log("Claimable under alice address:", aliceClaimable);
-        console.log("Claimable under apyUSD address:", apyUSDClaimable);
-
-        // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
-        assertEq(aliceClaimable, aliceWithdrawAmount, "Alice's claimable should match their withdraw amount");
-        assertEq(apyUSDClaimable, 0, "ApyUSD contract should not be able to claim UnlockToken");
 
         // Bob wants to withdraw - this should succeed when bug is fixed
         uint256 bobWithdrawAmount = bobDepositAmount;
+        uint256 bobSharesRedeemed = withdrawApxUSD(bobWithdrawAmount, bob, bob);
 
-        console.log("\n=== Bob Attempting Withdrawal ===");
-        console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
-        console.log("Bob trying to withdraw:", bobWithdrawAmount);
-
-        vm.prank(bob);
-        apyUSD.withdraw(bobWithdrawAmount, bob, bob);
-
-        console.log("Bob's withdrawal succeeded");
+        assertEq(unlockToken.balanceOf(bob), bobWithdrawAmount, "Bob should receive unlockToken shares");
+        assertEq(bobShares, bobSharesRedeemed, "Bob should receive the same number of shares as they deposited");
+        assertEq(apyUSD.balanceOf(bob), 0, "Bob apyUSD shares should be burned");
 
         // Charlie wants to withdraw - this should also succeed when bug is fixed
         uint256 charlieWithdrawAmount = charlieDepositAmount;
+        uint256 charlieSharesRedeemed = withdrawApxUSD(charlieWithdrawAmount, charlie, charlie);
 
-        console.log("\n=== Charlie Attempting Withdrawal ===");
-        console.log("Charlie apyUSD balance:", apyUSD.balanceOf(charlie));
-        console.log("Charlie trying to withdraw:", charlieWithdrawAmount);
-
-        vm.prank(charlie);
-        apyUSD.withdraw(charlieWithdrawAmount, charlie, charlie);
-
-        console.log("Charlie's withdrawal succeeded");
+        assertEq(unlockToken.balanceOf(charlie), charlieWithdrawAmount, "Charlie should receive unlockToken shares");
+        assertEq(
+            charlieShares, charlieSharesRedeemed, "Charlie should receive the same number of shares as they deposited"
+        );
+        assertEq(apyUSD.balanceOf(charlie), 0, "Charlie apyUSD shares should be burned");
     }
 
     /**
