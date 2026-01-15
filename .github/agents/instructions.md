@@ -11,7 +11,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 
 ## Project Structure Standards
 
-- Follow Foundry's default structure: `src/` for contracts, `test/` for tests, `script/` for deployment scripts
+- Follow Foundry's default structure: `src/` for contracts, `test/` for tests, `cmds/` for deployment scripts
 - Use named imports: `import {Contract} from "src/Contract.sol"`
 - Files: PascalCase for contracts (`MyContract.sol`), test suffix (`.t.sol`), script suffix (`.s.sol`)
 - Never place assertions in `setUp()` functions - only state initialization
