@@ -134,7 +134,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         // Try to mint with too low maxAssets
         vm.startPrank(bob);
-        apxUSD.approve(address(apyUSD), sharesToMint);
+        apxUSD.approve(address(apyUSD), LARGE_AMOUNT); // Approve enough to not fail on approval
         vm.expectRevert();
         apyUSD.mintForMaxAssets(sharesToMint, maxAssets, bob);
         vm.stopPrank();
