@@ -18,4 +18,4 @@ jobs:
         run: forge soldeer install
 
       - name: Clone Foundry repository
-        run: git clone https://github.com/foundry-rs/foundry /tmp/foundry
+        run: git clone --depth 1 https://github.com/foundry-rs/foundry /tmp/foundry

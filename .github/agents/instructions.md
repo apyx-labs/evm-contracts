@@ -13,4 +13,4 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 
 ## Documentation
 
-- **Search the foundry docs locally using `grep /tmp/foundry`** for quick reference to Foundry documentation and examples
+- **Search the foundry docs locally using `grep -r <search_term> /tmp/foundry`** for quick reference to Foundry documentation and examples (replace `<search_term>` with the specific topic or function you're looking for)
