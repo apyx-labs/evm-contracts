@@ -5,7 +5,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 ## Code Formatting and Linting
 
 - **Always run `forge fmt` after changing Solidity files** to ensure consistent code formatting
-- **Always run `forge lint src/` after changing Solidity files in the `src/` directory** to catch potential issues
+- **Always run `forge lint src` after changing Solidity files** to catch potential issues
 
 ## Testing
 
