@@ -28,7 +28,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 - Write comprehensive tests for all functionality (unit, fuzz, invariant)
 - Use `vm.expectRevert()` for testing expected failures
 - Use descriptive assertion messages: `assertEq(result, expected, "error message")`
-- **Fuzz Testing**: Use `vm.assume()` to exclude invalid inputs, use appropriate parameter types (e.g., `uint96` instead of `uint256` to avoid overflows)
+- **Fuzz Testing**: Use `vm.assume()` to exclude invalid inputs, bound parameters appropriately using `bound()` function
 - **Invariant Testing**: Use `invariant_` prefix, implement handler-based testing for complex protocols, use ghost variables to track state
 - Test state changes, event emissions, and return values
 
@@ -50,7 +50,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 - `forge coverage` - Generate code coverage report
 - `forge snapshot` - Generate gas usage snapshots
 - `forge doc` - Generate documentation from NatSpec comments
-- `forge lint --severity high` - Show only high-severity issues
+- `forge lint src` - Lint source code; use `--severity high` to filter by severity
 
 ## Configuration Best Practices
 
