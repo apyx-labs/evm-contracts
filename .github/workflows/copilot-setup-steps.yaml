@@ -1,0 +1,21 @@
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:
+
+jobs:
+  copilot-setup-steps:
+    name: Setup Copilot Environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install Solidity dependencies
+        run: forge soldeer install
+
+      - name: Clone Foundry repository
+        run: git clone https://github.com/foundry-rs/foundry /tmp/foundry
