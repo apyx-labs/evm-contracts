@@ -1,0 +1,41 @@
+name: Slither Static Analysis
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  slither:
+    name: Slither Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install Soldeer deps
+        run: forge soldeer install
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.1
+        id: slither
+        with:
+          ignore-compile: true
+          sarif: results.sarif
+          fail-on: ${{ github.ref == 'refs/heads/main' && 'none' || 'all' }}
+          slither-args: --filter-paths "(dependencies/|test/)"
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.slither.outputs.sarif }}
+        if: always() && github.ref == 'refs/heads/main'
