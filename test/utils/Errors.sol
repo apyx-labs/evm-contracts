@@ -8,6 +8,7 @@ import {ENotSupported} from "../../src/errors/NotSupported.sol";
 import {EInvalidCaller} from "../../src/errors/InvalidCaller.sol";
 import {EDenied} from "../../src/errors/Denied.sol";
 import {EAddressNotSet} from "../../src/errors/AddressNotSet.sol";
+import {ESupplyCapped} from "../../src/errors/SupplyCapped.sol";
 
 /**
  * @title Errors
@@ -40,5 +41,17 @@ library Errors {
 
     function addressNotSet(string memory param) external pure returns (bytes memory) {
         return abi.encodeWithSelector(EAddressNotSet.AddressNotSet.selector, param);
+    }
+
+    function supplyCapExceeded(uint256 requestedAmount, uint256 availableCapacity)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeWithSelector(ESupplyCapped.SupplyCapExceeded.selector, requestedAmount, availableCapacity);
+    }
+
+    function invalidSupplyCap() external pure returns (bytes4) {
+        return ESupplyCapped.InvalidSupplyCap.selector;
     }
 }

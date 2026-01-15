@@ -9,6 +9,7 @@ import {ENotSupported} from "../errors/NotSupported.sol";
 import {EInvalidCaller} from "../errors/InvalidCaller.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
 import {EDenied} from "../errors/Denied.sol";
+import {ESupplyCapped} from "../errors/SupplyCapped.sol";
 
 interface ICommitToken is
     IERC7540Redeem,
@@ -17,7 +18,8 @@ interface ICommitToken is
     EInvalidAmount,
     ENotSupported,
     EInvalidCaller,
-    EInsufficientBalance
+    EInsufficientBalance,
+    ESupplyCapped
 {
     /**
      * @notice Request data structure used for both deposits and redeems
@@ -50,6 +52,13 @@ interface ICommitToken is
      * @param newDenyList New deny list contract address
      */
     event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
+
+    /**
+     * @notice Emitted when the supply cap is updated
+     * @param oldCap Previous supply cap
+     * @param newCap New supply cap
+     */
+    event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
 
     // ========================================
     // Errors
@@ -103,4 +112,16 @@ interface ICommitToken is
      * @return true if the request is claimable, false otherwise
      */
     function isClaimable(uint256 requestId, address owner) external view returns (bool);
+
+    /**
+     * @notice Returns the current supply cap
+     * @return Maximum total supply allowed
+     */
+    function supplyCap() external view returns (uint256);
+
+    /**
+     * @notice Returns the remaining capacity before hitting the supply cap
+     * @return Amount of tokens that can still be minted
+     */
+    function supplyCapRemaining() external view returns (uint256);
 }

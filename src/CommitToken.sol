@@ -18,6 +18,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
     // Storage
     // ========================================
 
+    /// @notice Maximum total supply allowed
+    uint256 public supplyCap;
     /// @notice Cooldown period for redeem requests (unlocking delay)
     uint48 public unlockingDelay;
     /// @notice Mapping of user addresses to their redeem requests
@@ -30,7 +32,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
     // Functions
     // ========================================
 
-    constructor(address authority_, address asset_, uint48 unlockingDelay_, address denyList_)
+    constructor(address authority_, address asset_, uint48 unlockingDelay_, address denyList_, uint256 supplyCap_)
         AccessManaged(authority_)
         ERC4626(IERC20(asset_))
         ERC20(
@@ -42,12 +44,15 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         if (asset_ == address(0)) revert InvalidAddress("asset");
         if (unlockingDelay_ == 0) revert InvalidAmount("unlockingDelay", unlockingDelay_);
         if (denyList_ == address(0)) revert InvalidAddress("denyList");
+        if (supplyCap_ == 0) revert InvalidAmount("supplyCap", supplyCap_);
 
         unlockingDelay = unlockingDelay_;
         denyList = IAddressList(denyList_);
+        supplyCap = supplyCap_;
 
         emit UnlockingDelayUpdated(0, unlockingDelay_);
         emit DenyListUpdated(address(0), denyList_);
+        emit SupplyCapUpdated(0, supplyCap_);
     }
 
     // ========================================
@@ -79,10 +84,35 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         emit DenyListUpdated(oldDenyList, newDenyList);
     }
 
+    /**
+     * @notice Sets the supply cap
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @param newSupplyCap New maximum total supply
+     */
+    function setSupplyCap(uint256 newSupplyCap) external restricted {
+        if (newSupplyCap < totalSupply()) {
+            revert InvalidSupplyCap();
+        }
+
+        uint256 oldCap = supplyCap;
+        supplyCap = newSupplyCap;
+
+        emit SupplyCapUpdated(oldCap, newSupplyCap);
+    }
+
     function _revertIfDenied(address user) internal view {
         if (denyList.contains(user)) {
             revert Denied(user);
         }
+    }
+
+    /**
+     * @notice Returns the remaining capacity before hitting the supply cap
+     * @return Amount of tokens that can still be minted
+     */
+    function supplyCapRemaining() external view returns (uint256) {
+        uint256 supply = totalSupply();
+        return supply >= supplyCap ? 0 : supplyCap - supply;
     }
 
     // ========================================
@@ -125,6 +155,17 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         if (from != address(0) && to != address(0)) {
             revert NotSupported();
         }
+
+        // Check supply cap when minting (from == address(0))
+        if (from == address(0)) {
+            uint256 currentSupply = totalSupply();
+            uint256 newTotalSupply = currentSupply + value;
+            if (newTotalSupply > supplyCap) {
+                uint256 availableCapacity = supplyCap > currentSupply ? supplyCap - currentSupply : 0;
+                revert SupplyCapExceeded(value, availableCapacity);
+            }
+        }
+
         super._update(from, to, value);
     }
 

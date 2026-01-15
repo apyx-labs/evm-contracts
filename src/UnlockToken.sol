@@ -28,7 +28,7 @@ contract UnlockToken is CommitToken, IUnlockToken {
      * @param denyList_ Address of the AddressList contract for deny list checking
      */
     constructor(address authority_, address asset_, address vault_, uint48 unlockingDelay_, address denyList_)
-        CommitToken(authority_, asset_, unlockingDelay_, denyList_)
+        CommitToken(authority_, asset_, unlockingDelay_, denyList_, type(uint256).max)
     {
         if (vault_ == address(0)) revert InvalidAddress("vault");
         vault = vault_;
