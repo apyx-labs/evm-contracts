@@ -51,9 +51,26 @@ interface ICommitToken is
      */
     event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
 
+    /**
+     * @notice Emitted when the supply cap is updated
+     * @param oldCap Previous supply cap
+     * @param newCap New supply cap
+     */
+    event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
+
     // ========================================
     // Errors
     // ========================================
+
+    /**
+     * @notice Error thrown when minting would exceed the supply cap
+     */
+    error SupplyCapExceeded(uint256 requestedAmount, uint256 availableCapacity);
+
+    /**
+     * @notice Error thrown when setting an invalid supply cap
+     */
+    error InvalidSupplyCap();
 
     /**
      * @notice Error thrown when trying to claim a non-existent or non-claimable request
@@ -103,4 +120,16 @@ interface ICommitToken is
      * @return true if the request is claimable, false otherwise
      */
     function isClaimable(uint256 requestId, address owner) external view returns (bool);
+
+    /**
+     * @notice Returns the current supply cap
+     * @return Maximum total supply allowed
+     */
+    function supplyCap() external view returns (uint256);
+
+    /**
+     * @notice Returns the remaining capacity before hitting the supply cap
+     * @return Amount of tokens that can still be minted
+     */
+    function supplyCapRemaining() external view returns (uint256);
 }

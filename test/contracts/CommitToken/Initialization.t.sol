@@ -18,6 +18,9 @@ contract CommitTokenInitializationTest is CommitTokenBaseTest {
         assertEq(lockToken.name(), "Mock Token Lock Token");
         assertEq(lockToken.symbol(), "LT-MOCK");
 
+        // Verify supply cap is set correctly
+        assertEq(lockToken.supplyCap(), VERY_VERY_LARGE_AMOUNT);
+
         // Verify unlocking delay is set correctly by checking cooldown behavior
         // We'll test this more thoroughly in Redeem tests, but basic check:
         // Deposit, request redeem, check cooldown
@@ -31,24 +34,29 @@ contract CommitTokenInitializationTest is CommitTokenBaseTest {
 
     function test_RevertWhen_ConstructorZeroAuthority() public {
         vm.expectRevert(Errors.invalidAddress("authority"));
-        new CommitToken(address(0), address(mockToken), UNLOCKING_DELAY, address(denyList));
+        new CommitToken(address(0), address(mockToken), UNLOCKING_DELAY, address(denyList), VERY_VERY_LARGE_AMOUNT);
     }
 
     function test_RevertWhen_ConstructorZeroAsset() public {
         // Constructor should revert when asset is zero address
         // Note: require() in constructors may not preserve error messages in all cases
         vm.expectRevert();
-        new CommitToken(address(accessManager), address(0), UNLOCKING_DELAY, address(denyList));
+        new CommitToken(address(accessManager), address(0), UNLOCKING_DELAY, address(denyList), VERY_VERY_LARGE_AMOUNT);
     }
 
     function test_RevertWhen_ConstructorZeroUnlockingDelay() public {
         vm.expectRevert(Errors.invalidAmount("unlockingDelay", 0));
-        new CommitToken(address(accessManager), address(mockToken), 0, address(denyList));
+        new CommitToken(address(accessManager), address(mockToken), 0, address(denyList), VERY_VERY_LARGE_AMOUNT);
     }
 
     function test_RevertWhen_ConstructorZeroDenyList() public {
         vm.expectRevert(Errors.invalidAddress("denyList"));
-        new CommitToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(0));
+        new CommitToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(0), VERY_VERY_LARGE_AMOUNT);
+    }
+
+    function test_RevertWhen_ConstructorZeroSupplyCap() public {
+        vm.expectRevert(Errors.invalidAmount("supplyCap", 0));
+        new CommitToken(address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList), 0);
     }
 }
 
