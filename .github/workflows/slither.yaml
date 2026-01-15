@@ -1,8 +1,5 @@
 name: Slither Static Analysis
 
-permissions:
-  contents: read
-
 on:
   push:
     branches:
@@ -10,12 +7,17 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+
 jobs:
   slither:
     name: Slither Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
@@ -24,10 +26,16 @@ jobs:
         run: forge soldeer install
 
       - name: Run Slither
-        continue-on-error: true
-        run: |
-          docker run \
-            --rm \
-            -v ${{ github.workspace }}:/app \
-            ghcr.io/trailofbits/eth-security-toolbox:nightly-20260105 \
-            slither /app/ --filter-paths "(dependencies/|test/)"
+        uses: crytic/slither-action@v0.4.1
+        id: slither
+        with:
+          ignore-compile: true
+          sarif: results.sarif
+          fail-on: none
+          slither-args: --filter-paths "(dependencies/|test/)"
+
+      - name: Upload SARIF file
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: ${{ steps.slither.outputs.sarif }}
+        if: always()
