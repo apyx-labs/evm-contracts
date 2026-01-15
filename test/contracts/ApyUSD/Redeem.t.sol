@@ -40,7 +40,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         // Alice wants to withdraw - this should work
         uint256 aliceWithdrawAmount = aliceDepositAmount;
-        
+
         vm.prank(alice);
         uint256 aliceSharesRedeemed = apyUSD.withdraw(aliceWithdrawAmount, alice, alice);
 
@@ -57,7 +57,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         // The request should be tracked under alice's address, but it's tracked under apyUSD address
         uint256 aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
         uint256 apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-        
+
         console.log("\n=== Redeem Request Tracking (Before Cooldown) ===");
         console.log("Claimable under alice address:", aliceClaimable);
         console.log("Claimable under apyUSD address:", apyUSDClaimable);
@@ -68,7 +68,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
         apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-        
+
         console.log("\n=== Redeem Request Tracking (After Cooldown) ===");
         console.log("Claimable under alice address:", aliceClaimable);
         console.log("Claimable under apyUSD address:", apyUSDClaimable);
@@ -79,7 +79,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         // Bob wants to withdraw - this should succeed when bug is fixed
         uint256 bobWithdrawAmount = bobDepositAmount;
-        
+
         console.log("\n=== Bob Attempting Withdrawal ===");
         console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
         console.log("Bob trying to withdraw:", bobWithdrawAmount);
@@ -91,7 +91,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         // Charlie wants to withdraw - this should also succeed when bug is fixed
         uint256 charlieWithdrawAmount = charlieDepositAmount;
-        
+
         console.log("\n=== Charlie Attempting Withdrawal ===");
         console.log("Charlie apyUSD balance:", apyUSD.balanceOf(charlie));
         console.log("Charlie trying to withdraw:", charlieWithdrawAmount);
@@ -137,7 +137,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         // Check the redeem request - THIS IS THE BUG
         uint256 aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
         uint256 apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-        
+
         console.log("\n=== Redeem Request Tracking ===");
         console.log("Claimable under alice address:", aliceClaimable);
         console.log("Claimable under apyUSD address:", apyUSDClaimable);
@@ -170,7 +170,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
     function test_issue_0011_PendingRedeemRequest() public {
         // Setup
         uint256 depositAmount = MEDIUM_AMOUNT;
-        
+
         depositApxUSD(alice, depositAmount);
         depositApxUSD(bob, depositAmount);
 
@@ -181,11 +181,11 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         // Check the pending redeem request - should be under alice, not apyUSD
         uint256 alicePendingRequest = unlockToken.pendingRedeemRequest(0, alice);
         uint256 apyUSDPendingRequest = unlockToken.pendingRedeemRequest(0, address(apyUSD));
-        
+
         console.log("\n=== Pending Redeem Request Tracking ===");
         console.log("Pending request under alice address:", alicePendingRequest);
         console.log("Pending request under apyUSD address:", apyUSDPendingRequest);
-        
+
         // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
         assertEq(alicePendingRequest, depositAmount, "Alice should have a pending redeem request");
         assertEq(apyUSDPendingRequest, 0, "ApyUSD contract should not have a pending request");
