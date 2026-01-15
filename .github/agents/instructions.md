@@ -25,7 +25,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 
 ## Testing Requirements
 
-- Write comprehensive tests for all functionality (unit, fuzz, invariant)
+- Focus on write fewer tests that cover comprehensive and realistic user and attacker flows
 - Use `vm.expectRevert()` for testing expected failures
 - Use descriptive assertion messages: `assertEq(result, expected, "error message")`
 - **Fuzz Testing**: Use `vm.assume()` to exclude invalid inputs, bound parameters appropriately using `bound()` function
