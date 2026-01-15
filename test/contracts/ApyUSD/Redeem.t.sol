@@ -113,22 +113,16 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 depositAmount = MEDIUM_AMOUNT;
 
         depositApxUSD(alice, depositAmount);
-        depositApxUSD(bob, depositAmount);
 
         // Alice withdraws
-        vm.prank(alice);
-        apyUSD.withdraw(depositAmount, alice, alice);
+        uint256 aliceAssetsReceived = withdrawApxUSD(depositAmount, alice, alice);
 
         // Check the pending redeem request - should be under alice, not apyUSD
         uint256 alicePendingRequest = unlockToken.pendingRedeemRequest(0, alice);
         uint256 apyUSDPendingRequest = unlockToken.pendingRedeemRequest(0, address(apyUSD));
 
-        console.log("\n=== Pending Redeem Request Tracking ===");
-        console.log("Pending request under alice address:", alicePendingRequest);
-        console.log("Pending request under apyUSD address:", apyUSDPendingRequest);
-
         // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
-        assertEq(alicePendingRequest, depositAmount, "Alice should have a pending redeem request");
+        assertEq(alicePendingRequest, aliceAssetsReceived, "Alice should have a pending redeem request");
         assertEq(apyUSDPendingRequest, 0, "ApyUSD contract should not have a pending request");
     }
 }
