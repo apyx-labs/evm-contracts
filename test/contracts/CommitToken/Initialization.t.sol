@@ -15,8 +15,8 @@ contract CommitTokenInitializationTest is CommitTokenBaseTest {
         assertEq(address(lockToken.asset()), address(mockToken));
 
         // Verify name and symbol
-        assertEq(lockToken.name(), "Mock Token Lock Token");
-        assertEq(lockToken.symbol(), "LT-MOCK");
+        assertEq(lockToken.name(), "Mock Token Commit Token");
+        assertEq(lockToken.symbol(), "CT-MOCK");
 
         // Verify unlocking delay is set correctly by checking cooldown behavior
         // We'll test this more thoroughly in Redeem tests, but basic check:

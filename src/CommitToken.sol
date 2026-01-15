@@ -34,8 +34,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         AccessManaged(authority_)
         ERC4626(IERC20(asset_))
         ERC20(
-            string.concat(IERC20Metadata(asset_).name(), " Lock Token"),
-            string.concat("LT-", IERC20Metadata(asset_).symbol())
+            string.concat(IERC20Metadata(asset_).name(), " Commit Token"),
+            string.concat("CT-", IERC20Metadata(asset_).symbol())
         )
     {
         if (authority_ == address(0)) revert InvalidAddress("authority");
@@ -117,7 +117,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
     }
 
     /**
-     * @notice Lock tokens are not transferable and only support minting and burning
+     * @notice Commit tokens are not transferable and only support minting and burning
      * @inheritdoc ERC20
      */
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {
