@@ -39,7 +39,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         // Verify Alice received unlockToken shares
         assertEq(unlockToken.balanceOf(alice), aliceWithdrawAmount, "Alice should receive unlockToken shares");
-        assertEq(aliceShares, aliceSharesRedeemed, "Alice should receive the same number of shares as they deposited");
+        assertEq(aliceShares, aliceSharesRedeemed, "Alice should receive the same number of shares as they minted");
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
 
         // Bob wants to withdraw - this should succeed when bug is fixed
@@ -47,7 +47,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 bobSharesRedeemed = withdrawApxUSD(bobWithdrawAmount, bob, bob);
 
         assertEq(unlockToken.balanceOf(bob), bobWithdrawAmount, "Bob should receive unlockToken shares");
-        assertEq(bobShares, bobSharesRedeemed, "Bob should receive the same number of shares as they deposited");
+        assertEq(bobShares, bobSharesRedeemed, "Bob should receive the same number of shares as they minted");
         assertEq(apyUSD.balanceOf(bob), 0, "Bob apyUSD shares should be burned");
 
         // Charlie wants to withdraw - this should also succeed when bug is fixed
@@ -56,7 +56,7 @@ contract ApyUSDRedeemTest is ApyUSDTest {
 
         assertEq(unlockToken.balanceOf(charlie), charlieWithdrawAmount, "Charlie should receive unlockToken shares");
         assertEq(
-            charlieShares, charlieSharesRedeemed, "Charlie should receive the same number of shares as they deposited"
+            charlieShares, charlieSharesRedeemed, "Charlie should receive the same number of shares as they minted"
         );
         assertEq(apyUSD.balanceOf(charlie), 0, "Charlie apyUSD shares should be burned");
     }
@@ -75,51 +75,37 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 bobShares = depositApxUSD(bob, bobDepositAmount);
         uint256 charlieShares = depositApxUSD(charlie, charlieDepositAmount);
 
-        console.log("=== After Deposits ===");
-        console.log("Alice apyUSD shares:", aliceShares);
-        console.log("Bob apyUSD shares:", bobShares);
-        console.log("Charlie apyUSD shares:", charlieShares);
-
         // Alice wants to redeem - this should work
-        vm.prank(alice);
-        uint256 aliceAssetsReceived = apyUSD.redeem(aliceShares, alice, alice);
-
-        console.log("\n=== After Alice Redeem ===");
-        console.log("Alice assets received (unlockToken):", aliceAssetsReceived);
-        console.log("Alice unlockToken balance:", unlockToken.balanceOf(alice));
-        console.log("Alice apyUSD balance:", apyUSD.balanceOf(alice));
+        uint256 aliceAssetsReceived = redeemApyUSD(aliceShares, alice, alice);
 
         // Verify Alice received unlockToken shares
         assertEq(unlockToken.balanceOf(alice), aliceAssetsReceived, "Alice should receive unlockToken shares");
+        assertEq(
+            aliceAssetsReceived, aliceDepositAmount, "Alice should receive the same number of assets as they deposited"
+        );
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
-
-        // Check the redeem request - THIS IS THE BUG
-        uint256 aliceClaimable = unlockToken.claimableRedeemRequest(0, alice);
-        uint256 apyUSDClaimable = unlockToken.claimableRedeemRequest(0, address(apyUSD));
-
-        console.log("\n=== Redeem Request Tracking ===");
-        console.log("Claimable under alice address:", aliceClaimable);
-        console.log("Claimable under apyUSD address:", apyUSDClaimable);
 
         // Bob wants to redeem - this should succeed when bug is fixed
         console.log("\n=== Bob Attempting Redeem ===");
         console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
         console.log("Bob trying to redeem:", bobShares);
 
-        vm.prank(bob);
-        apyUSD.redeem(bobShares, bob, bob);
+        uint256 bobAssetsReceived = redeemApyUSD(bobShares, bob, bob);
 
-        console.log("Bob's redeem succeeded");
+        assertEq(unlockToken.balanceOf(bob), bobDepositAmount, "Bob should receive unlockToken shares");
+        assertEq(bobAssetsReceived, bobDepositAmount, "Bob should receive the same number of assets as they deposited");
+        assertEq(apyUSD.balanceOf(bob), 0, "Bob apyUSD shares should be burned");
 
         // Charlie wants to redeem - this should also succeed when bug is fixed
-        console.log("\n=== Charlie Attempting Redeem ===");
-        console.log("Charlie apyUSD balance:", apyUSD.balanceOf(charlie));
-        console.log("Charlie trying to redeem:", charlieShares);
+        uint256 charlieAssetsReceived = redeemApyUSD(charlieShares, charlie, charlie);
 
-        vm.prank(charlie);
-        apyUSD.redeem(charlieShares, charlie, charlie);
-
-        console.log("Charlie's redeem succeeded");
+        assertEq(unlockToken.balanceOf(charlie), charlieDepositAmount, "Charlie should receive unlockToken shares");
+        assertEq(
+            charlieAssetsReceived,
+            charlieDepositAmount,
+            "Charlie should receive the same number of assets as they deposited"
+        );
+        assertEq(apyUSD.balanceOf(charlie), 0, "Charlie apyUSD shares should be burned");
     }
 
     /**
