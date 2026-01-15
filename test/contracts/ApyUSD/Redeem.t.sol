@@ -86,10 +86,6 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
 
         // Bob wants to redeem - this should succeed when bug is fixed
-        console.log("\n=== Bob Attempting Redeem ===");
-        console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
-        console.log("Bob trying to redeem:", bobShares);
-
         uint256 bobAssetsReceived = redeemApyUSD(bobShares, bob, bob);
 
         assertEq(unlockToken.balanceOf(bob), bobDepositAmount, "Bob should receive unlockToken shares");
