@@ -21,8 +21,9 @@ contract ApyUSDRedeemTest is ApyUSDTest {
     /**
      * @notice Test demonstrating the issue where first user can withdraw
      * but second and third users fail due to incorrect address accounting
+     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
      */
-    function test_MultiUserWithdrawal_DemonstratesBug() public {
+    function test_issue_0011_MultiUserWithdrawal() public {
         // Setup: Three users deposit apxUSD into apyUSD
         uint256 aliceDepositAmount = MEDIUM_AMOUNT;
         uint256 bobDepositAmount = MEDIUM_AMOUNT;
@@ -40,9 +41,8 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         // Alice wants to withdraw - this should work
         uint256 aliceWithdrawAmount = aliceDepositAmount;
         
-        vm.startPrank(alice);
+        vm.prank(alice);
         uint256 aliceSharesRedeemed = apyUSD.withdraw(aliceWithdrawAmount, alice, alice);
-        vm.stopPrank();
 
         console.log("\n=== After Alice Withdrawal ===");
         console.log("Alice apyUSD shares burned:", aliceSharesRedeemed);
@@ -73,46 +73,40 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         console.log("Claimable under alice address:", aliceClaimable);
         console.log("Claimable under apyUSD address:", apyUSDClaimable);
 
-        // BUG DEMONSTRATION: The request is tracked under apyUSD address, not alice
-        assertEq(aliceClaimable, 0, "BUG: Alice's claimable should be 0 because request is under apyUSD");
-        assertEq(apyUSDClaimable, aliceWithdrawAmount, "BUG: Request is tracked under apyUSD address");
+        // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
+        assertEq(aliceClaimable, aliceWithdrawAmount, "Alice's claimable should match their withdraw amount");
+        assertEq(apyUSDClaimable, 0, "ApyUSD contract should not be able to claim UnlockToken");
 
-        // Bob wants to withdraw - this should FAIL
+        // Bob wants to withdraw - this should succeed when bug is fixed
         uint256 bobWithdrawAmount = bobDepositAmount;
         
         console.log("\n=== Bob Attempting Withdrawal ===");
         console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
         console.log("Bob trying to withdraw:", bobWithdrawAmount);
 
-        vm.startPrank(bob);
-        // This will revert with InsufficientBalance because the contract thinks
-        // apyUSD already has a pending request for aliceWithdrawAmount
-        vm.expectRevert();
+        vm.prank(bob);
         apyUSD.withdraw(bobWithdrawAmount, bob, bob);
-        vm.stopPrank();
 
-        console.log("Bob's withdrawal FAILED as expected due to the bug");
+        console.log("Bob's withdrawal succeeded");
 
-        // Charlie wants to withdraw - this should also FAIL
+        // Charlie wants to withdraw - this should also succeed when bug is fixed
         uint256 charlieWithdrawAmount = charlieDepositAmount;
         
         console.log("\n=== Charlie Attempting Withdrawal ===");
         console.log("Charlie apyUSD balance:", apyUSD.balanceOf(charlie));
         console.log("Charlie trying to withdraw:", charlieWithdrawAmount);
 
-        vm.startPrank(charlie);
-        // This will also revert with InsufficientBalance
-        vm.expectRevert();
+        vm.prank(charlie);
         apyUSD.withdraw(charlieWithdrawAmount, charlie, charlie);
-        vm.stopPrank();
 
-        console.log("Charlie's withdrawal FAILED as expected due to the bug");
+        console.log("Charlie's withdrawal succeeded");
     }
 
     /**
      * @notice Test demonstrating the issue with redeem() function as well
+     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
      */
-    function test_MultiUserRedeem_DemonstratesBug() public {
+    function test_issue_0011_MultiUserRedeem() public {
         // Setup: Three users deposit apxUSD into apyUSD
         uint256 aliceDepositAmount = MEDIUM_AMOUNT;
         uint256 bobDepositAmount = MEDIUM_AMOUNT;
@@ -128,9 +122,8 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         console.log("Charlie apyUSD shares:", charlieShares);
 
         // Alice wants to redeem - this should work
-        vm.startPrank(alice);
+        vm.prank(alice);
         uint256 aliceAssetsReceived = apyUSD.redeem(aliceShares, alice, alice);
-        vm.stopPrank();
 
         console.log("\n=== After Alice Redeem ===");
         console.log("Alice assets received (unlockToken):", aliceAssetsReceived);
@@ -149,70 +142,32 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         console.log("Claimable under alice address:", aliceClaimable);
         console.log("Claimable under apyUSD address:", apyUSDClaimable);
 
-        // Bob wants to redeem - this should FAIL
+        // Bob wants to redeem - this should succeed when bug is fixed
         console.log("\n=== Bob Attempting Redeem ===");
         console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
         console.log("Bob trying to redeem:", bobShares);
 
-        vm.startPrank(bob);
-        // This will revert with InsufficientBalance
-        vm.expectRevert();
+        vm.prank(bob);
         apyUSD.redeem(bobShares, bob, bob);
-        vm.stopPrank();
 
-        console.log("Bob's redeem FAILED as expected due to the bug");
+        console.log("Bob's redeem succeeded");
 
-        // Charlie wants to redeem - this should also FAIL
+        // Charlie wants to redeem - this should also succeed when bug is fixed
         console.log("\n=== Charlie Attempting Redeem ===");
         console.log("Charlie apyUSD balance:", apyUSD.balanceOf(charlie));
         console.log("Charlie trying to redeem:", charlieShares);
 
-        vm.startPrank(charlie);
-        // This will also revert with InsufficientBalance
-        vm.expectRevert();
+        vm.prank(charlie);
         apyUSD.redeem(charlieShares, charlie, charlie);
-        vm.stopPrank();
 
-        console.log("Charlie's redeem FAILED as expected due to the bug");
+        console.log("Charlie's redeem succeeded");
     }
 
     /**
-     * @notice Test showing that even sequential small withdrawals fail after the first
+     * @notice Test showing the accounting issue with pendingRedeemRequest in CommitToken
+     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
      */
-    function test_SequentialWithdrawals_SecondUserFails() public {
-        // Two users deposit same amount
-        uint256 depositAmount = MEDIUM_AMOUNT;
-        
-        depositApxUSD(alice, depositAmount);
-        depositApxUSD(bob, depositAmount);
-
-        console.log("=== Initial State ===");
-        console.log("Alice apyUSD balance:", apyUSD.balanceOf(alice));
-        console.log("Bob apyUSD balance:", apyUSD.balanceOf(bob));
-
-        // First withdrawal by Alice - should succeed
-        vm.prank(alice);
-        apyUSD.withdraw(depositAmount, alice, alice);
-
-        console.log("\n=== After Alice Withdrawal ===");
-        console.log("Alice unlockToken balance:", unlockToken.balanceOf(alice));
-        console.log("Alice apyUSD balance:", apyUSD.balanceOf(alice));
-
-        // Second withdrawal by Bob - should FAIL
-        console.log("\n=== Bob Attempting Withdrawal ===");
-        console.log("Bob apyUSD balance before:", apyUSD.balanceOf(bob));
-        
-        vm.prank(bob);
-        vm.expectRevert();
-        apyUSD.withdraw(depositAmount, bob, bob);
-
-        console.log("Bob's withdrawal FAILED - funds are locked!");
-    }
-
-    /**
-     * @notice Test showing the accounting issue with balanceOf check in CommitToken
-     */
-    function test_AccountingIssue_BalanceCheckFails() public {
+    function test_issue_0011_PendingRedeemRequest() public {
         // Setup
         uint256 depositAmount = MEDIUM_AMOUNT;
         
@@ -223,27 +178,16 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         vm.prank(alice);
         apyUSD.withdraw(depositAmount, alice, alice);
 
-        // Check the state of unlockToken
-        console.log("\n=== UnlockToken State After Alice Withdrawal ===");
-        console.log("UnlockToken balance of apyUSD contract:", unlockToken.balanceOf(address(apyUSD)));
-        console.log("UnlockToken balance of alice:", unlockToken.balanceOf(alice));
-        console.log("UnlockToken balance of bob:", unlockToken.balanceOf(bob));
-        
-        // Get pending request for apyUSD (the bug - requests tracked under wrong address)
+        // Check the pending redeem request - should be under alice, not apyUSD
+        uint256 alicePendingRequest = unlockToken.pendingRedeemRequest(0, alice);
         uint256 apyUSDPendingRequest = unlockToken.pendingRedeemRequest(0, address(apyUSD));
-        console.log("Pending redeem request under apyUSD address:", apyUSDPendingRequest);
-
-        // When Bob tries to withdraw, the contract checks:
-        // balanceOf(owner) - request.shares < shares
-        // Since owner is bob (via receiver parameter), but request is under apyUSD:
-        // balanceOf(bob) - redeemRequests[apyUSD].shares < bobShares
-        // unlockToken.balanceOf(bob) = 0
-        // redeemRequests[apyUSD].shares = aliceDepositAmount (from alice's withdrawal)
-        // So: 0 - aliceDepositAmount < bobShares -> underflow/revert
-
-        console.log("\n=== Bob's Withdrawal Will Fail ===");
-        console.log("Bob's unlockToken balance:", unlockToken.balanceOf(bob));
-        console.log("Debt tracked under apyUSD:", apyUSDPendingRequest);
-        console.log("This causes underflow in balance check");
+        
+        console.log("\n=== Pending Redeem Request Tracking ===");
+        console.log("Pending request under alice address:", alicePendingRequest);
+        console.log("Pending request under apyUSD address:", apyUSDPendingRequest);
+        
+        // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
+        assertEq(alicePendingRequest, depositAmount, "Alice should have a pending redeem request");
+        assertEq(apyUSDPendingRequest, 0, "ApyUSD contract should not have a pending request");
     }
 }
