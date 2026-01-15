@@ -37,7 +37,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 - Follow CEI (Checks-Effects-Interactions) pattern
 - Implement reentrancy protection where applicable
 - Validate all user inputs and external contract calls
-- Use access control patterns (OpenZeppelin's Ownable, AccessControl)
+- Use OpenZeppelin's AccessManager and AccessManaged contract for access control
 - Run `forge lint` and address high-severity lints (incorrect-shift, divide-before-multiply)
 - Implement proper error handling for external calls
 - Use events for important state changes
