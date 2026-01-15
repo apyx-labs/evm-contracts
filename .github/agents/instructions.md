@@ -56,7 +56,7 @@ This file contains guidelines for GitHub Copilot to follow when working with thi
 
 - **DO NOT modify `foundry.toml` without asking** - Explain which config property you want to change and why
 - Enable `dynamic_test_linking = true` for large projects (10x+ compilation speedup)
-- Use appropriate fuzz runs: `[fuzz] runs = 1000` in foundry.toml
+- Use appropriate fuzz runs: `[fuzz] runs = 256` in foundry.toml
 
 ## Documentation Standards
 
