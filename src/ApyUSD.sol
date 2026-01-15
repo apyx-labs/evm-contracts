@@ -359,11 +359,6 @@ contract ApyUSD is
 
         // Perform the deposit
         shares = deposit(assets, receiver);
-
-        // Ensure we got at least the minimum shares
-        if (shares < minShares) {
-            revert SlippageExceeded(minShares, shares);
-        }
     }
 
     /**
@@ -385,11 +380,6 @@ contract ApyUSD is
 
         // Perform the mint
         assets = mint(shares, receiver);
-
-        // Ensure we didn't use more than max assets
-        if (assets > maxAssets) {
-            revert SlippageExceeded(maxAssets, assets);
-        }
     }
 
     /**
@@ -414,11 +404,6 @@ contract ApyUSD is
 
         // Perform the withdrawal
         shares = withdraw(assets, receiver, msg.sender);
-
-        // Ensure we didn't burn more than max shares
-        if (shares > maxShares) {
-            revert SlippageExceeded(maxShares, shares);
-        }
     }
 
     /**
@@ -440,11 +425,6 @@ contract ApyUSD is
 
         // Perform the redemption
         assets = redeem(shares, receiver, msg.sender);
-
-        // Ensure we got at least the minimum assets
-        if (assets < minAssets) {
-            revert SlippageExceeded(minAssets, assets);
-        }
     }
 
     // ========================================
