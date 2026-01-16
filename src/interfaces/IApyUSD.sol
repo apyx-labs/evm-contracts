@@ -20,6 +20,13 @@ interface IApyUSD is EAddressNotSet, EDenied {
      */
     error UnlockTokenError(string reason);
 
+    /**
+     * @notice Error thrown when slippage protection is violated
+     * @param expected Expected amount
+     * @param actual Actual amount
+     */
+    error SlippageExceeded(uint256 expected, uint256 actual);
+
     // ========================================
     // Events
     // ========================================

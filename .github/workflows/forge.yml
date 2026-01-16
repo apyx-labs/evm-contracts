@@ -36,7 +36,7 @@ jobs:
         run: forge lint src
 
       - name: Run Forge build
-        run: forge build --sizes
+        run: forge build
 
       - name: Run Forge tests
         run: forge test --no-match-test Report -vvv
