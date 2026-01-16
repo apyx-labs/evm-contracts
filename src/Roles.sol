@@ -87,7 +87,7 @@ library Roles {
      * @param apyUSD The ApyUSD contract
      */
     function assignAdminTargetsFor(AccessManager self, ApyUSD apyUSD) internal {
-        bytes4[] memory selectors = new bytes4[](7);
+        bytes4[] memory selectors = new bytes4[](9);
         selectors[0] = ApyUSD.pause.selector;
         selectors[1] = ApyUSD.unpause.selector;
 
@@ -97,6 +97,8 @@ library Roles {
         selectors[4] = ApyUSD.setDenyList.selector;
         selectors[5] = ApyUSD.setUnlockToken.selector;
         selectors[6] = ApyUSD.setVesting.selector;
+        selectors[7] = ApyUSD.setUnlockingFee.selector;
+        selectors[8] = ApyUSD.setFeeWallet.selector;
         self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);
     }
 
