@@ -27,6 +27,12 @@ interface IApyUSD is EAddressNotSet, EDenied {
      */
     error SlippageExceeded(uint256 expected, uint256 actual);
 
+    /**
+     * @notice Error thrown when fee exceeds maximum allowed
+     * @param fee The fee that was attempted to be set
+     */
+    error FeeExceedsMax(uint256 fee);
+
     // ========================================
     // Events
     // ========================================
@@ -58,4 +64,18 @@ interface IApyUSD is EAddressNotSet, EDenied {
      * @param newVesting New Vesting contract address
      */
     event VestingUpdated(address indexed oldVesting, address indexed newVesting);
+
+    /**
+     * @notice Emitted when the unlocking fee is updated
+     * @param oldFee Previous unlocking fee
+     * @param newFee New unlocking fee
+     */
+    event UnlockingFeeUpdated(uint256 oldFee, uint256 newFee);
+
+    /**
+     * @notice Emitted when the fee wallet is updated
+     * @param oldFeeWallet Previous fee wallet address
+     * @param newFeeWallet New fee wallet address
+     */
+    event FeeWalletUpdated(address indexed oldFeeWallet, address indexed newFeeWallet);
 }

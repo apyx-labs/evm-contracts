@@ -16,6 +16,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ERC20FreezeableUpgradable} from "./exts/ERC20FreezeableUpgradable.sol";
 import {IApyUSD} from "./interfaces/IApyUSD.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -47,6 +48,12 @@ contract ApyUSD is
     IApyUSD
 {
     using SafeERC20 for IERC20;
+    using Math for uint256;
+
+    /// @notice Fee precision constant (100% = 1e18)
+    uint256 private constant FEE_PRECISION = 1e18;
+    /// @notice Maximum fee allowed (1%)
+    uint256 private constant MAX_FEE = 0.01e18;
 
     /// @custom:storage-location erc7201:apyx.storage.ApyUSD
     struct ApyUSDStorage {
@@ -56,6 +63,10 @@ contract ApyUSD is
         IUnlockToken unlockToken;
         /// @notice Reference to the Vesting contract for yield distribution
         IVesting vesting;
+        /// @notice Unlocking fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
+        uint256 unlockingFee;
+        /// @notice Address to receive unlocking fees
+        address feeWallet;
     }
 
     // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApyUSD")) - 1)) & ~bytes32(uint256(0xff))
@@ -162,6 +173,30 @@ contract ApyUSD is
         return vaultBalance + vestedYield;
     }
 
+    /**
+     * @notice Preview adding an exit fee on withdrawal
+     * @dev Overrides ERC4626 to account for unlocking fees
+     * @param assets Amount of assets to withdraw (what user receives after fees)
+     * @return Amount of shares needed to withdraw the requested assets
+     */
+    function previewWithdraw(uint256 assets) public view override returns (uint256) {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        uint256 fee = _feeOnRaw(assets, $.unlockingFee);
+        return super.previewWithdraw(assets + fee);
+    }
+
+    /**
+     * @notice Preview taking an exit fee on redeem
+     * @dev Overrides ERC4626 to account for unlocking fees
+     * @param shares Amount of shares to redeem
+     * @return Amount of assets user will receive after fees are deducted
+     */
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        uint256 assets = super.previewRedeem(shares);
+        return assets - _feeOnTotal(assets, $.unlockingFee);
+    }
+
     // ========================================
     // ERC4626 Deposit Functions (Synchronous)
     // ========================================
@@ -219,8 +254,18 @@ contract ApyUSD is
             $.vesting.transferVestedYield();
         }
 
-        // Withdraw (burn) shares from the vault by transferring assets to the vault
-        super._withdraw(caller, address(this), owner, assets, shares);
+        // Calculate fee on the raw assets amount
+        uint256 fee = _feeOnRaw(assets, $.unlockingFee);
+        address feeRecipient = $.feeWallet;
+
+        // Withdraw (burn) shares from the vault by transferring total assets (assets + fee) to the vault
+        // The parent _withdraw will transfer assets+fee from user to vault and burn shares
+        super._withdraw(caller, address(this), owner, assets + fee, shares);
+
+        // Transfer fee to fee wallet if fee > 0 and fee wallet is set
+        if (fee > 0 && feeRecipient != address(0) && feeRecipient != address(this)) {
+            IERC20(asset()).safeTransfer(feeRecipient, fee);
+        }
 
         // Deposit assets into the UnlockToken to the receiver so the receiver receives
         // the shares of the UnlockToken instead of the assets of the ApyUSD vault
@@ -331,6 +376,84 @@ contract ApyUSD is
     function vesting() external view returns (address) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         return address($.vesting);
+    }
+
+    // ========================================
+    // Fee Management
+    // ========================================
+
+    /**
+     * @notice Returns the current unlocking fee
+     * @return Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
+     */
+    function unlockingFee() public view returns (uint256) {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        return $.unlockingFee;
+    }
+
+    /**
+     * @notice Sets the unlocking fee
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @param fee Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
+     */
+    function setUnlockingFee(uint256 fee) external restricted {
+        if (fee > MAX_FEE) revert FeeExceedsMax(fee);
+
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        uint256 oldFee = $.unlockingFee;
+        $.unlockingFee = fee;
+
+        emit UnlockingFeeUpdated(oldFee, fee);
+    }
+
+    /**
+     * @notice Returns the current fee wallet address
+     * @return Address of the fee wallet
+     */
+    function feeWallet() public view returns (address) {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        return $.feeWallet;
+    }
+
+    /**
+     * @notice Sets the fee wallet address
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @param wallet Address to receive fees
+     */
+    function setFeeWallet(address wallet) external restricted {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        address oldFeeWallet = $.feeWallet;
+        $.feeWallet = wallet;
+
+        emit FeeWalletUpdated(oldFeeWallet, wallet);
+    }
+
+    // ========================================
+    // Fee Calculation Helpers
+    // ========================================
+
+    /**
+     * @notice Calculates the fees that should be added to an amount `assets` that does not already include fees
+     * @dev Used in previewWithdraw and _withdraw operations
+     * @param assets The asset amount before fees
+     * @param feePercentage Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
+     * @return Fee amount to add
+     */
+    function _feeOnRaw(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        if (feePercentage == 0) return 0;
+        return assets.mulDiv(feePercentage, FEE_PRECISION, Math.Rounding.Ceil);
+    }
+
+    /**
+     * @notice Calculates the fee part of an amount `assets` that already includes fees
+     * @dev Used in previewRedeem operations
+     * @param assets The total asset amount including fees
+     * @param feePercentage Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
+     * @return Fee amount that is part of the total
+     */
+    function _feeOnTotal(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        if (feePercentage == 0) return 0;
+        return assets.mulDiv(feePercentage, feePercentage + FEE_PRECISION, Math.Rounding.Ceil);
     }
 
     // ========================================
