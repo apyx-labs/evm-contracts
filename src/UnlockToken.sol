@@ -19,6 +19,13 @@ contract UnlockToken is CommitToken, IUnlockToken {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable vault;
 
+    // ========================================
+    // Errors
+    // ========================================
+
+    /// @notice Error thrown when a non-vault address attempts a vault-only operation
+    error OnlyVault();
+
     /**
      * @notice Constructs the UnlockToken contract
      * @param authority_ Address of the AccessManager contract
@@ -32,6 +39,18 @@ contract UnlockToken is CommitToken, IUnlockToken {
     {
         if (vault_ == address(0)) revert InvalidAddress("vault");
         vault = vault_;
+    }
+
+    // ========================================
+    // Modifiers
+    // ========================================
+
+    /**
+     * @notice Ensures that only the vault can call the function
+     */
+    modifier onlyVault() {
+        if (msg.sender != vault) revert OnlyVault();
+        _;
     }
 
     /**
@@ -65,6 +84,43 @@ contract UnlockToken is CommitToken, IUnlockToken {
         returns (bool)
     {
         return controller == operator || operator == vault;
+    }
+
+    // ========================================
+    // Access Controlled Functions
+    // ========================================
+
+    /**
+     * @notice Overrides CommitToken _deposit to restrict access to vault only
+     * @dev Only the vault can deposit assets into the UnlockToken
+     * @param caller The address to deposit from
+     * @param receiver The address to deposit to
+     * @param assets The amount of assets to deposit
+     * @param shares The amount of shares to deposit
+     */
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
+        internal
+        override
+        onlyVault
+    {
+        super._deposit(caller, receiver, assets, shares);
+    }
+
+    /**
+     * @notice Overrides CommitToken _requestRedeem to restrict access to vault only
+     * @dev Only the vault can request redeem on behalf of users
+     * @param request The redeem request storage pointer
+     * @param controller Address that will control the request
+     * @param owner Address that owns the shares
+     * @param assets Amount of assets to redeem
+     * @param shares Amount of shares to redeem
+     */
+    function _requestRedeem(Request storage request, address controller, address owner, uint256 assets, uint256 shares)
+        internal
+        override
+        onlyVault
+    {
+        super._requestRedeem(request, controller, owner, assets, shares);
     }
 }
 
