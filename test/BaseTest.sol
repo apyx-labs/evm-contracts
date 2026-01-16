@@ -56,6 +56,7 @@ abstract contract BaseTest is Test {
     address public minter;
     address public minterGuardian;
     address public yieldOperator;
+    address public feeRecipient;
 
     address public alice;
     address public bob;
@@ -105,6 +106,7 @@ abstract contract BaseTest is Test {
         minter = makeAddr("minter");
         minterGuardian = makeAddr("minterGuardian");
         yieldOperator = makeAddr("yieldOperator");
+        feeRecipient = makeAddr("feeRecipient");
 
         // Deploy AccessManager
         vm.prank(admin);
@@ -169,6 +171,8 @@ abstract contract BaseTest is Test {
         apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
         vm.prank(admin);
         apyUSD.setVesting(IVesting(address(vesting)));
+        vm.prank(admin);
+        apyUSD.setFeeWallet(feeRecipient);
     }
 
     /**

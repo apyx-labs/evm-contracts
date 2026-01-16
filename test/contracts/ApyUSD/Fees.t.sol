@@ -14,11 +14,11 @@ import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
 contract ApyUSDFeesTest is ApyUSDTest {
     using Formatter for uint256;
 
-    address feeRecipient;
+    // Max fee constant from ApyUSD contract (1%)
+    uint256 private constant MAX_FEE = 0.01e18;
 
     function setUp() public override {
         super.setUp();
-        feeRecipient = makeAddr("feeRecipient");
     }
 
     // ========================================
@@ -37,12 +37,14 @@ contract ApyUSDFeesTest is ApyUSDTest {
     }
 
     function test_SetFeeWallet() public {
+        address newFeeRecipient = makeAddr("newFeeRecipient");
+        
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
-        emit IApyUSD.FeeWalletUpdated(address(0), feeRecipient);
-        apyUSD.setFeeWallet(feeRecipient);
+        emit IApyUSD.FeeWalletUpdated(feeRecipient, newFeeRecipient);
+        apyUSD.setFeeWallet(newFeeRecipient);
 
-        assertEq(apyUSD.feeWallet(), feeRecipient, "Fee wallet should be updated");
+        assertEq(apyUSD.feeWallet(), newFeeRecipient, "Fee wallet should be updated");
     }
 
     function test_RevertWhen_SetUnlockingFeeNotAdmin() public {
@@ -60,10 +62,10 @@ contract ApyUSDFeesTest is ApyUSDTest {
     }
 
     function test_RevertWhen_SetUnlockingFeeExceeds100Percent() public {
-        uint256 newFee = 1.01e18; // 101%
+        uint256 newFee = MAX_FEE + 1;
 
         vm.prank(admin);
-        vm.expectRevert("fee exceeds 100%");
+        vm.expectRevert();
         apyUSD.setUnlockingFee(newFee);
     }
 
@@ -77,11 +79,11 @@ contract ApyUSDFeesTest is ApyUSDTest {
         assertEq(apyUSD.unlockingFee(), 0, "Fee should be 0");
     }
 
-    function test_SetUnlockingFee_100PercentIsValid() public {
+    function test_SetUnlockingFee_MaxFeeIsValid() public {
         vm.prank(admin);
-        apyUSD.setUnlockingFee(1e18); // 100%
+        apyUSD.setUnlockingFee(MAX_FEE);
 
-        assertEq(apyUSD.unlockingFee(), 1e18, "Fee should be 100%");
+        assertEq(apyUSD.unlockingFee(), MAX_FEE, "Fee should be max");
     }
 
     // ========================================
@@ -126,7 +128,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // Fee on total: fee = 1010 * 0.01 / (1 + 0.01) = 1010 * 0.01 / 1.01 = 10
         // Assets after fee = 1010 - 10 = 1000
         uint256 expectedAssets = 1000e18;
-        assertApproxEqRel(assetsReceived, expectedAssets, 0.0001e18, "Preview should deduct fee from assets");
+        assertEq(assetsReceived, expectedAssets, "Preview should deduct fee from assets");
     }
 
     function test_PreviewWithdraw_NoFee() public {
@@ -197,10 +199,11 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 depositAmount = MEDIUM_AMOUNT;
         depositApxUSD(alice, depositAmount);
 
-        // Set 1% fee but NO fee wallet
+        // Set 1% fee and explicitly set fee wallet to address(0)
         vm.prank(admin);
         apyUSD.setUnlockingFee(0.01e18);
-        // feeWallet remains address(0)
+        vm.prank(admin);
+        apyUSD.setFeeWallet(address(0));
 
         uint256 assetsToReceive = 1000e18;
 
@@ -308,7 +311,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
     function testFuzz_PreviewWithdraw_FeeCalculation(uint256 assets, uint256 feePercent) public {
         // Bound inputs
         assets = bound(assets, 1e18, LARGE_AMOUNT);
-        feePercent = bound(feePercent, 0, 1e18); // 0% to 100%
+        feePercent = bound(feePercent, 0, MAX_FEE); // 0% to 1%
 
         // Setup
         depositApxUSD(alice, LARGE_AMOUNT);
@@ -337,7 +340,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
     function testFuzz_PreviewRedeem_FeeCalculation(uint256 shares, uint256 feePercent) public {
         // Bound inputs
         shares = bound(shares, 1e18, LARGE_AMOUNT);
-        feePercent = bound(feePercent, 0, 0.99e18); // 0% to 99% (avoid 100% which would give 0 assets)
+        feePercent = bound(feePercent, 0, MAX_FEE);
 
         // Setup
         depositApxUSD(alice, LARGE_AMOUNT);
@@ -543,5 +546,75 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // The vault balance change should reflect assets sent to UnlockToken
         // but the fee logic should prevent a self-transfer
         assertGt(vaultBalanceBefore, vaultBalanceAfter, "Vault should have sent assets to UnlockToken");
+    }
+
+    // ========================================
+    // Preview Function Equivalency Tests
+    // ========================================
+
+    function test_PreviewEquivalency_WithdrawAndRedeem() public {
+        // Setup: Alice deposits
+        uint256 depositAmount = MEDIUM_AMOUNT;
+        depositApxUSD(alice, depositAmount);
+
+        // Set 1% fee
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0.01e18);
+
+        // Test equivalency: previewRedeem(previewWithdraw(assets)) should equal assets
+        uint256 withdrawAssets = 1000e18;
+        uint256 sharesIn = apyUSD.previewWithdraw(withdrawAssets);
+        uint256 assetsOut = apyUSD.previewRedeem(sharesIn);
+
+        assertEq(withdrawAssets, assetsOut, "previewRedeem(previewWithdraw(assets)) should equal assets");
+    }
+
+    function test_ActualEquivalency_WithdrawAndRedeem() public {
+        // Setup: Alice deposits
+        uint256 depositAmount = MEDIUM_AMOUNT;
+        depositApxUSD(alice, depositAmount);
+
+        // Set 1% fee
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0.01e18);
+
+        uint256 withdrawAssets = depositAmount / 2; // Withdraw half
+
+        // Step 1: Withdraw withdrawAssets => get burnShares
+        vm.prank(alice);
+        uint256 burnShares = apyUSD.withdraw(withdrawAssets, alice, alice);
+
+        // Record what Alice received in UnlockToken
+        uint256 aliceUnlockTokenBalance = unlockToken.balanceOf(alice);
+        assertEq(aliceUnlockTokenBalance, withdrawAssets, "Alice should have received withdrawAssets in UnlockToken");
+
+        // Step 2: Bob deposits the same amount as Alice originally did
+        depositApxUSD(bob, depositAmount);
+
+        // Step 3: Bob redeems the same number of shares that were burned from Alice
+        vm.prank(bob);
+        uint256 bobAssetsOut = apyUSD.redeem(burnShares, bob, bob);
+
+        // The assets Bob receives should equal the assets Alice withdrew
+        assertEq(withdrawAssets, bobAssetsOut, "Redeeming the burned shares should yield the same assets");
+    }
+
+    function testFuzz_PreviewEquivalency_WithdrawAndRedeem(uint256 withdrawAssets, uint256 feePercent) public {
+        // Bound inputs
+        withdrawAssets = bound(withdrawAssets, 1e18, LARGE_AMOUNT / 2);
+        feePercent = bound(feePercent, 0, MAX_FEE);
+
+        // Setup
+        depositApxUSD(alice, LARGE_AMOUNT);
+
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(feePercent);
+
+        // Test equivalency
+        uint256 sharesIn = apyUSD.previewWithdraw(withdrawAssets);
+        uint256 assetsOut = apyUSD.previewRedeem(sharesIn);
+
+        // Should be exactly equal or very close (within rounding)
+        assertApproxEqAbs(withdrawAssets, assetsOut, 1, "previewRedeem(previewWithdraw(assets)) should equal assets");
     }
 }

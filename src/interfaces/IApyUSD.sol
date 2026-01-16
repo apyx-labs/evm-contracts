@@ -27,6 +27,12 @@ interface IApyUSD is EAddressNotSet, EDenied {
      */
     error SlippageExceeded(uint256 expected, uint256 actual);
 
+    /**
+     * @notice Error thrown when fee exceeds maximum allowed
+     * @param fee The fee that was attempted to be set
+     */
+    error FeeExceedsMax(uint256 fee);
+
     // ========================================
     // Events
     // ========================================

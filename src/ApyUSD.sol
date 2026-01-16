@@ -52,6 +52,8 @@ contract ApyUSD is
 
     /// @notice Fee precision constant (100% = 1e18)
     uint256 private constant FEE_PRECISION = 1e18;
+    /// @notice Maximum fee allowed (1%)
+    uint256 private constant MAX_FEE = 0.01e18;
 
     /// @custom:storage-location erc7201:apyx.storage.ApyUSD
     struct ApyUSDStorage {
@@ -262,7 +264,7 @@ contract ApyUSD is
 
         // Transfer fee to fee wallet if fee > 0 and fee wallet is set
         if (fee > 0 && feeRecipient != address(0) && feeRecipient != address(this)) {
-            SafeERC20.safeTransfer(IERC20(asset()), feeRecipient, fee);
+            IERC20(asset()).safeTransfer(feeRecipient, fee);
         }
 
         // Deposit assets into the UnlockToken to the receiver so the receiver receives
@@ -395,7 +397,7 @@ contract ApyUSD is
      * @param fee Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
      */
     function setUnlockingFee(uint256 fee) external restricted {
-        require(fee <= FEE_PRECISION, "fee exceeds 100%");
+        if (fee > MAX_FEE) revert FeeExceedsMax(fee);
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
         uint256 oldFee = $.unlockingFee;
@@ -438,6 +440,7 @@ contract ApyUSD is
      * @return Fee amount to add
      */
     function _feeOnRaw(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        if (feePercentage == 0) return 0;
         return assets.mulDiv(feePercentage, FEE_PRECISION, Math.Rounding.Ceil);
     }
 
@@ -449,6 +452,7 @@ contract ApyUSD is
      * @return Fee amount that is part of the total
      */
     function _feeOnTotal(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        if (feePercentage == 0) return 0;
         return assets.mulDiv(feePercentage, feePercentage + FEE_PRECISION, Math.Rounding.Ceil);
     }
 
