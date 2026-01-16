@@ -92,11 +92,7 @@ contract UnlockToken is CommitToken, IUnlockToken {
      * @param assets The amount of assets to deposit
      * @param shares The amount of shares to deposit
      */
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
-        internal
-        override
-        onlyVault
-    {
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override onlyVault {
         super._deposit(caller, receiver, assets, shares);
     }
 
