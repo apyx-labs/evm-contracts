@@ -19,13 +19,6 @@ contract UnlockToken is CommitToken, IUnlockToken {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     address public immutable vault;
 
-    // ========================================
-    // Errors
-    // ========================================
-
-    /// @notice Error thrown when a non-vault address attempts a vault-only operation
-    error OnlyVault();
-
     /**
      * @notice Constructs the UnlockToken contract
      * @param authority_ Address of the AccessManager contract
@@ -48,8 +41,9 @@ contract UnlockToken is CommitToken, IUnlockToken {
     /**
      * @notice Ensures that only the vault can call the function
      */
+    // forge-lint: disable-next-line(unwrapped-modifier-logic)
     modifier onlyVault() {
-        if (msg.sender != vault) revert OnlyVault();
+        if (msg.sender != vault) revert InvalidCaller();
         _;
     }
 

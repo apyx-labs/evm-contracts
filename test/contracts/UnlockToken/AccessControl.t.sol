@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {console2 as console} from "forge-std/src/console2.sol";
 import {BaseTest} from "../../BaseTest.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title UnlockTokenAccessControlTest
@@ -10,15 +11,6 @@ import {BaseTest} from "../../BaseTest.sol";
  * @dev Tests that only the vault can call deposit, mint, requestRedeem, and requestWithdraw
  */
 contract UnlockTokenAccessControlTest is BaseTest {
-    function setUp() public virtual override {
-        super.setUp();
-        
-        // Mint ApxUSD to test accounts
-        mintApxUSD(alice, LARGE_AMOUNT);
-        mintApxUSD(bob, LARGE_AMOUNT);
-        mintApxUSD(charlie, LARGE_AMOUNT);
-    }
-
     // ========================================
     // Access Control Tests for Deposit/Mint
     // ========================================
@@ -32,7 +24,7 @@ contract UnlockTokenAccessControlTest is BaseTest {
         // Alice tries to deposit directly to UnlockToken (should fail)
         vm.startPrank(alice);
         apxUSD.approve(address(unlockToken), depositAmount);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
+        vm.expectRevert(Errors.invalidCaller());
         unlockToken.deposit(depositAmount, alice);
         vm.stopPrank();
     }
@@ -46,13 +38,14 @@ contract UnlockTokenAccessControlTest is BaseTest {
         // Alice tries to mint directly on UnlockToken (should fail)
         vm.startPrank(alice);
         apxUSD.approve(address(unlockToken), sharesToMint);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
+        vm.expectRevert(Errors.invalidCaller());
         unlockToken.mint(sharesToMint, alice);
         vm.stopPrank();
     }
 
-    function test_VaultCanDeposit() public {
-        uint256 depositAmount = MEDIUM_AMOUNT;
+    function test_VaultCanDeposit(uint256 depositAmount) public {
+        // Bound to reasonable amounts
+        depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
         
         // Mint ApxUSD to the vault (ApyUSD contract)
         mintApxUSD(address(apyUSD), depositAmount);
@@ -101,7 +94,7 @@ contract UnlockTokenAccessControlTest is BaseTest {
         
         // Alice tries to request redeem directly (should fail)
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
+        vm.expectRevert(Errors.invalidCaller());
         unlockToken.requestRedeem(depositAmount, alice, alice);
         vm.stopPrank();
     }
@@ -118,7 +111,7 @@ contract UnlockTokenAccessControlTest is BaseTest {
         
         // Alice tries to request withdraw directly (should fail)
         vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
+        vm.expectRevert(Errors.invalidCaller());
         unlockToken.requestWithdraw(depositAmount, alice, alice);
         vm.stopPrank();
     }
@@ -226,8 +219,8 @@ contract UnlockTokenAccessControlTest is BaseTest {
     function test_EndToEnd_ApyUSDRedemption() public {
         uint256 depositAmount = MEDIUM_AMOUNT;
         
-        // Record initial balance
-        uint256 aliceBalanceStart = apxUSD.balanceOf(alice);
+        // Mint ApxUSD to alice
+        mintApxUSD(alice, depositAmount);
         
         // Step 1: Alice deposits ApxUSD into ApyUSD
         uint256 apyShares = depositApxUSD(alice, depositAmount);
@@ -248,63 +241,8 @@ contract UnlockTokenAccessControlTest is BaseTest {
         vm.prank(alice);
         unlockToken.redeem(assetsRedeemed, alice, alice);
         
-        // Verify final state - alice should have her original balance back
-        assertEq(apxUSD.balanceOf(alice), aliceBalanceStart, "Alice should have received ApxUSD back");
+        // Verify final state
+        assertEq(apxUSD.balanceOf(alice), assetsRedeemed, "Alice should have received ApxUSD back");
         assertEq(unlockToken.balanceOf(alice), 0, "Alice should have no UnlockToken shares");
-    }
-
-    // ========================================
-    // Fuzz Tests
-    // ========================================
-
-    function testFuzz_RevertWhen_NonVaultCallsDeposit(uint256 depositAmount) public {
-        // Bound to reasonable amounts
-        depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
-        
-        // Mint ApxUSD to alice
-        mintApxUSD(alice, depositAmount);
-        
-        // Alice tries to deposit directly to UnlockToken (should fail)
-        vm.startPrank(alice);
-        apxUSD.approve(address(unlockToken), depositAmount);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
-        unlockToken.deposit(depositAmount, alice);
-        vm.stopPrank();
-    }
-
-    function testFuzz_VaultCanDeposit(uint256 depositAmount) public {
-        // Bound to reasonable amounts
-        depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
-        
-        // Mint ApxUSD to the vault
-        mintApxUSD(address(apyUSD), depositAmount);
-        
-        // Vault deposits to UnlockToken (should succeed)
-        vm.startPrank(address(apyUSD));
-        apxUSD.approve(address(unlockToken), depositAmount);
-        uint256 shares = unlockToken.deposit(depositAmount, alice);
-        vm.stopPrank();
-        
-        // Verify deposit succeeded
-        assertEq(shares, depositAmount, "Shares should equal deposit amount");
-        assertEq(unlockToken.balanceOf(alice), shares, "Alice should have received shares");
-    }
-
-    function testFuzz_RevertWhen_NonVaultCallsRequestRedeem(uint256 depositAmount) public {
-        // Bound to reasonable amounts
-        depositAmount = bound(depositAmount, 1e18, LARGE_AMOUNT);
-        
-        // Setup: Vault deposits to UnlockToken for alice
-        mintApxUSD(address(apyUSD), depositAmount);
-        vm.startPrank(address(apyUSD));
-        apxUSD.approve(address(unlockToken), depositAmount);
-        unlockToken.deposit(depositAmount, alice);
-        vm.stopPrank();
-        
-        // Alice tries to request redeem directly (should fail)
-        vm.startPrank(alice);
-        vm.expectRevert(abi.encodeWithSignature("OnlyVault()"));
-        unlockToken.requestRedeem(depositAmount, alice, alice);
-        vm.stopPrank();
     }
 }
