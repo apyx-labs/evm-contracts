@@ -334,6 +334,100 @@ contract ApyUSD is
     }
 
     // ========================================
+    // Price Controls
+    // ========================================
+
+    /**
+     * @notice Deposits exact assets for shares or reverts if less than min shares will be minted
+     * @dev Provides slippage protection for deposits
+     * @param assets Amount of assets to deposit
+     * @param minShares Minimum amount of shares expected
+     * @param receiver Address to receive the shares
+     * @return shares Amount of shares minted
+     */
+    function depositForMinShares(uint256 assets, uint256 minShares, address receiver)
+        external
+        returns (uint256 shares)
+    {
+        // Preview the deposit to get expected shares
+        uint256 expectedShares = previewDeposit(assets);
+
+        // Check slippage protection
+        if (expectedShares < minShares) {
+            revert SlippageExceeded(minShares, expectedShares);
+        }
+
+        // Perform the deposit
+        shares = deposit(assets, receiver);
+    }
+
+    /**
+     * @notice Mint exact shares for assets or reverts if more than max assets will be deposited
+     * @dev Provides slippage protection for mints
+     * @param shares Amount of shares to mint
+     * @param maxAssets Maximum amount of assets willing to deposit
+     * @param receiver Address to receive the shares
+     * @return assets Amount of assets deposited
+     */
+    function mintForMaxAssets(uint256 shares, uint256 maxAssets, address receiver) external returns (uint256 assets) {
+        // Preview the mint to get expected assets
+        uint256 expectedAssets = previewMint(shares);
+
+        // Check slippage protection
+        if (expectedAssets > maxAssets) {
+            revert SlippageExceeded(maxAssets, expectedAssets);
+        }
+
+        // Perform the mint
+        assets = mint(shares, receiver);
+    }
+
+    /**
+     * @notice Withdraws exact assets for shares or reverts if more than max shares will be burned
+     * @dev Provides slippage protection for withdrawals
+     * @param assets Amount of assets to withdraw
+     * @param maxShares Maximum amount of shares willing to burn
+     * @param receiver Address to receive the assets (as UnlockToken shares)
+     * @return shares Amount of shares burned
+     */
+    function withdrawForMaxShares(uint256 assets, uint256 maxShares, address receiver)
+        external
+        returns (uint256 shares)
+    {
+        // Preview the withdrawal to get expected shares
+        uint256 expectedShares = previewWithdraw(assets);
+
+        // Check slippage protection
+        if (expectedShares > maxShares) {
+            revert SlippageExceeded(maxShares, expectedShares);
+        }
+
+        // Perform the withdrawal
+        shares = withdraw(assets, receiver, msg.sender);
+    }
+
+    /**
+     * @notice Redeems exact shares for assets or reverts if less than min assets will be withdrawn
+     * @dev Provides slippage protection for redemptions
+     * @param shares Amount of shares to redeem
+     * @param minAssets Minimum amount of assets expected
+     * @param receiver Address to receive the assets (as UnlockToken shares)
+     * @return assets Amount of assets withdrawn
+     */
+    function redeemForMinAssets(uint256 shares, uint256 minAssets, address receiver) external returns (uint256 assets) {
+        // Preview the redemption to get expected assets
+        uint256 expectedAssets = previewRedeem(shares);
+
+        // Check slippage protection
+        if (expectedAssets < minAssets) {
+            revert SlippageExceeded(minAssets, expectedAssets);
+        }
+
+        // Perform the redemption
+        assets = redeem(shares, receiver, msg.sender);
+    }
+
+    // ========================================
     // Pause & Freeze
     // ========================================
 
