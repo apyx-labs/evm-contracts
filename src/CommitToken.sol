@@ -204,6 +204,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      */
     function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
         internal
+        virtual
         override
         whenNotPaused
     {
@@ -221,6 +222,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      */
     function _requestRedeem(Request storage request, address controller, address owner, uint256 assets, uint256 shares)
         internal
+        virtual
     {
         // Verify the controller is an operator of the owner, and the msg.sender is an operator of the controller
         if (!isOperator(owner, controller) || !isOperator(controller, msg.sender)) {
@@ -411,8 +413,10 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
             revert InvalidAmount("shares", shares);
         }
 
+        // Capture assets before deletion
+        assets = request.assets;
         _withdraw(request, msg.sender, receiver, owner);
-        return request.assets;
+        return assets;
     }
 
     // TODO: Confirm the correct value is being returned
@@ -431,8 +435,10 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
             revert InvalidAmount("assets", assets);
         }
 
+        // Capture shares before deletion
+        shares = request.shares;
         _withdraw(request, msg.sender, receiver, owner);
-        return request.shares;
+        return shares;
     }
 
     // ========================================
