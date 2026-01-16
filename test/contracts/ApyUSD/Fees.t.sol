@@ -38,7 +38,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
 
     function test_SetFeeWallet() public {
         address newFeeRecipient = makeAddr("newFeeRecipient");
-        
+
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
         emit IApyUSD.FeeWalletUpdated(feeRecipient, newFeeRecipient);
