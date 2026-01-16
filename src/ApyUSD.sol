@@ -451,7 +451,7 @@ contract ApyUSD is
     function _feeOnTotal(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
         return assets.mulDiv(feePercentage, feePercentage + FEE_PRECISION, Math.Rounding.Ceil);
     }
-    
+
     // ========================================
     // Price Controls
     // ========================================
