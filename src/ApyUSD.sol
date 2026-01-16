@@ -256,8 +256,9 @@ contract ApyUSD is
         uint256 fee = _feeOnRaw(assets, $.unlockingFee);
         address feeRecipient = $.feeWallet;
 
-        // Withdraw (burn) shares from the vault by transferring assets to the vault
-        super._withdraw(caller, address(this), owner, assets, shares);
+        // Withdraw (burn) shares from the vault by transferring total assets (assets + fee) to the vault
+        // The parent _withdraw will transfer assets+fee from user to vault and burn shares
+        super._withdraw(caller, address(this), owner, assets + fee, shares);
 
         // Transfer fee to fee wallet if fee > 0 and fee wallet is set
         if (fee > 0 && feeRecipient != address(0) && feeRecipient != address(this)) {
@@ -433,22 +434,22 @@ contract ApyUSD is
      * @notice Calculates the fees that should be added to an amount `assets` that does not already include fees
      * @dev Used in previewWithdraw and _withdraw operations
      * @param assets The asset amount before fees
-     * @param feeBasisPoints Fee in basis points with 18 decimals
+     * @param feePercentage Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
      * @return Fee amount to add
      */
-    function _feeOnRaw(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, FEE_PRECISION, Math.Rounding.Ceil);
+    function _feeOnRaw(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        return assets.mulDiv(feePercentage, FEE_PRECISION, Math.Rounding.Ceil);
     }
 
     /**
      * @notice Calculates the fee part of an amount `assets` that already includes fees
      * @dev Used in previewRedeem operations
      * @param assets The total asset amount including fees
-     * @param feeBasisPoints Fee in basis points with 18 decimals
+     * @param feePercentage Fee as a percentage with 18 decimals (e.g., 0.01e18 = 1%, 1e18 = 100%)
      * @return Fee amount that is part of the total
      */
-    function _feeOnTotal(uint256 assets, uint256 feeBasisPoints) private pure returns (uint256) {
-        return assets.mulDiv(feeBasisPoints, feeBasisPoints + FEE_PRECISION, Math.Rounding.Ceil);
+    function _feeOnTotal(uint256 assets, uint256 feePercentage) private pure returns (uint256) {
+        return assets.mulDiv(feePercentage, feePercentage + FEE_PRECISION, Math.Rounding.Ceil);
     }
 
     // ========================================

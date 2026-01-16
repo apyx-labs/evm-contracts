@@ -319,8 +319,16 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // Preview should include fee
         uint256 sharesNeeded = apyUSD.previewWithdraw(assets);
 
-        // Manual calculation: shares = assets + (assets * feePercent / 1e18)
-        uint256 fee = (assets * feePercent + 1e18 - 1) / 1e18; // Ceiling division
+        // Manual calculation matching implementation: fee = assets.mulDiv(feePercent, 1e18, Ceil)
+        // This is equivalent to ceiling division: (assets * feePercent + 1e18 - 1) / 1e18
+        uint256 fee;
+        if (feePercent == 0) {
+            fee = 0;
+        } else {
+            // Using the Math.mulDiv ceiling logic
+            uint256 prod = assets * feePercent;
+            fee = (prod + 1e18 - 1) / 1e18;
+        }
         uint256 expectedShares = assets + fee;
 
         assertApproxEqRel(sharesNeeded, expectedShares, 0.001e18, "Preview should correctly calculate fee");
@@ -341,10 +349,18 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 assetsReceived = apyUSD.previewRedeem(shares);
 
         // At 1:1 exchange rate, shares = totalAssets before fee
-        // Fee on total = totalAssets * feePercent / (1e18 + feePercent)
+        // Fee on total = totalAssets.mulDiv(feePercent, feePercent + 1e18, Ceil)
         // Assets after fee = totalAssets - fee
         uint256 totalAssets = shares; // At 1:1
-        uint256 fee = (totalAssets * feePercent + (1e18 + feePercent) - 1) / (1e18 + feePercent); // Ceiling
+        uint256 fee;
+        if (feePercent == 0) {
+            fee = 0;
+        } else {
+            // Using the Math.mulDiv ceiling logic
+            uint256 prod = totalAssets * feePercent;
+            uint256 denominator = feePercent + 1e18;
+            fee = (prod + denominator - 1) / denominator;
+        }
         uint256 expectedAssets = totalAssets - fee;
 
         assertApproxEqRel(assetsReceived, expectedAssets, 0.001e18, "Preview should correctly deduct fee");
