@@ -552,60 +552,14 @@ contract ApyUSDFeesTest is ApyUSDTest {
     // Preview Function Equivalency Tests
     // ========================================
 
-    function test_PreviewEquivalency_WithdrawAndRedeem() public {
-        // Setup: Alice deposits
-        uint256 depositAmount = MEDIUM_AMOUNT;
-        depositApxUSD(alice, depositAmount);
-
-        // Set 1% fee
-        vm.prank(admin);
-        apyUSD.setUnlockingFee(0.01e18);
-
-        // Test equivalency: previewRedeem(previewWithdraw(assets)) should equal assets
-        uint256 withdrawAssets = 1000e18;
-        uint256 sharesIn = apyUSD.previewWithdraw(withdrawAssets);
-        uint256 assetsOut = apyUSD.previewRedeem(sharesIn);
-
-        assertEq(withdrawAssets, assetsOut, "previewRedeem(previewWithdraw(assets)) should equal assets");
-    }
-
-    function test_ActualEquivalency_WithdrawAndRedeem() public {
-        // Setup: Alice deposits
-        uint256 depositAmount = MEDIUM_AMOUNT;
-        depositApxUSD(alice, depositAmount);
-
-        // Set 1% fee
-        vm.prank(admin);
-        apyUSD.setUnlockingFee(0.01e18);
-
-        uint256 withdrawAssets = depositAmount / 2; // Withdraw half
-
-        // Step 1: Withdraw withdrawAssets => get burnShares
-        vm.prank(alice);
-        uint256 burnShares = apyUSD.withdraw(withdrawAssets, alice, alice);
-
-        // Record what Alice received in UnlockToken
-        uint256 aliceUnlockTokenBalance = unlockToken.balanceOf(alice);
-        assertEq(aliceUnlockTokenBalance, withdrawAssets, "Alice should have received withdrawAssets in UnlockToken");
-
-        // Step 2: Bob deposits the same amount as Alice originally did
-        depositApxUSD(bob, depositAmount);
-
-        // Step 3: Bob redeems the same number of shares that were burned from Alice
-        vm.prank(bob);
-        uint256 bobAssetsOut = apyUSD.redeem(burnShares, bob, bob);
-
-        // The assets Bob receives should equal the assets Alice withdrew
-        assertEq(withdrawAssets, bobAssetsOut, "Redeeming the burned shares should yield the same assets");
-    }
-
     function testFuzz_PreviewEquivalency_WithdrawAndRedeem(uint256 withdrawAssets, uint256 feePercent) public {
         // Bound inputs
-        withdrawAssets = bound(withdrawAssets, 1e18, LARGE_AMOUNT / 2);
+        uint256 depositAmount = LARGE_AMOUNT;
+        withdrawAssets = bound(withdrawAssets, 0, depositAmount);
         feePercent = bound(feePercent, 0, MAX_FEE);
 
         // Setup
-        depositApxUSD(alice, LARGE_AMOUNT);
+        depositApxUSD(alice, depositAmount);
 
         vm.prank(admin);
         apyUSD.setUnlockingFee(feePercent);
@@ -615,6 +569,33 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 assetsOut = apyUSD.previewRedeem(sharesIn);
 
         // Should be exactly equal or very close (within rounding)
-        assertApproxEqAbs(withdrawAssets, assetsOut, 1, "previewRedeem(previewWithdraw(assets)) should equal assets");
+        assertEq(withdrawAssets, assetsOut, "previewRedeem(previewWithdraw(assets)) should equal assets");
+    }
+
+    function testFuzz_ActualEquivalency_WithdrawAndRedeem(uint256 withdrawAssets, uint256 feePercent) public {
+        // Setup
+        feePercent = bound(feePercent, 0, MAX_FEE);
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(feePercent);
+
+        uint256 depositAmount = LARGE_AMOUNT;
+        uint256 aliceShares = depositApxUSD(alice, depositAmount);
+
+        // Step 1: Withdraw withdrawAssets => get burnShares
+        withdrawAssets = bound(withdrawAssets, 0, apyUSD.previewRedeem(aliceShares));
+        uint256 burnShares = withdrawApxUSD(withdrawAssets, alice, alice);
+
+        // Record what Alice received in UnlockToken
+        uint256 aliceUnlockTokenBalance = unlockToken.balanceOf(alice);
+        assertEq(aliceUnlockTokenBalance, withdrawAssets, "Alice should have received withdrawAssets in UnlockToken");
+
+        // Step 2: Bob deposits the same amount as Alice originally did
+        depositApxUSD(bob, depositAmount);
+
+        // Step 3: Bob redeems the same number of shares that were burned from Alice
+        uint256 bobAssetsOut = redeemApyUSD(burnShares, bob, bob);
+
+        // The assets Bob receives should equal the assets Alice withdrew
+        assertEq(withdrawAssets, bobAssetsOut, "Redeeming the burned shares should yield the same assets");
     }
 }
