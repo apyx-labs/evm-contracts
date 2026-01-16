@@ -61,7 +61,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
         apyUSD.setFeeWallet(feeRecipient);
     }
 
-    function test_RevertWhen_SetUnlockingFeeExceeds100Percent() public {
+    function test_RevertWhen_SetUnlockingFeeExceedsMaxFee() public {
         uint256 newFee = MAX_FEE + 1;
 
         vm.prank(admin);
