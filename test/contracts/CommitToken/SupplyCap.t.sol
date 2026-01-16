@@ -12,7 +12,7 @@ import {Errors} from "../../utils/Errors.sol";
  * @notice Tests for CommitToken supply cap functionality
  */
 contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
-    function test_SupplyCap_InitialValue() public {
+    function test_SupplyCap_InitialValue() public view {
         // Verify supply cap is set correctly
         assertEq(lockToken.supplyCap(), VERY_VERY_LARGE_AMOUNT);
     }
@@ -129,7 +129,7 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
         lockToken.setSupplyCap(VERY_VERY_LARGE_AMOUNT);
     }
 
-    function test_UnlockToken_MaxSupplyCap() public {
+    function test_UnlockToken_MaxSupplyCap() public view {
         // Verify UnlockToken has max supply cap
         assertEq(unlockToken.supplyCap(), type(uint256).max);
         assertEq(unlockToken.supplyCapRemaining(), type(uint256).max);
@@ -138,8 +138,9 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
     function test_UnlockToken_CanMintWithMaxSupplyCap() public {
         // Mint apxUSD and deposit to test that max supply cap doesn't prevent minting
         mintApxUSD(alice, VERY_LARGE_AMOUNT);
+        depositApxUSD(alice, VERY_LARGE_AMOUNT);
 
-        vm.startPrank(alice);
+        vm.startPrank(address(apyUSD));
         apxUSD.approve(address(unlockToken), VERY_LARGE_AMOUNT);
         unlockToken.deposit(VERY_LARGE_AMOUNT, alice);
         vm.stopPrank();
