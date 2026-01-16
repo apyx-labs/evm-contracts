@@ -371,8 +371,8 @@ contract ApyUSDFeesTest is ApyUSDTest {
     // ========================================
 
     function test_MultipleWithdrawals_WithFee_AccumulateFees() public {
-        // Setup - deposit more than needed
-        uint256 depositAmount = LARGE_AMOUNT; // 100k instead of 1M
+        // Setup - use LARGE_AMOUNT (100k) which is sufficient for multiple withdrawals
+        uint256 depositAmount = LARGE_AMOUNT;
         depositApxUSD(alice, depositAmount);
 
         // Set 1% fee and fee wallet
