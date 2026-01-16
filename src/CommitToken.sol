@@ -219,7 +219,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         uint256 assets = previewRedeem(shares);
 
         // Get or update existing request
-        // When using operators, request is stored by owner, not msg.sender
         Request storage request = redeemRequests[owner];
         _requestRedeem(request, controller, owner, assets, shares);
         return 0;
@@ -233,7 +232,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         uint256 shares = previewWithdraw(assets);
 
         // Get or update existing request
-        // When using operators, request is stored by owner, not msg.sender
         Request storage request = redeemRequests[owner];
         _requestRedeem(request, controller, owner, assets, shares);
         return 0;
@@ -350,7 +348,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         uint256 shares = request.shares;
 
         // Clear request (follow CEI pattern)
-        // Delete by owner since requests are now stored by owner
         delete redeemRequests[owner];
 
         super._withdraw(caller, receiver, owner, assets, shares);
