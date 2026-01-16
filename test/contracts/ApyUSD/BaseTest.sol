@@ -26,4 +26,12 @@ abstract contract ApyUSDTest is BaseTest {
         apxUSD.mint(charlie, LARGE_AMOUNT);
         vm.stopPrank();
     }
+
+    /**
+     * @notice Helper to warp time forward by the unlocking delay
+     * @dev TODO: Move this to ../../BaseTest.sol
+     */
+    function warpPastUnlockingDelay() internal {
+        vm.warp(block.timestamp + UNLOCKING_DELAY + 1);
+    }
 }
