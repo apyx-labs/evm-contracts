@@ -1,44 +1,48 @@
 {
   "actors": {
     "admin": {
-      "address": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-      "privateKey": "77814517325470205911140941194401928579557062014761831930645393041380819009408",
+      "address": "0xf3643Db026FAcE828b077a15ca6557189F3bec1E",
+      "privateKey": "7182878517221984222728179939210145228303400006027179036140367241973380585946",
       "role": 0
     },
     "minter": {
-      "address": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-      "privateKey": "40606737760334725431406512677033654118342507952694270066784247067953537247501",
+      "address": "0xb703998A201b47E79587bCAA42C20B5c7e1544b7",
+      "privateKey": "11113093649773017222175583533125625908960258587193595568112567261204861548263",
       "role": 2
     }
   },
   "contracts": {
     "accessManager": {
-      "address": "0xff45Fcd36E04C07b53D909b00E915837fD1E3234",
-      "block": 9937224
+      "address": "0x6b0d5363af5E244E5b0B0a08AAE5AEaDc4CE540d",
+      "block": 10076964
     },
     "addressList": {
-      "address": "0x11DAa049d4C16824487B0ED8021c6De88284F4bB",
-      "block": 9937224
+      "address": "0xb6Eb10BAF059C1d36f4A5Ae8aF5116B5247038ab",
+      "block": 10076964
     },
     "apxUSD": {
-      "address": "0x71cEE012bA3B9642277f189c2C26488cAA28CF13",
-      "block": 9937224
+      "address": "0x931B479C43d507EAd8E6627441FCF128065ad1Af",
+      "block": 10076967
     },
     "apyUSD": {
-      "address": "0xdBfD38820686b738fc80E7aD26566F4B77c1B92D",
-      "block": 9937224
+      "address": "0xDd4deD06edeB59C211B95de77dbcA7a0ECeEf679",
+      "block": 10076973
     },
     "linearVestV0": {
-      "address": "0x29c0fc99eeEfe3B6f0C2b08e59961C6F4f2f2EdE",
-      "block": 9954599
+      "address": "0x6D03B85FdE48cA84706c11710760be42e420054A",
+      "block": 10076976
     },
     "minterV0": {
-      "address": "0xd91d0433c10291448a8DC00C3ba14Af8b94c7656",
-      "block": 9937224
+      "address": "0x9c13Edc5bC925B60d23b7075DF959aCcE705823d",
+      "block": 10076967
+    },
+    "unlockToken": {
+      "address": "0xa27A91162A4F63EfB79B4E453A70ED0e279643fd",
+      "block": 10076973
     },
     "yieldDistributor": {
-      "address": "0xe3f89724666d4220e816c80bafcC993337a5e1BF",
-      "block": 9954599
+      "address": "0x92675EEd5b8197FF64F4B0A4F07C5acA8f5Dc0D7",
+      "block": 10076976
     }
   }
 }
