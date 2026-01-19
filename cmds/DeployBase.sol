@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {Script, console2} from "forge-std/src/Script.sol";
 import {Roles} from "../src/Roles.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title DeployBase
@@ -38,9 +39,9 @@ abstract contract DeployBase is Script {
     /// @notice Default vesting period: 30 days
     uint256 public constant DEFAULT_VESTING_PERIOD = 30 days;
 
-    /// @notice Private keys for deployment (from Anvil defaults)
-    uint256 public constant ALICE_PRIVATE_KEY = 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
-    uint256 public constant BOB_PRIVATE_KEY = 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d;
+    /// @notice Private keys for deployment (from Anvil)
+    uint256 public constant ALICE_PRIVATE_KEY = 0x0fe15d7bc1d8132b2ebd56987ce47178e29eb50a0796f7bc120264556e2699da;
+    uint256 public constant BOB_PRIVATE_KEY = 0x1891c9c130648838255b45167bbc63689227c375c4efe4a609c91f1b7c61f6e7;
 
     // ========================================
     // Data Structures
@@ -224,7 +225,7 @@ abstract contract DeployBase is Script {
             if (actors[actorName].addr != address(0)) {
                 actor = actors[actorName];
             } else {
-                // Load from existing JSON
+                // Load from existing JSON/**
                 actor = getActorData(existingJson, actorName);
             }
 
@@ -298,6 +299,24 @@ abstract contract DeployBase is Script {
         }
 
         return json;
+    }
+
+    // ========================================
+    // CREATE2 Deployment Helpers
+    // ========================================
+
+    /**
+     * @notice Gets the creation bytecode for ERC1967Proxy with initialization data
+     * @param implementation The implementation contract address
+     * @param initData The initialization data
+     * @return bytecode The creation bytecode
+     */
+    function getERC1967ProxyCreationCode(address implementation, bytes memory initData)
+        internal
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodePacked(type(ERC1967Proxy).creationCode, abi.encode(implementation, initData));
     }
 }
 
