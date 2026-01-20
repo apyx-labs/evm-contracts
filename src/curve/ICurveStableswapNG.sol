@@ -1,7 +1,7 @@
-// SPDX-License-Identifier: UNLICENSED
+// SPDX-License-Identifier: TODO
 pragma solidity ^0.8.4;
 
-interface CurveStableSwapNG {
+interface ICurveStableswapNG {
     event AddLiquidity(
         address indexed provider, uint256[] token_amounts, uint256[] fees, uint256 invariant, uint256 token_supply
     );

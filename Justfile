@@ -124,3 +124,5 @@ copy-abis:
     ./scripts/copy-abi.sh MinterV0
     ./scripts/copy-abi.sh UnlockToken
     ./scripts/copy-abi.sh YieldDistributor
+    ./scripts/copy-abi.sh ICurveStableswapFactoryNG
+    ./scripts/copy-abi.sh ICurveStableswapNG

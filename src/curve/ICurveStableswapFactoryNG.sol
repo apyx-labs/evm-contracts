@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 // Generated using:
 // cast interface 0x6A8cbed756804B16E05E741eDaBd5cB544AE21bf > src/curve/ICurveStableswapFactoryNG.sol
 
-interface CurveStableswapFactoryNG {
+interface ICurveStableswapFactoryNG {
     event BasePoolAdded(address base_pool);
     event LiquidityGaugeDeployed(address pool, address gauge);
     event MetaPoolDeployed(address coin, address base_pool, uint256 A, uint256 fee, address deployer);
