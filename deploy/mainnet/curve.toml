@@ -1,0 +1,5 @@
+
+# https://docs.curve.finance/references/deployed-contracts/#stableswap-ng
+[curve.stableswap-ng]
+factory = "0x6A8cbed756804B16E05E741eDaBd5cB544AE21bf"
+plainAMM = "0xDCc91f930b42619377C200BA05b7513f2958b202"

@@ -1,8 +1,7 @@
 # https://docs.curve.finance/references/deployed-contracts/#stableswap-ng
 [curve.stableswap-ng]
 factory = "0xfb37b8D939FFa77114005e61CFc2e543d6F49A81"
-planAMM = "0xE12374F193f91f71CE40D53E0db102eBaA9098D5"
-metaAMM = "0xB00E89EaBD59cD3254c88E390103Cf17E914f678"
+plainAMM = "0xE12374F193f91f71CE40D53E0db102eBaA9098D5"
 
 [curve.twocrypto-ng]
 factory = "0x98EE851a00abeE0d95D08cF4CA2BdCE32aeaAF7F"
