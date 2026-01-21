@@ -9,6 +9,11 @@ linearVestV0_address = "0x0811669A91AeaC562D11B9219f1eEBbCfEcf8187"
 yieldDistributor_address = "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E"
 
 [arbitrum.uint]
-unlockToken_block = 24281728
-linearVestV0_block = 24281830
-yieldDistributor_block = 24281830
+accessManager_block = 423623352
+addressList_block = 423623352
+apxUSD_block = 423623352
+minterV0_block = 423623352
+apyUSD_block = 423623352
+unlockToken_block = 423623352
+linearVestV0_block = 423623352
+yieldDistributor_block = 423623352

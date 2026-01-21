@@ -1,0 +1,36 @@
+{
+  "contracts": {
+    "accessManager": {
+      "address": "0xedd1325589d8fc8754C046C37486D0f49262Fb19",
+      "block": 423623352
+    },
+    "addressList": {
+      "address": "0x431DC000A69787671bDbdA9c7C253e748e2fC6ce",
+      "block": 423623352
+    },
+    "apxUSD": {
+      "address": "0x972d3Dc804ec7CABEAb6D394b9a9f4E6c313dda7",
+      "block": 423623352
+    },
+    "minterV0": {
+      "address": "0x911C583B346A43B7D4176Ae135911c451E8C9203",
+      "block": 423623352
+    },
+    "apyUSD": {
+      "address": "0xB4134E73fA51a9214a945f6fE3003d1a056AE6d8",
+      "block": 423623352
+    },
+    "unlockToken": {
+      "address": "0xA37aAB9BB479662EEa0f1a6D0D42e2cC9e9Acbc8",
+      "block": 423623352
+    },
+    "linearVestV0": {
+      "address": "0x0811669A91AeaC562D11B9219f1eEBbCfEcf8187",
+      "block": 423623352
+    },
+    "yieldDistributor": {
+      "address": "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E",
+      "block": 423623352
+    }
+  }
+}

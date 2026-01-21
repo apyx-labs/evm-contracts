@@ -126,3 +126,6 @@ copy-abis:
     ./scripts/copy-abi.sh YieldDistributor
     ./scripts/copy-abi.sh ICurveStableswapFactoryNG
     ./scripts/copy-abi.sh ICurveStableswapNG
+
+convert-deploy-toml-to-json NETWORK="arbitrum":
+    ./scripts/convert-deploy-toml-to-json.sh {{NETWORK}} > deploy/{{NETWORK}}.json
