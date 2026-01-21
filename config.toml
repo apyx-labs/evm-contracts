@@ -1,0 +1,23 @@
+[arbitrum]
+rpc_url = "${ARBITRUM_RPC_URL}"
+
+[arbitrum.address]
+deployer = "${ETH_KEYSTORE_ADDRESS}"
+
+[arbitrum.string]
+network_name = "arbitrum"
+
+apx_usd_name = "Foo USD"
+apx_usd_symbol = "fooUSD"
+
+apy_usd_name = "Bar USD"
+apy_usd_symbol = "barUSD"
+
+apx_usd_supply_cap = "1_000_000_000"
+apx_usd_max_mint_size = "1_000_000"
+
+apx_usd_rate_limit_mint_size = "10_000_000"
+apx_usd_rate_limit_mint_period = "86400"    # seconds
+
+apx_usd_mint_delay = "5"        # seconds
+apy_usd_unlocking_delay = "60"  # seconds
