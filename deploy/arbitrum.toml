@@ -1,0 +1,14 @@
+[arbitrum.address]
+accessManager_address = "0xedd1325589d8fc8754C046C37486D0f49262Fb19"
+addressList_address = "0x431DC000A69787671bDbdA9c7C253e748e2fC6ce"
+apxUSD_address = "0x972d3Dc804ec7CABEAb6D394b9a9f4E6c313dda7"
+minterV0_address = "0x911C583B346A43B7D4176Ae135911c451E8C9203"
+apyUSD_address = "0xB4134E73fA51a9214a945f6fE3003d1a056AE6d8"
+unlockToken_address = "0xA37aAB9BB479662EEa0f1a6D0D42e2cC9e9Acbc8"
+linearVestV0_address = "0x0811669A91AeaC562D11B9219f1eEBbCfEcf8187"
+yieldDistributor_address = "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E"
+
+[arbitrum.uint]
+unlockToken_block = 24281728
+linearVestV0_block = 24281830
+yieldDistributor_block = 24281830

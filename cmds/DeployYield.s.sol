@@ -24,68 +24,41 @@ import {BaseDeploy} from "./BaseDeploy.sol";
  * Output: deploy/<network>.json
  */
 contract DeployYield is BaseDeploy {
-    LinearVestV0 public linearVestV0;
-    YieldDistributor public yieldDistributor;
-
-    address public linearVestV0Address;
-    address public yieldDistributorAddress;
-
-    // Existing deployment addresses (loaded from JSON)
-    address public accessManagerAddress;
-    address public apxUSDProxy;
-    address public apyUSDProxy;
-
     function run() public {
-        address deployer = vm.addr(ALICE_PRIVATE_KEY);
-        string memory network = getNetwork();
+        super.setUp();
 
-        console2.log("Network:", network);
-        console2.log("Deployer:", deployer);
-        console2.log("Deployer balance:", deployer.balance);
-
-        // Load existing deployment addresses
-        string memory json = loadDeployJson();
-        accessManagerAddress = getContractAddress(json, "accessManager");
-        apxUSDProxy = getContractAddress(json, "apxUSD");
-        apyUSDProxy = getContractAddress(json, "apyUSD");
-
-        if (accessManagerAddress == address(0)) {
-            revert("AccessManager not found. Deploy AccessManager first using DeployAccess.");
-        }
-        if (apxUSDProxy == address(0)) {
-            revert("ApxUSD not found. Deploy ApxUSD first using DeployApxUSD.");
-        }
-        if (apyUSDProxy == address(0)) {
-            revert("ApyUSD not found. Deploy ApyUSD first using DeployApyUSD.");
-        }
+        address accessManagerAddress = deployConfig.get(chainId, "accessManager_address").toAddress();
+        address apxUSDProxy = deployConfig.get(chainId, "apxUSD_address").toAddress();
+        address apyUSDProxy = deployConfig.get(chainId, "apyUSD_address").toAddress();
+        uint256 vestingPeriod = vm.parseUint(config.get(chainId, "vesting_period").toString());
 
         console2.log("\n=== Existing Deployment Addresses ===");
         console2.log("AccessManager:", accessManagerAddress);
         console2.log("ApxUSD:", apxUSDProxy);
         console2.log("ApyUSD:", apyUSDProxy);
 
-        vm.startBroadcast(ALICE_PRIVATE_KEY);
+        vm.startBroadcast(deployer);
 
         AccessManager accessManager = AccessManager(accessManagerAddress);
         ApyUSD apyUSD = ApyUSD(apyUSDProxy);
 
         // 1. Deploy LinearVestV0
-        linearVestV0 = new LinearVestV0(
+        LinearVestV0 linearVestV0 = new LinearVestV0(
             apxUSDProxy, // asset (ApxUSD)
             accessManagerAddress, // authority (AccessManager)
             apyUSDProxy, // beneficiary (ApyUSD)
-            DEFAULT_VESTING_PERIOD // vestingPeriod
+            vestingPeriod // vestingPeriod
         );
-        linearVestV0Address = address(linearVestV0);
+        address linearVestV0Address = address(linearVestV0);
         console2.log("LinearVestV0 deployed at:", linearVestV0Address);
 
         // 2. Deploy YieldDistributor
-        yieldDistributor = new YieldDistributor(
+        YieldDistributor yieldDistributor = new YieldDistributor(
             apxUSDProxy, // asset (ApxUSD)
             accessManagerAddress, // authority (AccessManager)
             linearVestV0Address // vesting (LinearVestV0)
         );
-        yieldDistributorAddress = address(yieldDistributor);
+        address yieldDistributorAddress = address(yieldDistributor);
         console2.log("YieldDistributor deployed at:", yieldDistributorAddress);
 
         // 3. Configure AccessManager permissions using Roles library
@@ -132,12 +105,13 @@ contract DeployYield is BaseDeploy {
         console2.log("1. Test yield distribution flow");
         console2.log("2. Test vesting and yield transfer to ApyUSD");
 
-        // Add to JSON
-        addContract("linearVestV0", linearVestV0Address);
-        addContract("yieldDistributor", yieldDistributorAddress);
+        uint256 blockNumber = vm.getBlockNumber();
+        console2.log("Block number:", blockNumber);
 
-        // Write deployment info to JSON file
-        writeDeployJson();
+        deployConfig.set(chainId, "linearVestV0_address", linearVestV0Address);
+        deployConfig.set(chainId, "linearVestV0_block", blockNumber);
+        deployConfig.set(chainId, "yieldDistributor_address", yieldDistributorAddress);
+        deployConfig.set(chainId, "yieldDistributor_block", blockNumber);
     }
 }
 

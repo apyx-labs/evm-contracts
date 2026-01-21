@@ -36,7 +36,7 @@ contract DeployUnlockToken is BaseDeploy {
         StdConfig config = loadConfig();
         StdConfig deployConfig = loadDeployConfig(network);
 
-        uint256 chainId = getChainIdByName(config, network);
+        uint256 chainId = config.resolveChainId(network);
         vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
 
         address deployer = config.get(chainId, "deployer").toAddress();

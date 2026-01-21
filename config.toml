@@ -21,3 +21,5 @@ apx_usd_rate_limit_mint_period = "86400"    # seconds
 
 apx_usd_mint_delay = "5"        # seconds
 apy_usd_unlocking_delay = "60"  # seconds
+
+vesting_period = "86400"  # 1 day in seconds

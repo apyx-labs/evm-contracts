@@ -6,6 +6,7 @@ import {Roles} from "../src/Roles.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {StdConfig} from "forge-std/src/StdConfig.sol";
 import {VmSafe} from "forge-std/src/Vm.sol";
+import {console2 as console} from "forge-std/src/console2.sol";
 
 /**
  * @title BaseDeploy
@@ -43,6 +44,12 @@ abstract contract BaseDeploy is Script {
     /// @notice Mapping to track contracts to add/update in JSON
     mapping(string => ContractData) internal contracts;
 
+    StdConfig internal config;
+    StdConfig internal deployConfig;
+
+    uint256 internal chainId;
+    address internal deployer;
+
     // ========================================
     // Network Management
     // ========================================
@@ -66,26 +73,34 @@ abstract contract BaseDeploy is Script {
         return string.concat(root, "/deploy/", filename);
     }
 
-    function loadConfig() internal returns (StdConfig config) {
-        config = new StdConfig(string.concat(vm.projectRoot(), "/config.toml"), false);
+    function loadConfig() internal returns (StdConfig) {
+        return new StdConfig(string.concat(vm.projectRoot(), "/config.toml"), false);
     }
 
-    function loadDeployConfig(string memory network) internal returns (StdConfig config) {
+    function loadDeployConfig(string memory network) internal returns (StdConfig) {
         bool writeToFile =
             vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume);
-        config = new StdConfig(string.concat(vm.projectRoot(), "/deploy/", network, ".toml"), writeToFile);
+        return new StdConfig(string.concat(vm.projectRoot(), "/deploy/", network, ".toml"), writeToFile);
     }
 
-    function getChainIdByName(StdConfig config, string memory name) internal view returns (uint256) {
-        uint256[] memory chainIds = config.getChainIds();
-        for (uint256 i = 0; i < chainIds.length; i++) {
-            uint256 chainId = chainIds[i];
-            string memory network = config.get(chainId, "network_name").toString();
-            if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked(name))) {
-                return chainId;
-            }
-        }
-        revert(string.concat("Chain not found: ", name));
+    // ========================================
+    // Set Up
+    // ========================================
+
+    function setUp() internal {
+        string memory network = getNetwork();
+
+        config = loadConfig();
+        deployConfig = loadDeployConfig(network);
+
+        chainId = config.resolveChainId(network);
+        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
+
+        deployer = config.get(chainId, "deployer").toAddress();
+
+        console.log("Network:  ", network);
+        console.log("Deployer: ", deployer);
+        console.log("Balance:  ", deployer.balance);
     }
 
     // ========================================
