@@ -83,8 +83,10 @@ abstract contract VestingTest is Test {
 
         // Deploy ApyUSD (vault)
         ApyUSD apyUSDImpl = new ApyUSD();
-        bytes memory apyUSDInitData =
-            abi.encodeCall(apyUSDImpl.initialize, (address(accessManager), address(apxUSD), address(denyList)));
+        bytes memory apyUSDInitData = abi.encodeCall(
+            apyUSDImpl.initialize,
+            ("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(denyList))
+        );
         ERC1967Proxy apyUSDProxy = new ERC1967Proxy(address(apyUSDImpl), apyUSDInitData);
         apyUSD = ApyUSD(address(apyUSDProxy));
 

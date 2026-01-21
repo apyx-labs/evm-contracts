@@ -91,13 +91,19 @@ contract ApyUSD is
      * @param initialDenyList Address of the AddressList contract for deny list checking
      * @dev UnlockToken must be set after deployment using setUnlockToken()
      */
-    function initialize(address initialAuthority, address asset, address initialDenyList) public initializer {
+    function initialize(
+        string memory name,
+        string memory symbol,
+        address initialAuthority,
+        address asset,
+        address initialDenyList
+    ) public initializer {
         require(initialAuthority != address(0), "authority is zero address");
         require(asset != address(0), "asset is zero address");
         require(initialDenyList != address(0), "denyList is zero address");
 
-        __ERC20_init("Apyx Yield USD", "apyUSD");
-        __ERC20Permit_init("Apyx Yield USD");
+        __ERC20_init(name, symbol);
+        __ERC20Permit_init(name);
         __ERC20Pausable_init();
         __ERC4626_init(IERC20(asset));
         __AccessManaged_init(initialAuthority);
