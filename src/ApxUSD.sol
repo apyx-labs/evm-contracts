@@ -76,12 +76,15 @@ contract ApxUSD is
      * @param initialAuthority Address of the AccessManager contract
      * @param initialSupplyCap Maximum total supply (e.g., 1_000_000e18 for $1M)
      */
-    function initialize(address initialAuthority, uint256 initialSupplyCap) public initializer {
+    function initialize(string memory name, string memory symbol, address initialAuthority, uint256 initialSupplyCap)
+        public
+        initializer
+    {
         require(initialAuthority != address(0), "authority is zero address");
         require(initialSupplyCap > 0, "supply cap must be positive");
 
-        __ERC20_init("Apyx USD", "apxUSD");
-        __ERC20Permit_init("Apyx USD");
+        __ERC20_init(name, symbol);
+        __ERC20Permit_init(name);
         __ERC20Pausable_init();
         __AccessManaged_init(initialAuthority);
 

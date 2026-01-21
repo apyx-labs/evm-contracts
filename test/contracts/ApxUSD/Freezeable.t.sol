@@ -30,7 +30,8 @@ contract ApxUSDFreezeableTest is Test {
         ApxUSD impl = new ApxUSD();
 
         // Deploy proxy with initialization
-        bytes memory initData = abi.encodeCall(impl.initialize, (address(accessManager), SUPPLY_CAP));
+        bytes memory initData =
+            abi.encodeCall(impl.initialize, ("Apyx USD", "apxUSD", address(accessManager), SUPPLY_CAP));
         ERC1967Proxy proxyContract = new ERC1967Proxy(address(impl), initData);
         apxUSD = ApxUSD(address(proxyContract));
 

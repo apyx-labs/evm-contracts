@@ -115,7 +115,8 @@ abstract contract BaseTest is Test {
 
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), APX_SUPPLY_CAP));
+        bytes memory apxUSDInitData =
+            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), APX_SUPPLY_CAP));
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 

@@ -50,7 +50,8 @@ abstract contract YieldDistributorBaseTest is Test {
 
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(apxUSDImpl.initialize, (address(accessManager), SUPPLY_CAP));
+        bytes memory apxUSDInitData =
+            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), SUPPLY_CAP));
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
