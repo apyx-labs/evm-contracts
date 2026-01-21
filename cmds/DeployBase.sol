@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {Script, console2} from "forge-std/src/Script.sol";
 import {Roles} from "../src/Roles.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {StdConfig} from "forge-std/src/StdConfig.sol";
 
 /**
  * @title DeployBase
@@ -39,10 +40,6 @@ abstract contract DeployBase is Script {
     /// @notice Default vesting period: 30 days
     uint256 public constant DEFAULT_VESTING_PERIOD = 30 days;
 
-    /// @notice Private keys for deployment (from Anvil)
-    uint256 public constant ALICE_PRIVATE_KEY = 0x0fe15d7bc1d8132b2ebd56987ce47178e29eb50a0796f7bc120264556e2699da;
-    uint256 public constant BOB_PRIVATE_KEY = 0x1891c9c130648838255b45167bbc63689227c375c4efe4a609c91f1b7c61f6e7;
-
     // ========================================
     // Data Structures
     // ========================================
@@ -61,7 +58,7 @@ abstract contract DeployBase is Script {
     }
 
     // ========================================
-    // State for JSON Building
+    // State
     // ========================================
 
     /// @notice Mapping to track actors to add/update in JSON
@@ -91,6 +88,24 @@ abstract contract DeployBase is Script {
         string memory network = getNetwork();
         string memory filename = string.concat(network, ".json");
         return string.concat(root, "/deploy/", filename);
+    }
+
+    function loadConfig() internal returns (StdConfig) {
+        StdConfig config = new StdConfig(string.concat(vm.projectRoot(), "/config.toml"), true);
+        config.writeUpdatesBackToFile(true);
+        return config;
+    }
+
+    function getChainIdByName(StdConfig config, string memory name) internal view returns (uint256) {
+        uint256[] memory chainIds = config.getChainIds();
+        for (uint256 i = 0; i < chainIds.length; i++) {
+            uint256 chainId = chainIds[i];
+            string memory network = config.get(chainId, "network_name").toString();
+            if (keccak256(abi.encodePacked(network)) == keccak256(abi.encodePacked(name))) {
+                return chainId;
+            }
+        }
+        revert(string.concat("Chain not found: ", name));
     }
 
     // ========================================
@@ -197,7 +212,7 @@ abstract contract DeployBase is Script {
 
         // Build root JSON
         string memory json = "";
-        json = vm.serializeString("root", "actors", actorsJson);
+        // json = vm.serializeString("root", "actors", actorsJson);
         json = vm.serializeString("root", "contracts", contractsJson);
 
         // Write to file

@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.30;
 
-import {Script, console2} from "forge-std/src/Script.sol";
+import {Script, console2 as console} from "forge-std/src/Script.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {AddressList} from "../src/AddressList.sol";
 import {Roles} from "../src/Roles.sol";
 import {DeployBase} from "./DeployBase.sol";
+
+import {StdConfig} from "forge-std/src/StdConfig.sol";
 
 /**
  * @title DeployAccess
@@ -29,49 +31,59 @@ contract DeployAccess is DeployBase {
     address public addressListAddress;
 
     function run() public {
-        address deployer = vm.addr(ALICE_PRIVATE_KEY);
+        StdConfig config = loadConfig();
+
         string memory network = getNetwork();
+        uint256 chainId = getChainIdByName(config, network);
+        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
 
-        console2.log("Network:", network);
-        console2.log("Deployer:", deployer);
-        console2.log("Deployer balance:", deployer.balance);
+        address deployer = config.get(chainId, "deployer").toAddress();
 
-        vm.startBroadcast(ALICE_PRIVATE_KEY);
+        console.log("Network:  ", network);
+        console.log("Deployer: ", deployer);
+        console.log("Balance:  ", deployer.balance);
+        console.log("tx.origin:", tx.origin);
+
+        vm.startBroadcast(deployer);
 
         // 1. Deploy AccessManager
         accessManager = new AccessManager(deployer);
         accessManagerAddress = address(accessManager);
-        console2.log("AccessManager deployed at:", accessManagerAddress);
+        console.log("\nAccessManager deployed at:", accessManagerAddress);
 
         // 2. Deploy AddressList
         addressList = new AddressList(accessManagerAddress);
         addressListAddress = address(addressList);
-        console2.log("AddressList deployed at:", addressListAddress);
+        console.log("AddressList deployed at:", addressListAddress);
 
         // 3. Configure role admins
-        console2.log("\nConfiguring AccessManager role admins...");
-        Roles.setRoleAdmins(accessManager);
-        console2.log("Set role admins for all roles");
+        console.log("\nConfiguring AccessManager role admins...");
+        // Roles.setRoleAdmins(accessManager);
+        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.MINTER_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.YIELD_DISTRIBUTOR_ROLE, Roles.ADMIN_ROLE);
+        accessManager.setRoleAdmin(Roles.ROLE_YIELD_OPERATOR, Roles.ADMIN_ROLE);
+        console.log("Set role admins for all roles");
 
         // 4. Configure AddressList permissions
-        console2.log("\nConfiguring AddressList permissions...");
+        console.log("\nConfiguring AddressList permissions...");
         Roles.assignAdminTargetsFor(accessManager, addressList);
-        console2.log("Configured AddressList functions to require ADMIN_ROLE");
+        console.log("Configured AddressList functions to require ADMIN_ROLE");
 
         vm.stopBroadcast();
 
         // Log deployment summary
-        console2.log("\n=== Deployment Summary ===");
-        console2.log("Network:", block.chainid);
-        console2.log("Deployer:", deployer);
-        console2.log("");
-        console2.log("AccessManager:", accessManagerAddress);
-        console2.log("AddressList:", addressListAddress);
-        console2.log("  - Authority:", addressList.authority());
-        console2.log("");
+        console.log("\n=== Deployment Summary ===");
+        console.log("Network:  ", block.chainid);
+        console.log("Deployer: ", deployer);
+        console.log("");
+        console.log("AccessManager: ", accessManagerAddress);
+        console.log("AddressList:   ", addressListAddress);
+        console.log("  - Authority: ", addressList.authority());
+        console.log("");
 
         // Add to JSON
-        addActor("admin", deployer, ALICE_PRIVATE_KEY, Roles.ADMIN_ROLE);
         addContract("accessManager", accessManagerAddress);
         addContract("addressList", addressListAddress);
 
