@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {ApxUSD} from "./ApxUSD.sol";
 import {ApyUSD} from "./ApyUSD.sol";
+import {CommitToken} from "./CommitToken.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -124,6 +125,21 @@ library Roles {
         selectors[0] = IAddressList.add.selector;
         selectors[1] = IAddressList.remove.selector;
         self.setTargetFunctionRole(address(denyList), selectors, ADMIN_ROLE);
+    }
+
+    /**
+     * @notice Assigns admin function selectors for CommitToken contract (extension function)
+     * @param self The AccessManager contract
+     * @param commitToken The CommitToken contract (or subclass like UnlockToken)
+     */
+    function assignAdminTargetsFor(AccessManager self, CommitToken commitToken) internal {
+        bytes4[] memory selectors = new bytes4[](5);
+        selectors[0] = CommitToken.setUnlockingDelay.selector;
+        selectors[1] = CommitToken.setDenyList.selector;
+        selectors[2] = CommitToken.setSupplyCap.selector;
+        selectors[3] = CommitToken.pause.selector;
+        selectors[4] = CommitToken.unpause.selector;
+        self.setTargetFunctionRole(address(commitToken), selectors, ADMIN_ROLE);
     }
 
     /**

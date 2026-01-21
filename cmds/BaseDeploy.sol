@@ -5,41 +5,17 @@ import {Script, console2} from "forge-std/src/Script.sol";
 import {Roles} from "../src/Roles.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {StdConfig} from "forge-std/src/StdConfig.sol";
+import {VmSafe} from "forge-std/src/Vm.sol";
 
 /**
- * @title DeployBase
+ * @title BaseDeploy
  * @notice Base contract for all deployment scripts providing shared constants and JSON utilities
  * @dev All deployment scripts should inherit from this contract to get access to:
  *      - Deployment constants (supply caps, delays, etc.)
  *      - Environment variable loading
  *      - Generic JSON reading/writing utilities
  */
-abstract contract DeployBase is Script {
-    // ========================================
-    // Constants
-    // ========================================
-
-    /// @notice Default supply cap: $100M (with 18 decimals)
-    uint256 public constant DEFAULT_SUPPLY_CAP = 100_000_000e18;
-
-    /// @notice Default max mint size: $10k (with 18 decimals)
-    uint208 public constant DEFAULT_MAX_MINT_SIZE = 100_000e18;
-
-    /// @notice Default rate limit mint size: $1M (with 18 decimals)
-    uint208 public constant DEFAULT_RATE_LIMIT_MINT_SIZE = 1_000_000e18;
-
-    /// @notice Default rate limit period: 24 hours
-    uint48 public constant DEFAULT_RATE_LIMIT_MINT_PERIOD = 24 hours;
-
-    /// @notice Default execution delay for MINT_STRAT_ROLE: 5 seconds
-    uint32 public constant DEFAULT_MINT_DELAY = 5;
-
-    /// @notice Default unlocking delay: 1 day for testing (86400 seconds)
-    uint48 public constant DEFAULT_UNLOCKING_DELAY = 1 days;
-
-    /// @notice Default vesting period: 30 days
-    uint256 public constant DEFAULT_VESTING_PERIOD = 30 days;
-
+abstract contract BaseDeploy is Script {
     // ========================================
     // Data Structures
     // ========================================
@@ -90,10 +66,14 @@ abstract contract DeployBase is Script {
         return string.concat(root, "/deploy/", filename);
     }
 
-    function loadConfig() internal returns (StdConfig) {
-        StdConfig config = new StdConfig(string.concat(vm.projectRoot(), "/config.toml"), true);
-        config.writeUpdatesBackToFile(true);
-        return config;
+    function loadConfig() internal returns (StdConfig config) {
+        config = new StdConfig(string.concat(vm.projectRoot(), "/config.toml"), false);
+    }
+
+    function loadDeployConfig(string memory network) internal returns (StdConfig config) {
+        bool writeToFile =
+            vm.isContext(VmSafe.ForgeContext.ScriptBroadcast) || vm.isContext(VmSafe.ForgeContext.ScriptResume);
+        config = new StdConfig(string.concat(vm.projectRoot(), "/deploy/", network, ".toml"), writeToFile);
     }
 
     function getChainIdByName(StdConfig config, string memory name) internal view returns (uint256) {
@@ -203,9 +183,6 @@ abstract contract DeployBase is Script {
     function writeDeployJson() internal {
         string memory path = getDeployJsonPath();
         string memory existingJson = loadDeployJson();
-
-        // Build actors JSON
-        string memory actorsJson = _buildActorsJson(existingJson);
 
         // Build contracts JSON
         string memory contractsJson = _buildContractsJson(existingJson);

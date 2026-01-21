@@ -7,7 +7,7 @@ import {LinearVestV0} from "../src/LinearVestV0.sol";
 import {YieldDistributor} from "../src/YieldDistributor.sol";
 import {ApyUSD} from "../src/ApyUSD.sol";
 import {Roles} from "../src/Roles.sol";
-import {DeployBase} from "./DeployBase.sol";
+import {BaseDeploy} from "./BaseDeploy.sol";
 
 /**
  * @title DeployYield
@@ -23,7 +23,7 @@ import {DeployBase} from "./DeployBase.sol";
  * Network options: local, devnet, testnet, mainnet
  * Output: deploy/<network>.json
  */
-contract DeployYield is DeployBase {
+contract DeployYield is BaseDeploy {
     LinearVestV0 public linearVestV0;
     YieldDistributor public yieldDistributor;
 

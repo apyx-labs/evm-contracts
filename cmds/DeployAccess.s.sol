@@ -5,7 +5,7 @@ import {Script, console2 as console} from "forge-std/src/Script.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {AddressList} from "../src/AddressList.sol";
 import {Roles} from "../src/Roles.sol";
-import {DeployBase} from "./DeployBase.sol";
+import {BaseDeploy} from "./BaseDeploy.sol";
 
 import {StdConfig} from "forge-std/src/StdConfig.sol";
 
@@ -23,7 +23,7 @@ import {StdConfig} from "forge-std/src/StdConfig.sol";
  * Network options: local, devnet, testnet, mainnet
  * Output: deploy/<network>.json
  */
-contract DeployAccess is DeployBase {
+contract DeployAccess is BaseDeploy {
     AccessManager public accessManager;
     AddressList public addressList;
 
@@ -31,10 +31,12 @@ contract DeployAccess is DeployBase {
     address public addressListAddress;
 
     function run() public {
-        StdConfig config = loadConfig();
-
         string memory network = getNetwork();
-        uint256 chainId = getChainIdByName(config, network);
+
+        StdConfig config = loadConfig();
+        StdConfig deployConfig = loadDeployConfig(network);
+
+        uint256 chainId = config.resolveChainId(network);
         vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
 
         address deployer = config.get(chainId, "deployer").toAddress();
@@ -42,7 +44,6 @@ contract DeployAccess is DeployBase {
         console.log("Network:  ", network);
         console.log("Deployer: ", deployer);
         console.log("Balance:  ", deployer.balance);
-        console.log("tx.origin:", tx.origin);
 
         vm.startBroadcast(deployer);
 
@@ -83,12 +84,10 @@ contract DeployAccess is DeployBase {
         console.log("  - Authority: ", addressList.authority());
         console.log("");
 
-        // Add to JSON
-        addContract("accessManager", accessManagerAddress);
-        addContract("addressList", addressListAddress);
-
-        // Write deployment info to JSON file
-        writeDeployJson();
+        deployConfig.set(chainId, "accessManager_address", accessManagerAddress);
+        deployConfig.set(chainId, "accessManager_block", block.number);
+        deployConfig.set(chainId, "addressList_address", addressListAddress);
+        deployConfig.set(chainId, "addressList_block", block.number);
     }
 }
 

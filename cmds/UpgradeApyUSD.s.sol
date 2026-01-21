@@ -5,7 +5,7 @@ import {Script, console2} from "forge-std/src/Script.sol";
 import {ApyUSD} from "../src/ApyUSD.sol";
 import {IAddressList} from "../src/interfaces/IAddressList.sol";
 import {IVesting} from "../src/interfaces/IVesting.sol";
-import {DeployBase} from "./DeployBase.sol";
+import {BaseDeploy} from "./BaseDeploy.sol";
 
 /**
  * @title UpgradeApyUSD
@@ -22,7 +22,7 @@ import {DeployBase} from "./DeployBase.sol";
  * Network options: local, devnet, testnet, mainnet
  * Note: This script reads from deploy/<network>.json but does NOT update it.
  */
-contract UpgradeApyUSD is DeployBase {
+contract UpgradeApyUSD is BaseDeploy {
     // Existing proxy address (loaded from JSON)
     address public apyUSDProxy;
 
@@ -112,7 +112,7 @@ contract UpgradeApyUSD is DeployBase {
     }
 }
 
-contract SetApyUSDDenyList is DeployBase {
+contract SetApyUSDDenyList is BaseDeploy {
     // Existing proxy address (loaded from JSON)
     address public apyUSDProxy;
     address public addressList;
@@ -148,7 +148,7 @@ contract SetApyUSDDenyList is DeployBase {
     }
 }
 
-contract SetApyUSDVesting is DeployBase {
+contract SetApyUSDVesting is BaseDeploy {
     // Existing proxy address (loaded from JSON)
     address public apyUSDProxy;
     address public vesting;

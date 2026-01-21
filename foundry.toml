@@ -12,9 +12,9 @@ fs_permissions = [
 
 [profile.release]
 solc_version = "0.8.30"
+# Use the IR compiler and optimizer
 via_ir = true
 optimizer = true
-
 # Skip compiling test files
 test = "skip"
 # Fail if any warnings are present
