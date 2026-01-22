@@ -31,6 +31,14 @@
     "yieldDistributor": {
       "address": "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E",
       "block": 423623352
+    },
+    "mockUSD": {
+      "address": "0xb37790829B57719217B19312DB23202C58B6Ed61",
+      "block": 423938148
+    },
+    "apxUSDMockUSDPool": {
+      "address": "0x07C4fA447a96f257b29596ea3ae0791d06D30738",
+      "block": 423938148
     }
   }
 }

@@ -7,6 +7,8 @@ apyUSD_address = "0xB4134E73fA51a9214a945f6fE3003d1a056AE6d8"
 unlockToken_address = "0xA37aAB9BB479662EEa0f1a6D0D42e2cC9e9Acbc8"
 linearVestV0_address = "0x0811669A91AeaC562D11B9219f1eEBbCfEcf8187"
 yieldDistributor_address = "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E"
+mockUSD_address = "0xb37790829B57719217B19312DB23202C58B6Ed61"
+apxUSDMockUSDPool_address = "0x07C4fA447a96f257b29596ea3ae0791d06D30738"
 
 [arbitrum.uint]
 accessManager_block = 423623352

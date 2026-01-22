@@ -159,7 +159,7 @@ abstract contract BaseTest is Test {
         vm.label(address(unlockToken), "unlockToken");
 
         // Deploy CommitToken (for CommitToken-specific tests)
-        mockToken = new MockERC20();
+        mockToken = new MockERC20("Mock Token", "MOCK");
         vm.label(address(mockToken), "mockToken");
         lockToken = new CommitToken(
             address(accessManager), address(mockToken), UNLOCKING_DELAY, address(denyList), VERY_VERY_LARGE_AMOUNT
