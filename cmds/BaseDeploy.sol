@@ -87,7 +87,7 @@ abstract contract BaseDeploy is Script {
     // Set Up
     // ========================================
 
-    function setUp() internal {
+    function setUp() internal virtual {
         string memory network = getNetwork();
 
         config = loadConfig();
