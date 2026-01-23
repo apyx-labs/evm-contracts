@@ -97,33 +97,29 @@ contract VestingDepositTest is VestingTest {
 
         deal(address(apxUSD), yieldDistributor, firstAmount);
         depositYield(yieldDistributor, firstAmount);
-        uint256 vestingBalanceBefore = apxUSD.balanceOf(address(vesting));
         uint256 apyUSDBalanceBefore = apxUSD.balanceOf(address(apyUSD));
 
         // Warp forward to partially vest
         skip(VESTING_PERIOD / 2);
 
         uint256 vestedBefore = vesting.vestedAmount();
-        assertGt(vestedBefore, 0, "Some yield should be vested");
+        assertEq(vestedBefore, firstAmount / 2, "Half of the first deposit should be vested");
 
         deal(address(apxUSD), yieldDistributor, secondAmount);
         depositYield(yieldDistributor, secondAmount);
 
         // After deposit, vested amount should be recalculated from new timestamp
         uint256 vestedAfter = vesting.vestedAmount();
-        assertEq(vestedAfter, 0, "Vested amount should decrease after reset");
-        // After deposit, vesting contract balance should decrease by the vested amount
+        assertEq(vestedAfter, vestedBefore, "Vested amount should remain the same after deposit");
+
+        // After deposit, vesting contract balance should increase by the new deposit
         assertEq(
             apxUSD.balanceOf(address(vesting)),
-            vestingBalanceBefore + secondAmount - vestedBefore,
-            "Vesting contract balance should decrease by the vested amount"
+            firstAmount + secondAmount,
+            "Vesting contract balance should increase by the new deposit"
         );
-        // After deposit, apyUSD balance should increase by the vested amount
-        assertEq(
-            apxUSD.balanceOf(address(apyUSD)),
-            apyUSDBalanceBefore + vestedBefore,
-            "ApyUSD balance should increase by the vested amount"
-        );
+        // After deposit, apyUSD balance should remain the same
+        assertEq(apxUSD.balanceOf(address(apyUSD)), apyUSDBalanceBefore, "ApyUSD balance should remain the same");
     }
 
     function test_RevertWhen_DepositZero() public {
