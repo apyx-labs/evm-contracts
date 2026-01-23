@@ -32,8 +32,14 @@ contract LinearVestV0 is AccessManaged, IVesting {
     /// @notice Total amount currently vesting
     uint256 public vestingAmount;
 
+    /// @notice Total amount that has been fully vested but not yet transferred to the beneficiary
+    uint256 public fullyVestedAmount;
+
     /// @notice Timestamp of the last deposit (when vesting period was reset)
     uint256 public lastDepositTimestamp;
+
+    /// @notice Timestamp of the last transfer (when vested yield was transferred to the beneficiary)
+    uint256 public lastTransferTimestamp;
 
     /// @notice Vesting period in seconds
     uint256 public vestingPeriod;
@@ -95,12 +101,18 @@ contract LinearVestV0 is AccessManaged, IVesting {
         unchecked {
             timeSinceLastDeposit = block.timestamp - lastDepositTimestamp;
         }
-        // slither-disable-next-line timestamp
-        if (timeSinceLastDeposit >= vestingPeriod) {
-            return vestingAmount; // Fully vested
+
+        uint256 timeSinceLastTransfer;
+        unchecked {
+            timeSinceLastTransfer = block.timestamp - lastTransferTimestamp;
         }
 
-        return (vestingAmount * timeSinceLastDeposit) / vestingPeriod;
+        // slither-disable-next-line timestamp
+        if (timeSinceLastDeposit >= vestingPeriod) {
+            return fullyVestedAmount + vestingAmount; // Fully vested
+        }
+
+        return fullyVestedAmount + ((vestingAmount * timeSinceLastTransfer) / vestingPeriod);
     }
 
     /**
@@ -138,12 +150,13 @@ contract LinearVestV0 is AccessManaged, IVesting {
         uint256 vested = vestedAmount();
         uint256 unvested = _unvestedAmount(vested);
 
-        // Add new amount to existing unvested amount
+        // Add new amount to fully vested and unvested amount
+        fullyVestedAmount += vested;
         vestingAmount = unvested + amount;
-        lastDepositTimestamp = block.timestamp;
 
-        // Transfer out any vested yield before resetting (if any)
-        _transferVestedYield(vested);
+        // Update timestamps
+        lastDepositTimestamp = block.timestamp;
+        lastTransferTimestamp = block.timestamp;
 
         // Transfer assets from caller
         asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -158,22 +171,18 @@ contract LinearVestV0 is AccessManaged, IVesting {
         uint256 vested = vestedAmount();
         vestingAmount -= vested;
 
-        _transferVestedYield(vested);
-    }
+        uint256 transferAmount = vested + fullyVestedAmount;
 
-    /**
-     * @notice Internal function to transfer vested yield to the beneficiary
-     * @dev No-op if no vested yield available. Updates vesting state.
-     * @param _vestedAmount Amount of vested yield to transfer
-     */
-    function _transferVestedYield(uint256 _vestedAmount) internal {
+        fullyVestedAmount = 0;
+        lastTransferTimestamp = block.timestamp;
+
         // No-op if no vested yield available
         // slither-disable-next-line incorrect-equality,timestamp
-        if (_vestedAmount == 0) return;
+        if (transferAmount == 0) return;
 
         // Transfer vested yield to beneficiary
-        asset.safeTransfer(beneficiary, _vestedAmount);
-        emit VestedYieldTransferred(beneficiary, _vestedAmount);
+        asset.safeTransfer(beneficiary, transferAmount);
+        emit VestedYieldTransferred(beneficiary, transferAmount);
     }
 
     /**
