@@ -114,13 +114,12 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     }
 
     /**
-     * @notice Validates an order without executing it (useful for off-chain checks)
+     * @notice Validates an order without executing it (reverts if invalid)
      * @param order The mint order to validate
      * @param signature The beneficiary's signature over the order
-     * @return bool True if the order is valid
      */
     // slither-disable-start timestamp
-    function validateOrder(Order calldata order, bytes calldata signature) public view returns (bool) {
+    function validateOrder(Order calldata order, bytes calldata signature) public view {
         // Check time window validity
         if (order.notAfter < order.notBefore) {
             revert OrderInvalidTimeWindow();
@@ -154,8 +153,20 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         if (signer != order.beneficiary) {
             revert InvalidSignature();
         }
+    }
 
-        return true;
+    /**
+     * @notice Checks if an order is valid without reverting
+     * @param order The mint order to validate
+     * @param signature The beneficiary's signature over the order
+     * @return bool True if the order is valid, false otherwise
+     */
+    function isOrderValid(Order calldata order, bytes calldata signature) public view returns (bool) {
+        try this.validateOrder(order, signature) {
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     // slither-disable-end timestamp
