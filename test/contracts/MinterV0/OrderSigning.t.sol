@@ -26,7 +26,8 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 digest = minterV0.hashOrder(order);
+        bytes32 structHash = minterV0.hashOrder(order);
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
         (, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Modify v to invalid value (not 27 or 28)
@@ -48,7 +49,8 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 digest = minterV0.hashOrder(order);
+        bytes32 structHash = minterV0.hashOrder(order);
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Create malleable signature by flipping s (using secp256k1 curve order - s)
@@ -90,7 +92,8 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 digest = minterV0.hashOrder(order);
+        bytes32 structHash = minterV0.hashOrder(order);
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Create signature that's too long (extra bytes)
@@ -196,5 +199,73 @@ contract MinterV0_OrderSigningTest is MinterTest {
 
         // Should be different
         assertTrue(hash1 != hash2);
+    }
+
+    // ----------------------------------------
+    // EIP-712 Compliance Tests
+    // ----------------------------------------
+
+    function test_EIP712Compliance_DomainSeparatorIntegration() public view {
+        // Create order
+        IMinterV0.Order memory order = IMinterV0.Order({
+            beneficiary: alice,
+            notBefore: uint48(block.timestamp),
+            notAfter: uint48(block.timestamp + 1 hours),
+            nonce: 0,
+            amount: 1_000e18
+        });
+
+        // Get struct hash (without domain separator)
+        bytes32 structHash = minterV0.hashOrder(order);
+
+        // Manually compute EIP-712 compliant digest
+        bytes32 expectedDigest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+
+        // Verify that the struct hash alone is different from the full EIP-712 digest
+        assertTrue(structHash != expectedDigest, "Struct hash should differ from full EIP-712 digest");
+
+        // Verify DOMAIN_SEPARATOR is not zero (contract properly initialized)
+        assertTrue(minterV0.DOMAIN_SEPARATOR() != bytes32(0), "Domain separator should be initialized");
+    }
+
+    function test_EIP712Compliance_ValidSignatureWithDomainSeparator() public view {
+        // Create order
+        IMinterV0.Order memory order = IMinterV0.Order({
+            beneficiary: alice,
+            notBefore: uint48(block.timestamp),
+            notAfter: uint48(block.timestamp + 1 hours),
+            nonce: 0,
+            amount: 1_000e18
+        });
+
+        // Create EIP-712 compliant signature
+        bytes32 structHash = minterV0.hashOrder(order);
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        // Should validate successfully
+        bool isValid = minterV0.validateOrder(order, signature);
+        assertTrue(isValid, "EIP-712 compliant signature should be valid");
+    }
+
+    function test_RevertWhen_SignatureWithoutDomainSeparator() public {
+        // Create order
+        IMinterV0.Order memory order = IMinterV0.Order({
+            beneficiary: alice,
+            notBefore: uint48(block.timestamp),
+            notAfter: uint48(block.timestamp + 1 hours),
+            nonce: 0,
+            amount: 1_000e18
+        });
+
+        // Create signature WITHOUT domain separator (old, non-compliant way)
+        bytes32 structHash = minterV0.hashOrder(order);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, structHash);
+        bytes memory nonCompliantSignature = abi.encodePacked(r, s, v);
+
+        // Should revert with InvalidSignature because signer won't match
+        vm.expectRevert(IMinterV0.InvalidSignature.selector);
+        minterV0.validateOrder(order, nonCompliantSignature);
     }
 }

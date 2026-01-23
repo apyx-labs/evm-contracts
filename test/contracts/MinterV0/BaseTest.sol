@@ -137,7 +137,8 @@ abstract contract MinterTest is Test {
      * @return signature The EIP-712 signature
      */
     function _signOrder(IMinterV0.Order memory order, uint256 privateKey) internal view returns (bytes memory) {
-        bytes32 digest = minterV0.hashOrder(order);
+        bytes32 structHash = minterV0.hashOrder(order);
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
         return abi.encodePacked(r, s, v);

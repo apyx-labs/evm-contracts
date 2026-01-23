@@ -97,9 +97,18 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     // ============================================
 
     /**
-     * @notice Returns the EIP-712 typed hash for an order
+     * @notice Returns the EIP-712 domain separator
+     * @return The domain separator for this contract
+     */
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
+
+    /**
+     * @notice Returns the EIP-712 struct hash for an order
+     * @dev This returns the struct hash only. Use with DOMAIN_SEPARATOR() to create the full EIP-712 digest
      * @param order The mint order to hash
-     * @return The EIP-712 typed hash
+     * @return The struct hash (not the full EIP-712 digest)
      */
     function hashOrder(Order calldata order) public pure returns (bytes32) {
         // @dev This is only done during minting, which is not a hot path
@@ -148,7 +157,8 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         }
 
         // Verify signature
-        bytes32 digest = hashOrder(order);
+        bytes32 structHash = hashOrder(order);
+        bytes32 digest = _hashTypedDataV4(structHash);
         address signer = digest.recover(signature);
 
         if (signer != order.beneficiary) {
