@@ -130,6 +130,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @return Amount of unvested yield
      */
     function _unvestedAmount(uint256 _vestedAmount) internal view returns (uint256) {
+        if (_vestedAmount > vestingAmount) return 0;
         return vestingAmount - _vestedAmount;
     }
 
