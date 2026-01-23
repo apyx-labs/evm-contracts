@@ -183,4 +183,40 @@ contract ApyUSDDenyListTest is ApyUSDTest {
         assertEq(apyUSD.balanceOf(alice), 0, "Alice should have no shares");
         assertEq(apyUSD.balanceOf(bob), aliceShares, "Bob should have shares");
     }
+
+    function test_RevertWhen_DeniedAddressDeposits() public {
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        // Add Alice to deny list
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // Alice cannot deposit (expected)
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        vm.expectRevert();
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_DeniedAddressWithdraws() public {
+        // Alice deposits first
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+
+        // Then gets added to deny list
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // Alice cannot withdraw (expected)
+        vm.prank(alice);
+        vm.expectRevert();
+        apyUSD.withdraw(depositAmount, alice, alice);
+    }
 }
