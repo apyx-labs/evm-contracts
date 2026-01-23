@@ -138,6 +138,9 @@ contract ApyUSD is
         internal
         override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20FreezeableUpgradable)
     {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        if (from != address(0)) _revertIfDenied($, from);
+        if (to != address(0)) _revertIfDenied($, to);
         super._update(from, to, value);
     }
 

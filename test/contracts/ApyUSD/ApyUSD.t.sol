@@ -77,3 +77,110 @@ contract ApyUSDInitializationTest is ApyUSDTest {
         apyUSD.initialize("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(denyList));
     }
 }
+
+/**
+ * @title ApyUSDDenyListTest
+ * @notice Tests for ApyUSD deny list functionality on transfers
+ */
+contract ApyUSDDenyListTest is ApyUSDTest {
+    // ========================================
+    // Deny List Transfer Tests
+    // ========================================
+
+    function test_DenyListBypassViaTransfer() public {
+        // 1. Alice deposits and receives shares
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+
+        uint256 aliceShares = apyUSD.balanceOf(alice);
+        assertGt(aliceShares, 0, "Alice should have shares");
+
+        // 2. Alice gets added to deny list
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // 3. Alice cannot withdraw directly (expected)
+        vm.prank(alice);
+        vm.expectRevert();
+        apyUSD.withdraw(depositAmount, alice, alice);
+
+        // 4. Alice **cannot** transfer shares to Bob (deny list now enforced)
+        vm.prank(alice);
+        vm.expectRevert();
+        apyUSD.transfer(bob, aliceShares);
+
+        // Verify Alice still has her shares (transfer failed)
+        assertEq(apyUSD.balanceOf(alice), aliceShares, "Alice should still have shares");
+        assertEq(apyUSD.balanceOf(bob), 0, "Bob should have no shares");
+    }
+
+    function test_RevertWhen_DeniedAddressTransfersFrom() public {
+        // 1. Alice deposits and receives shares
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+
+        uint256 aliceShares = apyUSD.balanceOf(alice);
+
+        // 2. Add Alice to deny list
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // 3. Alice cannot transfer shares to Bob
+        vm.prank(alice);
+        vm.expectRevert();
+        apyUSD.transfer(bob, aliceShares);
+    }
+
+    function test_RevertWhen_DeniedAddressReceivesTransfer() public {
+        // 1. Alice deposits and receives shares
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+
+        uint256 aliceShares = apyUSD.balanceOf(alice);
+
+        // 2. Add Bob to deny list
+        vm.prank(admin);
+        denyList.add(bob);
+
+        // 3. Alice cannot transfer shares to Bob (who is denied)
+        vm.prank(alice);
+        vm.expectRevert();
+        apyUSD.transfer(bob, aliceShares);
+    }
+
+    function test_TransferWhenNotOnDenyList() public {
+        // 1. Alice deposits and receives shares
+        uint256 depositAmount = 1000e18;
+        deal(address(apxUSD), alice, depositAmount);
+
+        vm.startPrank(alice);
+        apxUSD.approve(address(apyUSD), depositAmount);
+        apyUSD.deposit(depositAmount, alice);
+        vm.stopPrank();
+
+        uint256 aliceShares = apyUSD.balanceOf(alice);
+
+        // 2. Alice can transfer shares to Bob (neither is on deny list)
+        vm.prank(alice);
+        apyUSD.transfer(bob, aliceShares);
+
+        // Verify transfer succeeded
+        assertEq(apyUSD.balanceOf(alice), 0, "Alice should have no shares");
+        assertEq(apyUSD.balanceOf(bob), aliceShares, "Bob should have shares");
+    }
+}
