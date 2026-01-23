@@ -131,4 +131,55 @@ contract VestingIntegrationTest is VestingTest {
         assertEq(apyUSDBalanceAfter, expectedBalance, "Yield should be pulled");
         assertEq(vesting.vestingAmount(), 0, "All vested yield should be transferred");
     }
+
+    function test_PullYield_AcrossMultipleWithdrawals(uint256 yieldAmount, uint256 depositAmount) public {
+        // Deposit yield to vesting contract first
+        yieldAmount = bound(yieldAmount, 2, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, yieldAmount);
+
+        // Deposit apxUSD to apyUSD
+        depositAmount = bound(depositAmount, 2, DEPOSIT_AMOUNT);
+        deposit(alice, depositAmount);
+
+        // Warp half way through the vesting period
+        vm.warp(block.timestamp + VESTING_PERIOD / 2);
+
+        // Record state before first withdrawal
+        uint256 apyUSDBalanceBefore = apxUSD.balanceOf(address(apyUSD));
+        uint256 vestedAmountBefore = vesting.vestedAmount();
+
+        // Withdraw 1 wei apxUSD from apyUSD
+        uint256 withdrawAmount = 1;
+        vm.prank(alice);
+        apyUSD.withdraw(withdrawAmount, alice, alice);
+
+        // Confirm apxUSD balance of apyUSD went up by vested amount - 1 wei
+        uint256 apyUSDBalanceAfterFirst = apxUSD.balanceOf(address(apyUSD));
+        assertEq(
+            apyUSDBalanceAfterFirst,
+            apyUSDBalanceBefore + vestedAmountBefore - withdrawAmount,
+            "Balance should increase by vested amount minus withdrawal"
+        );
+
+        // Confirm vested amount is now 0
+        uint256 vestedAmountAfterFirst = vesting.vestedAmount();
+        assertEq(vestedAmountAfterFirst, 0, "Vested amount should be 0 after first withdrawal");
+
+        // Withdraw another 1 wei of apxUSD from apyUSD
+        vm.prank(alice);
+        apyUSD.withdraw(withdrawAmount, alice, alice);
+
+        uint256 apyUSDBalanceAfterSecond = apxUSD.balanceOf(address(apyUSD));
+
+        // Confirm apxUSD balance went down by 1 wei (withdraw amount)
+        assertEq(
+            apyUSDBalanceAfterSecond,
+            apyUSDBalanceAfterFirst - withdrawAmount,
+            "Balance should decrease by withdrawal amount only"
+        );
+
+        // Confirm vested amount is still 0
+        uint256 vestedAmountAfterSecond = vesting.vestedAmount();
+        assertEq(vestedAmountAfterSecond, 0, "Vested amount should still be 0 after second withdrawal");
+    }
 }
