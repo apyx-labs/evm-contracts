@@ -132,7 +132,7 @@ contract VestingIntegrationTest is VestingTest {
         assertEq(vesting.vestingAmount(), 0, "All vested yield should be transferred");
     }
 
-    function test_PullYield_AcrossMultipleWithdrawals(uint256 yieldAmount, uint256 depositAmount) public {
+    function testFuzz_PullYield_AcrossMultipleWithdrawals(uint256 yieldAmount, uint256 depositAmount) public {
         // Deposit yield to vesting contract first
         yieldAmount = bound(yieldAmount, 2, DEPOSIT_AMOUNT);
         depositYield(yieldDistributor, yieldAmount);
@@ -181,5 +181,111 @@ contract VestingIntegrationTest is VestingTest {
         // Confirm vested amount is still 0
         uint256 vestedAmountAfterSecond = vesting.vestedAmount();
         assertEq(vestedAmountAfterSecond, 0, "Vested amount should still be 0 after second withdrawal");
+    }
+
+    function testFuzz_VestedAmount_AccumulatesAcrossMultipleDeposits(
+        uint256 firstYieldAmount,
+        uint256 secondYieldAmount,
+        uint256 depositAmount
+    ) public {
+        // Deposit yield to vesting contract
+        firstYieldAmount = bound(firstYieldAmount, 2, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, firstYieldAmount);
+
+        // Mint apxUSD to alice (already done in setUp, but adding more)
+        depositAmount = bound(depositAmount, 2, DEPOSIT_AMOUNT);
+        vm.prank(admin);
+        apxUSD.mint(alice, depositAmount);
+
+        // Deposit apxUSD to apyUSD
+        deposit(alice, depositAmount);
+
+        // Warp half way through the vesting period
+        vm.warp(block.timestamp + VESTING_PERIOD / 2);
+
+        // Confirm vested amount is half the deposited yield
+        assertEq(vesting.vestedAmount(), firstYieldAmount / 2, "Vested amount should be half the deposited yield");
+        //assertEq(vesting.unvestedAmount(), firstYieldAmount / 2, "Unvested amount should be half of the first deposit");
+        assertEq(
+            vesting.vestedAmount() + vesting.unvestedAmount(),
+            firstYieldAmount,
+            "Vested amount + unvested amount should be equal to the first deposit"
+        );
+
+        // Record apyUSD balance before second deposit
+        uint256 apyUSDBalanceBeforeSecondDeposit = apxUSD.balanceOf(address(apyUSD));
+        uint256 unvestedAmountBeforeSecondDeposit = vesting.unvestedAmount();
+
+        // Deposit more yield to the vesting contract
+        // Note: depositYield automatically transfers out vested yield before resetting
+        secondYieldAmount = bound(secondYieldAmount, 2, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, secondYieldAmount);
+
+        // Confirm that vested yield is not transferred to apyUSD during deposit
+        uint256 apyUSDBalanceAfterSecondDeposit = apxUSD.balanceOf(address(apyUSD));
+        assertEq(
+            apyUSDBalanceAfterSecondDeposit,
+            apyUSDBalanceBeforeSecondDeposit,
+            "Vested yield should not be transferred to apyUSD during deposit"
+        );
+
+        assertEq(
+            vesting.vestingAmount(),
+            unvestedAmountBeforeSecondDeposit + secondYieldAmount,
+            "Vesting amount should be unvested from first (half) + second deposit"
+        );
+        assertEq(
+            vesting.vestingAmount() + vesting.fullyVestedAmount(),
+            vesting.vestedAmount() + vesting.unvestedAmount(),
+            "Vesting amount + fully vested amount should be equal to vested amount + unvested amount"
+        );
+
+        // Confirm unvested amount is now: unvested from first (half) + second deposit
+        assertEq(
+            vesting.unvestedAmount(),
+            unvestedAmountBeforeSecondDeposit + secondYieldAmount,
+            "Unvested amount should be unvested from first (half) + second deposit"
+        );
+
+        // Confirm vested amount is still the same as before the second deposit
+        assertEq(
+            vesting.vestedAmount(), firstYieldAmount / 2, "Vested amount should still be half of the first deposit"
+        );
+
+        // Warp another half of the vesting period
+        vm.warp(block.timestamp + VESTING_PERIOD / 2);
+
+        // Confirm vested amount is 3/4 of the first deposit + 1/2 of the second deposit
+        uint256 expectedVestedAmount = firstYieldAmount * 3 / 4 + secondYieldAmount / 2;
+        assertApproxEqAbs(
+            vesting.vestedAmount(),
+            expectedVestedAmount,
+            1,
+            "Vested amount should be 3/4 of the first deposit + 1/2 of the second deposit"
+        );
+
+        // Record state before withdrawal
+        uint256 apyUSDBalanceBefore = apxUSD.balanceOf(address(apyUSD));
+        uint256 unvestedAmountBefore = vesting.unvestedAmount();
+
+        // Withdraw 1 wei apxUSD from apyUSD vault
+        uint256 withdrawAmount = 1;
+        vm.prank(alice);
+        apyUSD.withdraw(withdrawAmount, alice, alice);
+
+        uint256 apyUSDBalanceAfter = apxUSD.balanceOf(address(apyUSD));
+
+        // Confirm apyUSD balance went up by vested amount - withdraw amount
+        assertApproxEqAbs(
+            apyUSDBalanceAfter,
+            apyUSDBalanceBefore + expectedVestedAmount - withdrawAmount,
+            1,
+            "Balance should increase by vested amount minus withdrawal"
+        );
+
+        assertEq(vesting.vestedAmount(), 0, "Vested amount should be 0 after withdrawal");
+        assertEq(
+            vesting.unvestedAmount(), unvestedAmountBefore, "Unvested amount should be the same as before withdrawal"
+        );
     }
 }

@@ -90,10 +90,22 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /**
-     * @notice Returns the amount of yield that has vested and is available
-     * @return Amount of vested yield
+     * @notice Returns the amount of yield that has vested and is available, including
+     *         fully vested yield. This is used to calculate vested amounts including
+     *         fully vested yield.
+     * @return Amount of vested yield including fully vested yield
      */
-    function vestedAmount() public view override returns (uint256) {
+    function vestedAmount() external view override returns (uint256) {
+        return fullyVestedAmount + _vestedAmount();
+    }
+
+    /**
+     * @notice Returns the amount of yield that has vested and is available, excluding
+     *         fully vested yield. This is used to calculate vested amounts without
+     *         double counting the fully vested yield.
+     * @return Amount of vested yield excluding fully vested yield
+     */
+    function _vestedAmount() internal view returns (uint256) {
         // slither-disable-next-line incorrect-equality
         if (vestingAmount == 0) return 0;
 
@@ -109,10 +121,10 @@ contract LinearVestV0 is AccessManaged, IVesting {
 
         // slither-disable-next-line timestamp
         if (timeSinceLastDeposit >= vestingPeriod) {
-            return fullyVestedAmount + vestingAmount; // Fully vested
+            return vestingAmount; // Fully vested
         }
 
-        return fullyVestedAmount + ((vestingAmount * timeSinceLastTransfer) / vestingPeriod);
+        return (vestingAmount * timeSinceLastTransfer) / vestingPeriod;
     }
 
     /**
@@ -120,18 +132,17 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @return Amount of unvested yield
      */
     function unvestedAmount() external view override returns (uint256) {
-        return _unvestedAmount(vestedAmount());
+        return _unvestedAmount(_vestedAmount());
     }
 
     /**
      * @notice Returns the amount of yield that is still vesting
      * @dev Internal function to calculate unvested amount without recalculating vested amount
-     * @param _vestedAmount Amount of vested yield
+     * @param amount Amount of vested yield
      * @return Amount of unvested yield
      */
-    function _unvestedAmount(uint256 _vestedAmount) internal view returns (uint256) {
-        if (_vestedAmount > vestingAmount) return 0;
-        return vestingAmount - _vestedAmount;
+    function _unvestedAmount(uint256 amount) internal view returns (uint256) {
+        return vestingAmount - amount;
     }
 
     // ========================================
@@ -142,13 +153,13 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @notice Deposits yield into the vesting contract
      * @dev Transfers out any vested yield before resetting the vesting period.
      *      Resets the vesting period by adding new deposit to existing unvested amount.
-     * @param amount Amount of yield to deposit
+     * @param amount Amount of yield to depositinternal
      */
     function depositYield(uint256 amount) external override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
 
         // Calculate unvested amount BEFORE transferring (since transfer will modify vestingAmount)
-        uint256 vested = vestedAmount();
+        uint256 vested = _vestedAmount();
         uint256 unvested = _unvestedAmount(vested);
 
         // Add new amount to fully vested and unvested amount
@@ -169,7 +180,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @dev Only callable by vault contract. No-op if no vested yield available.
      */
     function transferVestedYield() external override onlyBeneficiary {
-        uint256 vested = vestedAmount();
+        uint256 vested = _vestedAmount();
         vestingAmount -= vested;
 
         uint256 transferAmount = vested + fullyVestedAmount;
