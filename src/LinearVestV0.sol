@@ -158,7 +158,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
     function depositYield(uint256 amount) external override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
 
-        // Calculate unvested amount BEFORE transferring (since transfer will modify vestingAmount)
+        // Calculate unvested amount BEFORE transferring
         uint256 vested = _vestedAmount();
         uint256 unvested = _unvestedAmount(vested);
 

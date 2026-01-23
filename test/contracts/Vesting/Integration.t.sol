@@ -284,8 +284,95 @@ contract VestingIntegrationTest is VestingTest {
         );
 
         assertEq(vesting.vestedAmount(), 0, "Vested amount should be 0 after withdrawal");
+
         assertEq(
             vesting.unvestedAmount(), unvestedAmountBefore, "Unvested amount should be the same as before withdrawal"
+        );
+    }
+
+    function test_VestedAmount_ThroughVestingPeriod(uint256 yieldAmount) public {
+        // Deposit yield to vesting contract
+        yieldAmount = bound(yieldAmount, 1, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, yieldAmount);
+
+        uint256 vestingPeriod = vesting.vestingPeriod();
+        for (uint256 i = 1; i <= 10; i++) {
+            skip(vestingPeriod / 10);
+
+            assertEq(vesting.vestedAmount(), yieldAmount * i / 10, "Vested amount should be i/10 of the yield amount");
+        }
+
+        assertEq(
+            vesting.vestedAmount(),
+            yieldAmount,
+            "Vested amount should be equal to the yield amount at the end of the vesting period"
+        );
+    }
+
+    function test_VestedAmount_ThroughVestingPeriod_WithMultipleDeposits(
+        uint256 firstYieldAmount,
+        uint256 secondYieldAmount
+    ) public {
+        // Deposit yield to vesting contract
+        firstYieldAmount = bound(firstYieldAmount, 1, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, firstYieldAmount);
+
+        uint256 vestingPeriod = vesting.vestingPeriod();
+
+        // Iterate half way through the vesting period
+        for (uint256 i = 1; i <= 5; i++) {
+            skip(vestingPeriod / 10);
+
+            assertEq(
+                vesting.vestedAmount(), firstYieldAmount * i / 10, "Vested amount should be i/10 of the yield amount"
+            );
+        }
+
+        assertEq(
+            vesting.vestedAmount(),
+            firstYieldAmount / 2,
+            "Vested amount should be 1/2 of the first yield amount at the end of the first half of the vesting period"
+        );
+
+        // Deposit yield to vesting contract
+        secondYieldAmount = bound(secondYieldAmount, 1, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, secondYieldAmount);
+
+        assertEq(
+            vesting.vestedAmount(),
+            firstYieldAmount / 2,
+            "Vested amount should be 1/2 of the first yield amount after the second deposit"
+        );
+        assertApproxEqAbs(
+            vesting.vestingAmount(),
+            firstYieldAmount / 2 + secondYieldAmount,
+            1,
+            "Vesting amount should be 1/2 of the first yield amount + second yield amount after the second deposit"
+        );
+        assertEq(
+            vesting.unvestedAmount(),
+            vesting.vestingAmount(),
+            "Unvested amount should be equal to the vested amount after the second deposit"
+        );
+
+        uint256 unvestedAmount = vesting.unvestedAmount();
+
+        // Iterate half way through the vesting period
+        for (uint256 i = 1; i <= 5; i++) {
+            skip(vestingPeriod / 10);
+
+            assertEq(
+                vesting.vestedAmount() - vesting.fullyVestedAmount(),
+                unvestedAmount * i / 10,
+                "Vested amount should be i/20 of the first yield amount + i/10 of the second yield amount"
+            );
+        }
+
+        assertApproxEqAbs(
+            vesting.vestedAmount(),
+            firstYieldAmount * 3 / 4 + secondYieldAmount / 2,
+            1,
+            "Vested amount should be equal to the sum of the yield amounts at the end of the vesting period"
         );
     }
 }
