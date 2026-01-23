@@ -123,8 +123,10 @@ contract LinearVestV0 is AccessManaged, IVesting {
         if (timeSinceLastDeposit >= vestingPeriod) {
             return vestingAmount; // Fully vested
         }
+        uint256 timeBetweenDepositAndTransfer = lastTransferTimestamp - lastDepositTimestamp;
+        uint256 originalVestingAmount = vestingAmount * vestingPeriod / (vestingPeriod - timeBetweenDepositAndTransfer);
 
-        return (vestingAmount * timeSinceLastTransfer) / vestingPeriod;
+        return (originalVestingAmount * timeSinceLastTransfer) / vestingPeriod;
     }
 
     /**

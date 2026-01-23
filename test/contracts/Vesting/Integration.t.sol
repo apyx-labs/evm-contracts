@@ -375,4 +375,59 @@ contract VestingIntegrationTest is VestingTest {
             "Vested amount should be equal to the sum of the yield amounts at the end of the vesting period"
         );
     }
+
+    function test_VestingAmount_ThroughVestingPeriod_CallsTransferVestedYield(uint256 yieldAmount) public {
+        // Deposit yield to vesting contract
+        yieldAmount = bound(yieldAmount, 1, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, yieldAmount);
+
+        // Iterate half way through the vesting period
+        uint256 vestingPeriod = vesting.vestingPeriod();
+        for (uint256 i = 1; i <= 5; i++) {
+            skip(vestingPeriod / 10);
+
+            assertEq(
+                vesting.vestedAmount(), yieldAmount * i / 10, "Vested amount should be i/10 of the yield amount - 1"
+            );
+        }
+
+        uint256 vestedAmountAfterFirstHalf = vesting.vestedAmount();
+        assertEq(
+            vestedAmountAfterFirstHalf,
+            yieldAmount / 2,
+            "Vesting amount should be equal to the yield amount / 2 at the end of the vesting period"
+        );
+
+        vm.prank(address(apyUSD));
+        vesting.transferVestedYield();
+
+        uint256 timeBetweenDepositAndTransfer = vesting.lastTransferTimestamp() - vesting.lastDepositTimestamp();
+        uint256 originalVestingAmount =
+            vesting.vestingAmount() * vestingPeriod / (vestingPeriod - timeBetweenDepositAndTransfer);
+
+        assertApproxEqAbs(
+            yieldAmount, originalVestingAmount, 1, "Vesting amount should be equal to the original vesting amount"
+        );
+
+        // Iterate the second half of the vesting period
+        for (uint256 i = 1; i <= 5; i++) {
+            skip(vestingPeriod / 10);
+
+            assertApproxEqAbs(
+                vesting.vestedAmount(), yieldAmount * i / 10, 1, "Vested amount should be i/10 of the yield amount - 2"
+            );
+        }
+
+        assertApproxEqAbs(
+            vesting.vestedAmount(),
+            yieldAmount / 2,
+            1,
+            "Vested amount should be equal to the yield amount / 2 at the end of the vesting period"
+        );
+        assertEq(
+            vesting.vestedAmount() + vestedAmountAfterFirstHalf,
+            yieldAmount,
+            "Total vested amount should be equal to the yield amount at the end of the vesting period"
+        );
+    }
 }
