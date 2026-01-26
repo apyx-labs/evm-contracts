@@ -36,7 +36,9 @@ abstract contract BaseTest is Test {
     // ========================================
 
     AccessManager public accessManager;
+    ApxUSD apxUSDImpl;
     ApxUSD public apxUSD;
+    ApyUSD apyUSDImpl;
     ApyUSD public apyUSD;
     MinterV0 public minterV0;
     LinearVestV0 public vesting;
@@ -114,7 +116,7 @@ abstract contract BaseTest is Test {
         vm.label(address(accessManager), "AccessManager");
 
         // Deploy ApxUSD (underlying asset)
-        ApxUSD apxUSDImpl = new ApxUSD();
+        apxUSDImpl = new ApxUSD();
         bytes memory apxUSDInitData =
             abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), APX_SUPPLY_CAP));
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
@@ -128,7 +130,7 @@ abstract contract BaseTest is Test {
         vm.label(address(denyList), "denyList");
 
         // Deploy ApyUSD (vault)
-        ApyUSD apyUSDImpl = new ApyUSD();
+        apyUSDImpl = new ApyUSD();
         bytes memory apyUSDInitData = abi.encodeCall(
             apyUSDImpl.initialize,
             ("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(denyList))
