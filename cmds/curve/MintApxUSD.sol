@@ -27,17 +27,24 @@ contract MintOrderBase is BaseDeploy {
  * @notice Creates a mint order for the MinterV0 contract and logs the digest
  * @dev To sign the order, use the following command:
  * ```
- * SIGNATURE=$(cast wallet sign --account $ACCOUNT --no-hash "$DIGEST")
+ * export SIGNATURE=$(cast wallet sign --account $ACCOUNT --no-hash "$DIGEST")
  * ```
  */
 contract CreateOrder is MintOrderBase {
     function run() public {
         super.setUp();
 
+        address beneficiary = vm.envAddress("BENEFICIARY");
+        console2.log("Beneficiary: ", beneficiary);
+
+        uint48 nonce = minterV0.nonce(beneficiary);
+        console2.log("Nonce: ", nonce);
+
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: deployer, amount: 1000e18, nonce: 0, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary, amount: 1000e18, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
         });
         bytes32 digest = minterV0.hashOrder(order);
+        console2.log("Digest: ");
         console2.logBytes32(digest);
     }
 }
@@ -56,8 +63,14 @@ contract SubmitOrder is MintOrderBase {
         console2.log("Signature:");
         console2.logBytes(signature);
 
+        address beneficiary = vm.envAddress("BENEFICIARY");
+        console2.log("Beneficiary: ", beneficiary);
+
+        uint48 nonce = minterV0.nonce(beneficiary);
+        console2.log("Nonce: ", nonce);
+
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: deployer, amount: 1000e18, nonce: 0, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary, amount: 1000e18, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
         });
 
         if (!minterV0.validateOrder(order, signature)) {
@@ -101,8 +114,15 @@ contract ExecuteOrder is MintOrderBase {
         apxUSDAddress = deployConfig.get(chainId, "apxUSD_address").toAddress();
         vm.label(apxUSDAddress, "apxUSDAddress");
 
+        address beneficiary = vm.envAddress("BENEFICIARY");
+        if (beneficiary == address(0)) {
+            beneficiary = deployer;
+            console2.log("Beneficiary is not set, using deployer: ", beneficiary);
+        }
+        console2.log("Beneficiary: ", beneficiary);
+
         apxUSD = IERC20(apxUSDAddress);
-        balanceBefore = apxUSD.balanceOf(deployer);
+        balanceBefore = apxUSD.balanceOf(beneficiary);
 
         operationId = vm.parseBytes32(vm.envString("OPERATION_ID"));
         console2.log("Operation ID: ");
@@ -130,7 +150,7 @@ contract ExecuteOrder is MintOrderBase {
         console2.log("Operation ID:");
         console2.logBytes32(operationId);
         console2.log("Balance Before:", balanceBefore);
-        console2.log("Balance After:  ", apxUSD.balanceOf(deployer));
-        console2.log("Balance Change: ", apxUSD.balanceOf(deployer) - balanceBefore);
+        console2.log("Balance After:  ", apxUSD.balanceOf(beneficiary));
+        console2.log("Balance Change: ", apxUSD.balanceOf(beneficiary) - balanceBefore);
     }
 }

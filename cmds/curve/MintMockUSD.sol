@@ -17,14 +17,21 @@ contract MintMockUSD is BaseDeploy {
         vm.label(mockUSDAddress, "mockUSDAddress");
         mockUSD = MockERC20(mockUSDAddress);
 
-        balanceBefore = mockUSD.balanceOf(deployer);
+        address beneficiary = vm.envAddress("BENEFICIARY");
+        if (beneficiary == address(0)) {
+            beneficiary = deployer;
+            console2.log("Beneficiary is not set, using deployer: ", beneficiary);
+        }
+        console2.log("Beneficiary: ", beneficiary);
+
+        balanceBefore = mockUSD.balanceOf(beneficiary);
 
         vm.broadcast(deployer);
-        mockUSD.mint(deployer, 1000e18);
+        mockUSD.mint(beneficiary, 1000e18);
 
         console2.log("\n=== MockUSD Minted ===");
         console2.log("Balance Before:", balanceBefore);
-        console2.log("Balance After:  ", mockUSD.balanceOf(deployer));
-        console2.log("Balance Change: ", mockUSD.balanceOf(deployer) - balanceBefore);
+        console2.log("Balance After:  ", mockUSD.balanceOf(beneficiary));
+        console2.log("Balance Change: ", mockUSD.balanceOf(beneficiary) - balanceBefore);
     }
 }
