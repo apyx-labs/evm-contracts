@@ -10,6 +10,11 @@ fs_permissions = [
     { access = "read-write", path = "./reports" },
 ]
 
+[invariant]
+runs = 32
+depth = 32
+fail_on_revert = true
+
 [profile.release]
 solc_version = "0.8.30"
 # Use the IR compiler and optimizer
