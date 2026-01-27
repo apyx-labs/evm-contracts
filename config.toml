@@ -7,6 +7,8 @@ deployer = "${ETH_KEYSTORE_ADDRESS}"
 # Curve
 # https://docs.curve.finance/references/deployed-contracts/#stableswap-ng
 curve_stableswap_ng_factory_address = "0x9AF14D26075f142eb3F292D5065EB3faa646167b"
+# https://docs.curve.finance/references/deployed-contracts/#twocrypto-ng
+curve_twocrypto_ng_factory_address = "0x98EE851a00abeE0d95D08cF4CA2BdCE32aeaAF7F"
 
 # https://developers.circle.com/stablecoins/usdc-contract-addresses
 # usdc_address = "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"

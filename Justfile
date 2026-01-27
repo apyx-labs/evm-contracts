@@ -82,29 +82,9 @@ doc:
 doc-serve:
     forge doc --serve --port 3000
 
-# Upgrade PrefUSD contract (requires PROXY_ADDRESS env var)
-upgrade-prefusd PROXY_ADDRESS:
-    PROXY_ADDRESS={{PROXY_ADDRESS}} forge script cmds/Upgrade.s.sol:UpgradePrefUSD --rpc-url http://localhost:8545 --broadcast
-
-# Upgrade Minting contract (requires PROXY_ADDRESS env var)
-upgrade-minting PROXY_ADDRESS:
-    PROXY_ADDRESS={{PROXY_ADDRESS}} forge script cmds/Upgrade.s.sol:UpgradeMinting --rpc-url http://localhost:8545 --broadcast
-
 # Compute ERC7201 storage location for proxy storage namespace
 storage-location INPUT:
     chisel eval 'keccak256(abi.encode(uint256(keccak256("apyx.storage.{{INPUT}}")) - 1)) & ~bytes32(uint256(0xff))'
-
-# Run forge snapshot (gas benchmarks)
-snapshot:
-    forge snapshot
-
-# Update dependencies
-update:
-    forge soldeer update
-
-# Install dependencies
-install:
-    forge soldeer install
 
 # Quick check (format, build, test)
 check:
