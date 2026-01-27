@@ -13,7 +13,8 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {ERC20FreezeableUpgradable} from "./exts/ERC20FreezeableUpgradable.sol";
+import {ERC20DenyListUpgradable} from "./exts/ERC20DenyListUpgradable.sol";
+import {IAddressList} from "./interfaces/IAddressList.sol";
 
 /**
  * @title ApxUSD
@@ -32,7 +33,7 @@ contract ApxUSD is
     ERC20Upgradeable,
     ERC20PermitUpgradeable,
     ERC20PausableUpgradeable,
-    ERC20FreezeableUpgradable,
+    ERC20DenyListUpgradable,
     AccessManagedUpgradeable,
     UUPSUpgradeable
 {
@@ -76,16 +77,21 @@ contract ApxUSD is
      * @param initialAuthority Address of the AccessManager contract
      * @param initialSupplyCap Maximum total supply (e.g., 1_000_000e18 for $1M)
      */
-    function initialize(string memory name, string memory symbol, address initialAuthority, uint256 initialSupplyCap)
-        public
-        initializer
-    {
-        require(initialAuthority != address(0), "authority is zero address");
-        require(initialSupplyCap > 0, "supply cap must be positive");
+    function initialize(
+        string memory name,
+        string memory symbol,
+        address initialAuthority,
+        address initialDenyList,
+        uint256 initialSupplyCap
+    ) public initializer {
+        if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
+        if (initialDenyList == address(0)) revert InvalidAddress("initialDenyList");
+        if (initialSupplyCap == 0) revert InvalidSupplyCap();
 
         __ERC20_init(name, symbol);
         __ERC20Permit_init(name);
         __ERC20Pausable_init();
+        __ERC20DenyListedUpgradable_init(IAddressList(initialDenyList));
         __AccessManaged_init(initialAuthority);
 
         // Set initial supply cap
@@ -128,7 +134,7 @@ contract ApxUSD is
      */
     function _update(address from, address to, uint256 value)
         internal
-        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20FreezeableUpgradable)
+        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20DenyListUpgradable)
     {
         super._update(from, to, value);
     }
@@ -194,24 +200,10 @@ contract ApxUSD is
     }
 
     // ----------------------------------------
-    // ERC20FreezeableUpgradeable
+    // ERC20DenyListUpgradable
     // ----------------------------------------
 
-    /**
-     * @notice Freezes an address, preventing transfers to or from it
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param target The address to freeze
-     */
-    function freeze(address target) external restricted {
-        _freeze(target);
-    }
-
-    /**
-     * @notice Unfreezes an address, allowing transfers to or from it
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param target The address to unfreeze
-     */
-    function unfreeze(address target) external restricted {
-        _unfreeze(target);
+    function setDenyList(IAddressList newDenyList) external restricted {
+        _setDenyList(newDenyList);
     }
 }
