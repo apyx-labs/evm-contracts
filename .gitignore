@@ -28,3 +28,6 @@ deploy/local.json
 
 # Generated reports
 reports/*.csv
+
+# OS specific files
+.DS_Store
