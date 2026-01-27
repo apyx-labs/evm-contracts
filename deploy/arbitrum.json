@@ -34,11 +34,15 @@
     },
     "mockUSD": {
       "address": "0xb37790829B57719217B19312DB23202C58B6Ed61",
-      "block": 423938148
+      "block": null
     },
     "apxUSDMockUSDPool": {
       "address": "0x07C4fA447a96f257b29596ea3ae0791d06D30738",
-      "block": 423938148
+      "block": null
+    },
+    "commitToken_0x07C4fA447a96f257b29596ea3ae0791d06D30738": {
+      "address": "0x2f56c91ba2d32104150b30495a21a5ae1fa83644",
+      "block": 425638659
     }
   }
 }

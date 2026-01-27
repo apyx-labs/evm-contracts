@@ -1,8 +1,8 @@
-#!/bin/env bash
+#!/usr/bin/env sh
 
 NETWORK=$1
 
-cat "deploy/${NETWORK}.toml" | tomlq '
+yq -oj "deploy/${NETWORK}.toml" | jq '
   .'${NETWORK}' as $net |
   {
     contracts: (

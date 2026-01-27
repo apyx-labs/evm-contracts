@@ -10,6 +10,9 @@ yieldDistributor_address = "0x5EE929A664Dc1075628838E0fbB34451aAcDeF9E"
 mockUSD_address = "0xb37790829B57719217B19312DB23202C58B6Ed61"
 apxUSDMockUSDPool_address = "0x07C4fA447a96f257b29596ea3ae0791d06D30738"
 
+# CommitToken for apxUSDMockUSDPool
+commitToken_0x07C4fA447a96f257b29596ea3ae0791d06D30738_address = "0x2f56c91ba2d32104150b30495a21a5ae1fa83644"
+
 [arbitrum.uint]
 accessManager_block = 423623352
 addressList_block = 423623352
@@ -19,3 +22,6 @@ apyUSD_block = 423623352
 unlockToken_block = 423623352
 linearVestV0_block = 423623352
 yieldDistributor_block = 423623352
+
+# CommitToken for apxUSDMockUSDPool
+commitToken_0x07C4fA447a96f257b29596ea3ae0791d06D30738_block = 425638659

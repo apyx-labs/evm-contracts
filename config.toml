@@ -28,15 +28,19 @@ apx_usd_rate_limit_mint_period = "86400"    # seconds
 apy_usd_name = "Bar USD"
 apy_usd_symbol = "barUSD"
 
-apx_usd_mint_delay = "5"        # seconds
-apy_usd_unlocking_delay = "60"  # seconds
+apx_usd_mint_delay = "5"       # seconds
+apy_usd_unlocking_delay = "60" # seconds
+
+# CommitToken
+commit_token_default_supply_cap = "10000000" # 10M
+commit_token_default_unlocking_delay = "60"  # seconds
 
 # Vesting
-vesting_period = "86400"  # 1 day in seconds
+vesting_period = "86400" # 1 day in seconds
 
 # Curve ApxUSD Pool
 curve_pool_apx_usd_usdc_name = "Curve.fi fooUSD-mockUSDC"
-curve_pool_apx_usd_usdc_symbol = "fooUSDmock" # max 10 chars
+curve_pool_apx_usd_usdc_symbol = "fooUSDmock"                 # max 10 chars
 curve_pool_apx_usd_usdc_amplification = "400"
 curve_pool_apx_usd_usdc_fee = "4000000"
 curve_pool_apx_usd_usdc_offpeg_fee_multiplier = "20000000000"
