@@ -34,7 +34,7 @@ apx_usd_mint_delay = "5"       # seconds
 apy_usd_unlocking_delay = "60" # seconds
 
 # CommitToken
-commit_token_default_supply_cap = "10000000" # 10M
+commit_token_default_supply_cap = "10000000" # 10M ether (1e18)
 commit_token_default_unlocking_delay = "60"  # seconds
 
 # Vesting

@@ -51,6 +51,10 @@
     "apyUSDMockUSDPool": {
       "address": "0x9a439269c2779D5900ccFDE02f2fDF8F839E5fD1",
       "block": 425669116
+    },
+    "commitToken_0x9a439269c2779D5900ccFDE02f2fDF8F839E5fD1": {
+      "address": "0x1AD137E3789075d66f1e82ec0D1EB42AcD3c6db2",
+      "block": 425671429
     }
   }
 }
