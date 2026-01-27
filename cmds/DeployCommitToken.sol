@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {console2} from "forge-std/src/Script.sol";
+import {VmSafe} from "forge-std/src/Vm.sol";
 import {Variable} from "forge-std/src/LibVariable.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {CommitToken} from "../src/CommitToken.sol";
@@ -44,7 +45,10 @@ contract DeployCommitToken is BaseDeploy {
         string memory ctAddressDeployConfigKey = string.concat(ctDeployConfigKey, "_address");
         string memory ctBlockDeployConfigKey = string.concat(ctDeployConfigKey, "_block");
 
-        if (deployConfig.get(chainId, ctAddressDeployConfigKey).exists()) {
+        if (
+            vm.isContext(VmSafe.ForgeContext.ScriptDryRun)
+                && deployConfig.get(chainId, ctAddressDeployConfigKey).exists()
+        ) {
             console2.log("CommitToken already deployed for this asset. Skipping deployment.");
             return;
         }

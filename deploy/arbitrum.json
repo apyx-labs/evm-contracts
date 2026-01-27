@@ -12,6 +12,10 @@
       "address": "0x972d3Dc804ec7CABEAb6D394b9a9f4E6c313dda7",
       "block": 423623352
     },
+    "commitToken_0x972d3Dc804ec7CABEAb6D394b9a9f4E6c313dda7": {
+      "address": "0x6263782720A1f77BE88038fE371d7bAC17FB4652",
+      "block": 425666086
+    },
     "minterV0": {
       "address": "0x911C583B346A43B7D4176Ae135911c451E8C9203",
       "block": 423623352
@@ -38,11 +42,15 @@
     },
     "apxUSDMockUSDPool": {
       "address": "0x07C4fA447a96f257b29596ea3ae0791d06D30738",
-      "block": null
+      "block": 423623352
     },
     "commitToken_0x07C4fA447a96f257b29596ea3ae0791d06D30738": {
       "address": "0x2f56c91ba2d32104150b30495a21a5ae1fa83644",
       "block": 425638659
+    },
+    "apyUSDMockUSDPool": {
+      "address": "0x9a439269c2779D5900ccFDE02f2fDF8F839E5fD1",
+      "block": 425669116
     }
   }
 }
