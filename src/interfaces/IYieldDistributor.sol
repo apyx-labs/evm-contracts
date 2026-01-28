@@ -82,6 +82,13 @@ interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBal
     function setVesting(address newVesting) external;
 
     /**
+     * @notice Sets the signature delegate
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @param newSigningDelegate New signature delegate address
+     */
+    function setSigningDelegate(address newSigningDelegate) external;
+
+    /**
      * @notice Deposits yield to the vesting contract
      * @dev Only callable through AccessManager with ROLE_YIELD_OPERATOR
      * @param amount Amount of yield to deposit

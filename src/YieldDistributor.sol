@@ -91,9 +91,7 @@ contract YieldDistributor is AccessManaged, ERC1271Delegated, IYieldDistributor 
     }
 
     /**
-     * @notice Sets the signature delegate
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param newSigningDelegate New signature delegate address
+     * @inheritdoc IYieldDistributor
      */
     function setSigningDelegate(address newSigningDelegate) external restricted {
         if (newSigningDelegate == address(0)) revert InvalidAddress("newSigningDelegate");
