@@ -5,6 +5,7 @@ import {ApyUSD} from "src/ApyUSD.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC1271Delegated} from "src/exts/ERC1271Delegated.sol";
 import {EInsufficientBalance} from "src/errors/InsufficientBalance.sol";
 import {Deployer} from "./Deployer.sol";
 
@@ -12,8 +13,9 @@ import {Deployer} from "./Deployer.sol";
  * @title ApyUSDDeployer
  * @notice Deploys ApyUSD (implementation + proxy), initializes, deposits deployer's ApxUSD, and sends shares to beneficiary
  * @dev Deploy is restricted via AccessManager. Requires deployer ApxUSD balance > 10_000e18 before deploying.
+ *      Implements ERC-1271 via ERC1271Delegated so it can receive minted ApxUSD when MinterV0 supports contract beneficiaries.
  */
-contract ApyUSDDeployer is AccessManaged, Deployer, EInsufficientBalance {
+contract ApyUSDDeployer is AccessManaged, Deployer, ERC1271Delegated, EInsufficientBalance {
     /// @notice Minimum ApxUSD balance (in wei, 18 decimals) required on the deployer to call deploy()
     uint256 public constant MIN_APXUSD_BALANCE = 10_000e18;
 
@@ -47,8 +49,9 @@ contract ApyUSDDeployer is AccessManaged, Deployer, EInsufficientBalance {
         string memory _symbol,
         address _asset,
         address _denyList,
-        address _beneficiary
-    ) AccessManaged(_authority) {
+        address _beneficiary,
+        address _signer
+    ) AccessManaged(_authority) ERC1271Delegated(_signer) {
         name = _name;
         symbol = _symbol;
         asset = _asset;
@@ -68,10 +71,7 @@ contract ApyUSDDeployer is AccessManaged, Deployer, EInsufficientBalance {
         }
 
         ApyUSD impl = new ApyUSD();
-        bytes memory initData = abi.encodeCall(
-            ApyUSD.initialize,
-            (name, symbol, authority(), asset, denyList)
-        );
+        bytes memory initData = abi.encodeCall(ApyUSD.initialize, (name, symbol, authority(), asset, denyList));
         ERC1967Proxy proxyContract = new ERC1967Proxy(address(impl), initData);
         proxy = address(proxyContract);
 
