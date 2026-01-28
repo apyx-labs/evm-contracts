@@ -13,6 +13,9 @@ import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
  * @notice CommitToken subclass that allows a vault to initiate redeem requests on behalf of users
  * @dev The vault address is immutable and set at construction. The vault can act as an operator
  *      for any controller, enabling it to initiate redeem requests automatically.
+ * @dev Like CommitToken, this version is non-transferable for implementation simplicity.
+ *      Future versions may support transferability or could be implemented as an NFT
+ *      to enable transferring unlocking positions between users.
  */
 contract UnlockToken is CommitToken, IUnlockToken {
     /// @notice The vault address that can act as an operator (immutable)
