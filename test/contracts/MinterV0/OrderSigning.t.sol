@@ -34,7 +34,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
         bytes memory invalidSignature = abi.encodePacked(r, s, invalidV);
 
         // Should revert with ECDSAInvalidSignature (OpenZeppelin ECDSA library error)
-        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignature.selector));
+        vm.expectRevert(IMinterV0.InvalidSignature.selector);
         minterV0.validateOrder(order, invalidSignature);
     }
 
@@ -58,7 +58,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
         bytes memory malleableSignature = abi.encodePacked(r, flippedS, flippedV);
 
         // Should revert with ECDSAInvalidSignatureS (ECDSA library prevents malleability)
-        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureS.selector, flippedS));
+        vm.expectRevert(IMinterV0.InvalidSignature.selector);
         minterV0.validateOrder(order, malleableSignature);
     }
 
@@ -76,7 +76,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
         bytes memory shortSignature = new bytes(64);
 
         // Should revert with ECDSAInvalidSignatureLength
-        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureLength.selector, uint256(64)));
+        vm.expectRevert(IMinterV0.InvalidSignature.selector);
         minterV0.validateOrder(order, shortSignature);
     }
 
@@ -97,7 +97,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
         bytes memory longSignature = abi.encodePacked(r, s, v, bytes1(0x00));
 
         // Should revert with ECDSAInvalidSignatureLength
-        vm.expectRevert(abi.encodeWithSelector(ECDSA.ECDSAInvalidSignatureLength.selector, uint256(66)));
+        vm.expectRevert(IMinterV0.InvalidSignature.selector);
         minterV0.validateOrder(order, longSignature);
     }
 
