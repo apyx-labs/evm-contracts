@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {EnumerableSet} from "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
+import {EInvalidAddress} from "./errors/InvalidAddress.sol";
 
 /**
  * @title AddressList
@@ -16,7 +17,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
  * - Enumerable for off-chain iteration
  * - Gas-efficient set operations
  */
-contract AddressList is AccessManaged, IAddressList {
+contract AddressList is AccessManaged, IAddressList, EInvalidAddress {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     /// @notice Set of addresses in the list
@@ -27,7 +28,7 @@ contract AddressList is AccessManaged, IAddressList {
      * @param initialAuthority Address of the AccessManager contract
      */
     constructor(address initialAuthority) AccessManaged(initialAuthority) {
-        require(initialAuthority != address(0), "authority is zero address");
+        if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
     }
 
     // ========================================
@@ -40,11 +41,9 @@ contract AddressList is AccessManaged, IAddressList {
      * @param user Address to add
      */
     function add(address user) external override restricted {
-        require(user != address(0), "cannot add zero address");
+        if (user == address(0)) revert InvalidAddress("user");
 
-        bool added = _addresses.add(user);
-        require(added, "address already in list");
-
+        _addresses.add(user);
         emit Added(user);
     }
 
@@ -54,9 +53,7 @@ contract AddressList is AccessManaged, IAddressList {
      * @param user Address to remove
      */
     function remove(address user) external override restricted {
-        bool removed = _addresses.remove(user);
-        require(removed, "address not in list");
-
+        _addresses.remove(user);
         emit Removed(user);
     }
 

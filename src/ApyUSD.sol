@@ -305,15 +305,6 @@ contract ApyUSD is
     }
 
     /**
-     * @notice Returns the current deny list contract address
-     * @return Address of the AddressList contract
-     */
-    function denyList() external view returns (address) {
-        DenyListStorage storage $ = _getDenyListStorage();
-        return address($._denyList);
-    }
-
-    /**
      * @notice Sets the UnlockToken contract
      * @dev Only callable through AccessManager with ADMIN_ROLE
      * @dev No fund migration is performed - outstanding requests remain on old UnlockToken

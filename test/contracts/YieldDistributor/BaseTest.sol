@@ -9,6 +9,7 @@ import {MinterV0} from "../../../src/MinterV0.sol";
 import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {YieldDistributor} from "../../../src/YieldDistributor.sol";
 import {Roles} from "../../../src/Roles.sol";
+import {AddressList} from "../../../src/AddressList.sol";
 
 /**
  * @title YieldDistributorBaseTest
@@ -26,6 +27,7 @@ abstract contract YieldDistributorBaseTest is Test {
     LinearVestV0 public vesting;
     YieldDistributor public yieldDistributor;
     AccessManager public accessManager;
+    AddressList public denyList;
 
     address public admin = address(0x1);
     address public operator = address(0x2);
@@ -48,10 +50,14 @@ abstract contract YieldDistributorBaseTest is Test {
         vm.prank(admin);
         accessManager = new AccessManager(admin);
 
+        // Deploy AddressList
+        denyList = new AddressList(address(accessManager));
+
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData =
-            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), SUPPLY_CAP));
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), SUPPLY_CAP)
+        );
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
