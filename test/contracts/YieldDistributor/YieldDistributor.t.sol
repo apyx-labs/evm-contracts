@@ -48,7 +48,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
     function test_RevertWhen_NonAdminSetsVesting() public {
         vm.expectRevert();
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.setVesting(address(vesting));
     }
 
@@ -75,7 +75,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         uint256 vestingBalanceBefore = apxUSD.balanceOf(address(vesting));
         uint256 distributorBalanceBefore = yieldDistributor.availableBalance();
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         assertEq(
@@ -118,7 +118,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         uint256 distributorBalanceBefore = apxUSD.balanceOf(address(yieldDistributor));
         uint256 vestingBalanceBefore = apxUSD.balanceOf(address(vesting));
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         assertEq(
@@ -136,7 +136,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
         uint256 vestingAmountBefore = vesting.vestingAmount();
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         // Vesting amount should increase (may include unvested from previous deposits)
@@ -147,9 +147,9 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         mintToYieldDistributor(YIELD_AMOUNT);
 
         vm.expectEmit(false, false, false, true);
-        emit IYieldDistributor.YieldDeposited(operator, YIELD_AMOUNT);
+        emit IYieldDistributor.YieldDeposited(yieldOperator, YIELD_AMOUNT);
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
     }
 
@@ -159,12 +159,12 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
         mintToYieldDistributor(amount1 + amount2);
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(amount1);
 
         assertEq(yieldDistributor.availableBalance(), amount2, "Remaining balance should be correct");
 
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(amount2);
 
         assertEq(yieldDistributor.availableBalance(), 0, "Balance should be zero after all deposits");
@@ -178,7 +178,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         mintToYieldDistributor(YIELD_AMOUNT);
 
         vm.expectRevert(Errors.invalidAmount("amount", 0));
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(0);
     }
 
@@ -186,7 +186,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         mintToYieldDistributor(YIELD_AMOUNT);
 
         vm.expectRevert(Errors.insufficientBalance(address(yieldDistributor), YIELD_AMOUNT, YIELD_AMOUNT + 1));
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT + 1);
     }
 
@@ -194,7 +194,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         mintToYieldDistributor(YIELD_AMOUNT);
 
         uint256 partialAmount = YIELD_AMOUNT / 2;
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(partialAmount);
 
         assertEq(
@@ -216,19 +216,19 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         // First mint and deposit
         vm.prank(admin);
         apxUSD.mint(address(yieldDistributor), mint1);
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint1);
 
         // Second mint and deposit
         vm.prank(admin);
         apxUSD.mint(address(yieldDistributor), mint2);
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint2);
 
         // Third mint and deposit
         vm.prank(admin);
         apxUSD.mint(address(yieldDistributor), mint3);
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint3);
 
         assertEq(yieldDistributor.availableBalance(), 0, "All tokens should be deposited");
@@ -255,7 +255,7 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         yieldDistributor.setVesting(address(newVesting));
 
         // Deposit to new vesting
-        vm.prank(operator);
+        vm.prank(yieldOperator);
         yieldDistributor.depositYield(YIELD_AMOUNT);
 
         assertEq(apxUSD.balanceOf(address(newVesting)), YIELD_AMOUNT, "New vesting should receive tokens");
