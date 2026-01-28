@@ -15,7 +15,7 @@ abstract contract ERC20DenyListUpgradable is Initializable, ERC20Upgradeable, EI
     }
 
     bytes32 private constant DENYLISTED_STORAGE_LOC =
-        0xe66b3d99be4f71ea7aa9cf2bc9a8a4827bbe4f718fcfa5d183e05f8945211500;
+        0xde333b8ffad3aee9c87bb17db9ab84f10634c83b51f5022e3b2d7da89a012200;
 
     function _getDenyListStorage() internal pure returns (DenyListStorage storage $) {
         // slither-disable-next-line assembly
