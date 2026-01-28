@@ -237,6 +237,19 @@ abstract contract BaseTest is Test {
     }
 
     // ========================================
+    // Address List Helpers
+    // ========================================
+
+    /**
+     * @notice Helper to add an address to the deny list
+     * @param user Address to add to the deny list
+     */
+    function addToDenyList(address user) internal {
+        vm.prank(admin);
+        denyList.add(user);
+    }
+
+    // ========================================
     // ApxUSD Helpers
     // ========================================
 
@@ -274,6 +287,17 @@ abstract contract BaseTest is Test {
     // ========================================
     // ApyUSD Helpers
     // ========================================
+
+    /**
+     * @notice Helper to transfer ApyUSD tokens from one user to another
+     * @param from Address to transfer from
+     * @param to Address to transfer to
+     * @param amount Amount of ApyUSD to transfer
+     */
+    function transferApyUSD(address from, address to, uint256 amount) internal {
+        vm.prank(from);
+        apyUSD.transfer(to, amount);
+    }
 
     /**
      * @notice Helper to deposit apxUSD and receive apyUSD shares
