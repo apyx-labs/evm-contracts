@@ -155,7 +155,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @notice Deposits yield into the vesting contract
      * @dev Transfers out any vested yield before resetting the vesting period.
      *      Resets the vesting period by adding new deposit to existing unvested amount.
-     * @param amount Amount of yield to depositinternal
+     * @param amount Amount of yield to deposit
      */
     function depositYield(uint256 amount) external override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
