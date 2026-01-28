@@ -155,20 +155,6 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         }
     }
 
-    /**
-     * @notice Checks if an order is valid without reverting
-     * @param order The mint order to validate
-     * @param signature The beneficiary's signature over the order
-     * @return bool True if the order is valid, false otherwise
-     */
-    function isOrderValid(Order calldata order, bytes calldata signature) public view returns (bool) {
-        try this.validateOrder(order, signature) {
-            return true;
-        } catch {
-            return false;
-        }
-    }
-
     // slither-disable-end timestamp
 
     // ============================================

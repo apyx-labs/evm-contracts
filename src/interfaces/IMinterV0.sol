@@ -117,14 +117,6 @@ interface IMinterV0 is EInvalidAddress, EInvalidAmount {
     function validateOrder(Order calldata order, bytes calldata signature) external view;
 
     /**
-     * @notice Checks if an order is valid without reverting
-     * @param order The mint order to validate
-     * @param signature The beneficiary's signature over the order
-     * @return bool True if the order is valid, false otherwise
-     */
-    function isOrderValid(Order calldata order, bytes calldata signature) external view returns (bool);
-
-    /**
      * @notice Requests a mint by validating the order and scheduling with AccessManager
      * @param order The mint order
      * @param signature The beneficiary's signature over the order

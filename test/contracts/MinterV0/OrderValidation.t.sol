@@ -42,12 +42,11 @@ contract MinterV0_OrderValidationTest is MinterTest {
 
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
-        // Should return true for valid order
-        bool isValid = minterV0.isOrderValid(order, signature);
-        assertTrue(isValid);
+        // Should validate successfully (no revert)
+        minterV0.validateOrder(order, signature);
     }
 
-    function test_IsOrderValid_WithInvalidOrder() public view {
+    function test_IsOrderValid_WithInvalidOrder() public {
         // Create order with notBefore in the future (invalid)
         IMinterV0.Order memory order = IMinterV0.Order({
             beneficiary: alice,
@@ -59,9 +58,9 @@ contract MinterV0_OrderValidationTest is MinterTest {
 
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
-        // Should return false for invalid order
-        bool isValid = minterV0.isOrderValid(order, signature);
-        assertFalse(isValid);
+        // Should revert with OrderNotYetValid
+        vm.expectRevert(IMinterV0.OrderNotYetValid.selector);
+        minterV0.validateOrder(order, signature);
     }
 
     function test_RevertWhen_ValidateOrderNotBeforeFuture() public {
