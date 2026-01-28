@@ -13,7 +13,7 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  */
 abstract contract ERC1271Delegated is IERC1271 {
     /// @notice Address that is allowed to sign on behalf of this contract (e.g. Foundation multisig)
-    address public signatureDelegate;
+    address public signingDelegate;
 
     /// @notice ERC-1271 magic value returned when the signature is valid
     bytes4 private constant _ERC1271_MAGIC = IERC1271.isValidSignature.selector;
@@ -23,10 +23,10 @@ abstract contract ERC1271Delegated is IERC1271 {
 
     /**
      * @notice Sets the signature delegate
-     * @param delegate_ Address that may sign on behalf of this contract
+     * @param delegate Address that may sign on behalf of this contract
      */
-    constructor(address delegate_) {
-        signatureDelegate = delegate_;
+    constructor(address delegate) {
+        signingDelegate = delegate;
     }
 
     /**
@@ -41,7 +41,7 @@ abstract contract ERC1271Delegated is IERC1271 {
         override
         returns (bytes4 magicValue)
     {
-        if (SignatureChecker.isValidSignatureNowCalldata(signatureDelegate, hash, signature)) {
+        if (SignatureChecker.isValidSignatureNowCalldata(signingDelegate, hash, signature)) {
             return _ERC1271_MAGIC;
         }
         return _ERC1271_INVALID;

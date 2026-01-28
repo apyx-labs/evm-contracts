@@ -73,7 +73,8 @@ abstract contract YieldDistributorBaseTest is Test {
         );
 
         // Deploy YieldDistributor
-        yieldDistributor = new YieldDistributor(address(apxUSD), address(accessManager), address(vesting));
+        yieldDistributor =
+            new YieldDistributor(address(apxUSD), address(accessManager), address(vesting), address(minter));
 
         // Configure roles
         setUpRoles();

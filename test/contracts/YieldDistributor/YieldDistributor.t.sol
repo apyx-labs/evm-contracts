@@ -29,17 +29,17 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
     function test_RevertWhen_ConstructorWithZeroAsset() public {
         vm.expectRevert(Errors.invalidAddress("asset"));
-        new YieldDistributor(address(0), address(accessManager), address(vesting));
+        new YieldDistributor(address(0), address(accessManager), address(vesting), address(minter));
     }
 
     function test_RevertWhen_ConstructorWithZeroAuthority() public {
         vm.expectRevert(Errors.invalidAddress("authority"));
-        new YieldDistributor(address(apxUSD), address(0), address(vesting));
+        new YieldDistributor(address(apxUSD), address(0), address(vesting), address(minter));
     }
 
     function test_RevertWhen_ConstructorWithZeroVesting() public {
         vm.expectRevert(Errors.invalidAddress("vesting"));
-        new YieldDistributor(address(apxUSD), address(accessManager), address(0));
+        new YieldDistributor(address(apxUSD), address(accessManager), address(0), address(minter));
     }
 
     // ========================================

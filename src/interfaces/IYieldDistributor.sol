@@ -35,6 +35,13 @@ interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBal
     event VestingContractUpdated(address indexed oldVesting, address indexed newVesting);
 
     /**
+     * @notice Emitted when the signature delegate is updated
+     * @param oldSigningDelegate Previous signature delegate address
+     * @param newSigningDelegate New signature delegate address
+     */
+    event SigningDelegateUpdated(address indexed oldSigningDelegate, address indexed newSigningDelegate);
+
+    /**
      * @notice Emitted when yield is deposited to the vesting contract
      * @param operator Address of the operator that triggered the yield to be deposited
      * @param amount Amount of yield deposited
