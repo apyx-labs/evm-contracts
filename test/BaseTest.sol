@@ -14,8 +14,10 @@ import {YieldDistributor} from "../src/YieldDistributor.sol";
 import {UnlockToken} from "../src/UnlockToken.sol";
 import {CommitToken} from "../src/CommitToken.sol";
 import {AddressList} from "../src/AddressList.sol";
+import {RedemptionPoolV0} from "../src/RedemptionPoolV0.sol";
 import {Roles} from "../src/Roles.sol";
 import {IUnlockToken} from "../src/interfaces/IUnlockToken.sol";
+import {IRedemptionPool} from "../src/interfaces/IRedemptionPool.sol";
 import {IVesting} from "../src/interfaces/IVesting.sol";
 
 /**
@@ -44,6 +46,7 @@ abstract contract BaseTest is Test {
     UnlockToken public unlockToken;
     CommitToken public lockToken;
     AddressList public denyList;
+    RedemptionPoolV0 public redemptionPool;
 
     // Mock ERC20 for CommitToken tests
     MockERC20 public mockToken;
@@ -57,6 +60,7 @@ abstract contract BaseTest is Test {
     address public minterGuardian;
     address public yieldOperator;
     address public feeRecipient;
+    address public redeemer;
 
     address public alice;
     address public bob;
@@ -166,6 +170,13 @@ abstract contract BaseTest is Test {
         );
         vm.label(address(lockToken), "lockToken");
 
+        // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = mockToken)
+        redemptionPool = new RedemptionPoolV0(address(accessManager), apxUSD, mockToken);
+        vm.label(address(redemptionPool), "redemptionPool");
+
+        // Create redeemer account
+        redeemer = makeAddr("redeemer");
+
         // Configure roles for entire system
         setUpRoles();
 
@@ -214,6 +225,10 @@ abstract contract BaseTest is Test {
         accessManager.assignYieldDistributorTargetsFor(vesting);
         accessManager.assignYieldOperatorTargetsFor(yieldDistributor);
 
+        // Configure RedemptionPool targets (admin + redeemer)
+        accessManager.assignAdminTargetsFor(redemptionPool);
+        accessManager.assignRedeemerTargetsFor(IRedemptionPool(address(redemptionPool)));
+
         // Grant roles
         // MINT_STRAT_ROLE to MinterV0 (with delay) and admin (no delay for direct minting in tests)
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, address(minterV0), MINT_DELAY);
@@ -231,6 +246,9 @@ abstract contract BaseTest is Test {
 
         // ROLE_YIELD_OPERATOR to operator address
         accessManager.grantRole(Roles.ROLE_YIELD_OPERATOR, yieldOperator, 0);
+
+        // ROLE_REDEEMER to redeemer address
+        accessManager.grantRole(Roles.ROLE_REDEEMER, redeemer, 0);
 
         vm.stopPrank();
     }
@@ -347,5 +365,41 @@ abstract contract BaseTest is Test {
      */
     function redeemApyUSD(uint256 shares, address owner) internal returns (uint256 assets) {
         return redeemApyUSD(shares, owner, owner);
+    }
+
+    // ========================================
+    // RedemptionPool Helpers
+    // ========================================
+
+    /**
+     * @notice Deposits reserve (mockToken) into the redemption pool
+     * @param amount Amount of mockToken to deposit (mints to admin then deposits)
+     */
+    function depositRedemptionPoolReserve(uint256 amount) internal {
+        mockToken.mint(admin, amount);
+        vm.startPrank(admin);
+        mockToken.approve(address(redemptionPool), amount);
+        redemptionPool.deposit(amount);
+        vm.stopPrank();
+    }
+
+    /**
+     * @notice Approves redemption pool to spend apxUSD
+     * @param amount Amount of apxUSD to approve
+     */
+    function approveRedemptionPool(uint256 amount) internal {
+        vm.prank(redeemer);
+        apxUSD.approve(address(redemptionPool), amount);
+    }
+
+    /**
+     * @notice Redeems apxUSD from the redemption pool
+     * @param amount Amount of apxUSD to give and approve
+     */
+    function redeemRedemptionPool(uint256 amount) internal returns (uint256 reserveAmount) {
+        vm.startPrank(redeemer);
+        apxUSD.approve(address(redemptionPool), amount);
+        reserveAmount = redemptionPool.redeem(amount, redeemer);
+        vm.stopPrank();
     }
 }
