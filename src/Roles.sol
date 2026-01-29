@@ -76,9 +76,11 @@ library Roles {
      * @param minterContract The MinterV0 contract
      */
     function assignAdminTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
-        bytes4[] memory selectors = new bytes4[](2);
+        bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = IMinterV0.setMaxMintAmount.selector;
         selectors[1] = IMinterV0.setRateLimit.selector;
+        selectors[2] = bytes4(keccak256("pause()"));
+        selectors[3] = bytes4(keccak256("unpause()"));
         self.setTargetFunctionRole(address(minterContract), selectors, ADMIN_ROLE);
     }
 
