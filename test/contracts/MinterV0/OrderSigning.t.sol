@@ -245,9 +245,8 @@ contract MinterV0_OrderSigningTest is MinterTest {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        // Should validate successfully
-        bool isValid = minterV0.validateOrder(order, signature);
-        assertTrue(isValid, "EIP-712 compliant signature should be valid");
+        // Should validate successfully (will revert if invalid)
+        minterV0.validateOrder(order, signature);
     }
 
     function test_RevertWhen_SignatureWithoutDomainSeparator() public {
