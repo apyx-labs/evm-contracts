@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {ApxUSD} from "../src/ApxUSD.sol";
@@ -171,7 +172,7 @@ abstract contract BaseTest is Test {
         vm.label(address(lockToken), "lockToken");
 
         // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = mockToken)
-        redemptionPool = new RedemptionPoolV0(address(accessManager), apxUSD, mockToken);
+        redemptionPool = new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), mockToken);
         vm.label(address(redemptionPool), "redemptionPool");
 
         // Create redeemer account
