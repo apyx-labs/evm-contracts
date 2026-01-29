@@ -26,8 +26,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 structHash = minterV0.hashOrder(order);
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest = minterV0.hashOrder(order);
         (, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Modify v to invalid value (not 27 or 28)
@@ -49,8 +48,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 structHash = minterV0.hashOrder(order);
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest = minterV0.hashOrder(order);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Create malleable signature by flipping s (using secp256k1 curve order - s)
@@ -92,8 +90,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        bytes32 structHash = minterV0.hashOrder(order);
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+        bytes32 digest = minterV0.hashOrder(order);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
 
         // Create signature that's too long (extra bytes)
@@ -205,7 +202,7 @@ contract MinterV0_OrderSigningTest is MinterTest {
     // EIP-712 Compliance Tests
     // ----------------------------------------
 
-    function test_EIP712Compliance_DomainSeparatorIntegration() public view {
+    function test_EIP712Compliance_HashOrderReturnsDomainBoundDigest() public view {
         // Create order
         IMinterV0.Order memory order = IMinterV0.Order({
             beneficiary: alice,
@@ -215,20 +212,25 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        // Get struct hash (without domain separator)
-        bytes32 structHash = minterV0.hashOrder(order);
+        // hashOrder should return the full EIP-712 digest
+        bytes32 digest = minterV0.hashOrder(order);
 
-        // Manually compute EIP-712 compliant digest
+        // Manually compute what the digest should be
+        bytes32 structHash = keccak256(
+            abi.encodePacked(
+                minterV0.ORDER_TYPEHASH(), order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount
+            )
+        );
         bytes32 expectedDigest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
 
-        // Verify that the struct hash alone is different from the full EIP-712 digest
-        assertTrue(structHash != expectedDigest, "Struct hash should differ from full EIP-712 digest");
+        // Verify hashOrder returns the full EIP-712 digest
+        assertEq(digest, expectedDigest, "hashOrder should return full EIP-712 digest");
 
         // Verify DOMAIN_SEPARATOR is not zero (contract properly initialized)
         assertTrue(minterV0.DOMAIN_SEPARATOR() != bytes32(0), "Domain separator should be initialized");
     }
 
-    function test_EIP712Compliance_ValidSignatureWithDomainSeparator() public view {
+    function test_EIP712Compliance_ValidSignatureWithHashOrder() public view {
         // Create order
         IMinterV0.Order memory order = IMinterV0.Order({
             beneficiary: alice,
@@ -238,9 +240,8 @@ contract MinterV0_OrderSigningTest is MinterTest {
             amount: 1_000e18
         });
 
-        // Create EIP-712 compliant signature
-        bytes32 structHash = minterV0.hashOrder(order);
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", minterV0.DOMAIN_SEPARATOR(), structHash));
+        // Create EIP-712 compliant signature using hashOrder
+        bytes32 digest = minterV0.hashOrder(order);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, digest);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -260,7 +261,12 @@ contract MinterV0_OrderSigningTest is MinterTest {
         });
 
         // Create signature WITHOUT domain separator (old, non-compliant way)
-        bytes32 structHash = minterV0.hashOrder(order);
+        // Sign just the struct hash directly without domain separator
+        bytes32 structHash = keccak256(
+            abi.encodePacked(
+                minterV0.ORDER_TYPEHASH(), order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount
+            )
+        );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(alicePrivateKey, structHash);
         bytes memory nonCompliantSignature = abi.encodePacked(r, s, v);
 

@@ -105,12 +105,12 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     }
 
     /**
-     * @notice Returns the EIP-712 struct hash for an order
-     * @dev This returns the struct hash only. Use with DOMAIN_SEPARATOR() to create the full EIP-712 digest
+     * @notice Returns the EIP-712 typed hash for an order
+     * @dev This returns the full EIP-712 digest that should be signed
      * @param order The mint order to hash
-     * @return The struct hash (not the full EIP-712 digest)
+     * @return The EIP-712 compliant digest
      */
-    function hashOrder(Order calldata order) public pure returns (bytes32) {
+    function hashOrder(Order calldata order) public view returns (bytes32) {
         // @dev This is only done during minting, which is not a hot path
         // forge-lint: disable-start(asm-keccak256)
         bytes32 structHash = keccak256(
@@ -119,7 +119,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             )
         );
         // forge-lint: disable-end(asm-keccak256)
-        return structHash;
+        return _hashTypedDataV4(structHash);
     }
 
     /**
@@ -157,8 +157,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         }
 
         // Verify signature
-        bytes32 structHash = hashOrder(order);
-        bytes32 digest = _hashTypedDataV4(structHash);
+        bytes32 digest = hashOrder(order);
         address signer = digest.recover(signature);
 
         if (signer != order.beneficiary) {
