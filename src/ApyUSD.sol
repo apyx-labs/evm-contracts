@@ -23,6 +23,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
+import {EInvalidCaller} from "./errors/InvalidCaller.sol";
 
 /**
  * @title ApyUSD
@@ -45,7 +46,8 @@ contract ApyUSD is
     AccessManagedUpgradeable,
     UUPSUpgradeable,
     ERC4626Upgradeable,
-    IApyUSD
+    IApyUSD,
+    EInvalidCaller
 {
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -244,6 +246,13 @@ contract ApyUSD is
         override
     {
         ApyUSDStorage storage $ = _getApyUSDStorage();
+
+        // Prevent griefing by requiring receiver == owner
+        // This prevents third parties from resetting another user's cooldown
+        // while still allowing users to accidentally reset their own cooldown
+        if (receiver != owner) {
+            revert InvalidCaller();
+        }
 
         // Check that no party is denied
         _revertIfDenied($, caller);

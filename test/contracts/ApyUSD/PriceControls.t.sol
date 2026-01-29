@@ -179,7 +179,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         assertEq(unlockToken.balanceOf(alice), withdrawAmount, "Alice should have UnlockToken shares");
     }
 
-    function test_WithdrawForMaxShares_WithReceiver() public {
+    function test_RevertWhen_WithdrawForMaxShares_WithDifferentReceiver() public {
         // First deposit some shares
         uint256 depositAmount = MEDIUM_AMOUNT;
         depositApxUSD(alice, depositAmount);
@@ -187,16 +187,12 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         uint256 withdrawAmount = MEDIUM_AMOUNT / 2;
         uint256 maxShares = withdrawAmount;
 
-        // Alice withdraws but Bob receives the UnlockToken shares
+        // Alice tries to withdraw but have Bob receive the UnlockToken shares
+        // This should revert because receiver != owner
         vm.startPrank(alice);
-        uint256 shares = apyUSD.withdrawForMaxShares(withdrawAmount, maxShares, bob);
+        vm.expectRevert();
+        apyUSD.withdrawForMaxShares(withdrawAmount, maxShares, bob);
         vm.stopPrank();
-
-        // Verify shares burned from Alice
-        assertEq(apyUSD.balanceOf(alice), depositAmount - shares, "Alice should have remaining shares");
-        // Bob should have UnlockToken shares
-        assertEq(unlockToken.balanceOf(bob), withdrawAmount, "Bob should have UnlockToken shares");
-        assertLe(shares, maxShares, "Shares burned should not exceed maxShares");
     }
 
     function test_RevertWhen_WithdrawForMaxShares_SlippageExceeded() public {
@@ -262,7 +258,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         assertEq(unlockToken.balanceOf(alice), assets, "Alice should have UnlockToken shares");
     }
 
-    function test_RedeemForMinAssets_WithReceiver() public {
+    function test_RevertWhen_RedeemForMinAssets_WithDifferentReceiver() public {
         // First deposit some shares
         uint256 depositAmount = MEDIUM_AMOUNT;
         depositApxUSD(alice, depositAmount);
@@ -270,16 +266,12 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         uint256 sharesToRedeem = MEDIUM_AMOUNT / 2;
         uint256 minAssets = sharesToRedeem;
 
-        // Alice redeems but Bob receives the UnlockToken shares
+        // Alice tries to redeem but have Bob receive the UnlockToken shares
+        // This should revert because receiver != owner
         vm.startPrank(alice);
-        uint256 assets = apyUSD.redeemForMinAssets(sharesToRedeem, minAssets, bob);
+        vm.expectRevert();
+        apyUSD.redeemForMinAssets(sharesToRedeem, minAssets, bob);
         vm.stopPrank();
-
-        // Verify shares burned from Alice
-        assertEq(apyUSD.balanceOf(alice), depositAmount - sharesToRedeem, "Alice should have remaining shares");
-        // Bob should have UnlockToken shares
-        assertEq(unlockToken.balanceOf(bob), assets, "Bob should have UnlockToken shares");
-        assertGe(assets, minAssets, "Assets received should be at least minAssets");
     }
 
     function test_RevertWhen_RedeemForMinAssets_SlippageExceeded() public {
