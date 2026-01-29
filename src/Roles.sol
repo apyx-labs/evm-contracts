@@ -5,6 +5,7 @@ import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManage
 import {ApxUSD} from "./ApxUSD.sol";
 import {ApyUSD} from "./ApyUSD.sol";
 import {CommitToken} from "./CommitToken.sol";
+import {MinterV0} from "./MinterV0.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -79,8 +80,8 @@ library Roles {
         bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = IMinterV0.setMaxMintAmount.selector;
         selectors[1] = IMinterV0.setRateLimit.selector;
-        selectors[2] = bytes4(keccak256("pause()"));
-        selectors[3] = bytes4(keccak256("unpause()"));
+        selectors[2] = MinterV0.pause.selector;
+        selectors[3] = MinterV0.unpause.selector;
         self.setTargetFunctionRole(address(minterContract), selectors, ADMIN_ROLE);
     }
 
