@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
@@ -12,10 +13,12 @@ import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
 /**
  * @title RedemptionPoolV0
  * @notice Redeems asset tokens for reserve assets at a configurable exchange rate
- * @dev Non-upgradeable. Uses AccessManager for role-based access; ROLE_REDEEMER for redeem(), ADMIN for deposit/withdraw/setExchangeRate/pause/unpause.
- *      Exchange rate is reserve asset per asset (1e18 = 1:1). Asset is burned by transferring to address(0).
+ * @dev Non-upgradeable. Uses AccessManager for role-based access; ROLE_REDEEMER for redeem(), ADMIN for
+ *      deposit/withdraw/setExchangeRate/pause/unpause. Exchange rate is reserve asset per asset (1e18 = 1:1).
+ *      The asset MUST support burning by transferring to address(0); redeem transfers asset from caller
+ *      to address(0). If the asset reverts or returns false for transfer to address(0), redeem will fail.
  */
-contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
+contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     /// @notice Asset token to be redeemed (burned); e.g. apxUSD
@@ -53,6 +56,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
 
     /// @inheritdoc IRedemptionPool
     /// @dev Does not consider pause state or reserve balance; callers should check paused() and reserveBalance()
+    ///      Rounding is downward in favor of the pool: reserveAmount = floor(assetsAmount * exchangeRate / 1e18)
     function previewRedeem(uint256 assetsAmount) external view override returns (uint256 reserveAmount) {
         return (assetsAmount * exchangeRate) / 1e18;
     }
@@ -63,6 +67,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
         override
         restricted
         whenNotPaused
+        nonReentrant
         returns (uint256 reserveAmount)
     {
         if (assetsAmount == 0) revert InvalidAmount("assetsAmount", assetsAmount);
@@ -84,7 +89,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
     // ============ Admin Functions ============
 
     /// @inheritdoc IRedemptionPool
-    function deposit(uint256 reserveAmount) external override restricted {
+    function deposit(uint256 reserveAmount) external override restricted nonReentrant {
         if (reserveAmount == 0) revert InvalidAmount("reserveAmount", reserveAmount);
         reserveAsset.safeTransferFrom(msg.sender, address(this), reserveAmount);
     }
@@ -95,25 +100,36 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
     }
 
     /// @inheritdoc IRedemptionPool
-    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver) public override restricted {
+    /// @dev Use to recover tokens erroneously sent to the pool (e.g. asset or any other ERC20).
+    ///      Can also withdraw reserve asset; equivalent to withdraw() for that case.
+    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver)
+        public
+        override
+        restricted
+        nonReentrant
+    {
         if (amount == 0) revert InvalidAmount("amount", amount);
         if (receiver == address(0)) revert InvalidAddress("receiver");
 
         uint256 balance = IERC20(withdrawAsset).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance(address(this), balance, amount);
         IERC20(withdrawAsset).safeTransfer(receiver, amount);
+
+        emit Withdraw(msg.sender, withdrawAsset, amount, receiver);
     }
 
     /// @inheritdoc IRedemptionPool
     /// @param newRate Reserve asset per asset, 1e18 = 1:1
     function setExchangeRate(uint256 newRate) external override restricted {
         if (newRate == 0) revert InvalidAmount("newRate", newRate);
+
         uint256 oldRate = exchangeRate;
         exchangeRate = newRate;
+
         emit ExchangeRateUpdated(oldRate, newRate);
     }
 
-    /// @notice Unpause redemptions
+    /// @notice Pause redemptions
     /// @dev Restricted to admin role
     function pause() external restricted {
         _pause();

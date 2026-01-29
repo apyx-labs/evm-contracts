@@ -22,6 +22,13 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
     /// @param newRate New exchange rate
     event ExchangeRateUpdated(uint256 oldRate, uint256 newRate);
 
+    /// @notice Emitted when tokens are withdrawn via withdrawTokens
+    /// @param caller Address that initiated the withdrawal (admin)
+    /// @param withdrawAsset Address of the token withdrawn
+    /// @param amount Amount withdrawn
+    /// @param receiver Address that received the tokens
+    event Withdraw(address indexed caller, address indexed withdrawAsset, uint256 amount, address indexed receiver);
+
     // ============ Core Functions ============
 
     /// @notice Redeem assets for reserve assets at the current exchange rate
