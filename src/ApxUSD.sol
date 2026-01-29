@@ -9,6 +9,9 @@ import {
     ERC20PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {
+    ERC20BurnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {
     AccessManagedUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -32,6 +35,7 @@ contract ApxUSD is
     ERC20Upgradeable,
     ERC20PermitUpgradeable,
     ERC20PausableUpgradeable,
+    ERC20BurnableUpgradeable,
     ERC20FreezeableUpgradable,
     AccessManagedUpgradeable,
     UUPSUpgradeable

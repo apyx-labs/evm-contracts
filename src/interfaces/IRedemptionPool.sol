@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 import {EInvalidAmount} from "../errors/InvalidAmount.sol";
@@ -76,7 +77,7 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
 
     /// @notice Get the asset token address
     /// @return Address of the asset token
-    function asset() external view returns (IERC20);
+    function asset() external view returns (ERC20Burnable);
 
     /// @notice Get the reserve asset token address
     /// @return Address of the reserve asset token

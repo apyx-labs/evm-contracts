@@ -7,6 +7,7 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 
 import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
 
@@ -22,7 +23,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     using SafeERC20 for IERC20;
 
     /// @notice Asset token to be redeemed (burned); e.g. apxUSD
-    IERC20 public immutable asset;
+    ERC20Burnable public immutable asset;
     /// @notice Reserve asset paid out on redemption; e.g. USDC
     IERC20 public immutable reserveAsset;
     /// @notice Exchange rate: reserve asset per asset, 1e18 = 1:1 (reserveAmount = assetsAmount * exchangeRate / 1e18)
@@ -37,7 +38,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
      * @param asset_ Asset token (e.g. apxUSD)
      * @param reserveAsset_ Reserve asset token (e.g. USDC); must have same decimals as asset_
      */
-    constructor(address initialAuthority, IERC20 asset_, IERC20 reserveAsset_) AccessManaged(initialAuthority) {
+    constructor(address initialAuthority, ERC20Burnable asset_, IERC20 reserveAsset_) AccessManaged(initialAuthority) {
         if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
         if (address(asset_) == address(0)) revert InvalidAddress("asset");
         if (address(reserveAsset_) == address(0)) revert InvalidAddress("reserveAsset");
@@ -79,7 +80,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
             revert InsufficientBalance(address(this), balance, reserveAmount);
         }
         // Burn the asset and transfer out the reserve asset
-        asset.safeTransferFrom(msg.sender, address(0), assetsAmount);
+        asset.burnFrom(msg.sender, assetsAmount);
         reserveAsset.safeTransfer(receiver, reserveAmount);
 
         emit Redeemed(msg.sender, assetsAmount, reserveAmount);
