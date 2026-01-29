@@ -91,11 +91,11 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable {
 
     /// @inheritdoc IRedemptionPool
     function withdraw(uint256 amount, address receiver) external override restricted {
-        withdraw(address(reserveAsset), amount, receiver);
+        withdrawTokens(address(reserveAsset), amount, receiver);
     }
 
     /// @inheritdoc IRedemptionPool
-    function withdraw(address withdrawAsset, uint256 amount, address receiver) public override restricted {
+    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver) public override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
         if (receiver == address(0)) revert InvalidAddress("receiver");
 

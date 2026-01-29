@@ -50,10 +50,11 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
 
     /// @notice Withdraw excess assets from the contract
     /// @dev Restricted to admin role
+    /// @dev This function is used to support withdrawing tokens that are erroneously deposited to the redemption pool.
     /// @param withdrawAsset Address of the asset to withdraw
     /// @param amount Amount of the asset to withdraw
     /// @param receiver Address to receive the asset
-    function withdraw(address withdrawAsset, uint256 amount, address receiver) external;
+    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver) external;
 
     /// @notice Update the exchange rate (assets to reserve assets)
     /// @dev Restricted to admin role
