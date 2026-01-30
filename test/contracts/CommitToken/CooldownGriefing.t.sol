@@ -15,18 +15,26 @@ contract CommitTokenCooldownGriefingTest is CommitTokenBaseTest {
      * @dev Bob tries to add to Alice's request but it should revert because he's not the owner
      */
     function test_CooldownGriefing_Prevented_ThirdPartyCannotAddToRequest() public {
-        // Setup: Alice deposits and starts a redeem request
+        // Setup: Alice deposits and starts a redeem request directly with lockToken (CommitToken)
         mockToken.mint(alice, LARGE_AMOUNT);
-        uint256 aliceShares = deposit(alice, LARGE_AMOUNT);
-        requestRedeem(alice, aliceShares);
+
+        vm.startPrank(alice);
+        mockToken.approve(address(lockToken), LARGE_AMOUNT);
+        uint256 aliceShares = lockToken.deposit(LARGE_AMOUNT, alice);
+        lockToken.requestRedeem(aliceShares, alice, alice);
+        vm.stopPrank();
 
         // Time passes - 1 hour remaining
         vm.warp(block.timestamp + UNLOCKING_DELAY - 1 hours);
         assertEq(lockToken.cooldownRemaining(0, alice), 1 hours);
 
-        // Bob tries to grief by calling requestRedeem with alice as owner
+        // Bob deposits to lockToken and tries to grief by calling requestRedeem with alice as owner
         mockToken.mint(bob, MEDIUM_AMOUNT);
-        deposit(bob, MEDIUM_AMOUNT);
+
+        vm.startPrank(bob);
+        mockToken.approve(address(lockToken), MEDIUM_AMOUNT);
+        lockToken.deposit(MEDIUM_AMOUNT, bob);
+        vm.stopPrank();
 
         // This should revert because bob (msg.sender) is not an operator of alice (owner)
         vm.prank(bob);
@@ -42,20 +50,27 @@ contract CommitTokenCooldownGriefingTest is CommitTokenBaseTest {
      * @dev Users can reset their own cooldown by making multiple requests
      */
     function test_AccidentalSelfGriefing_StillPossible() public {
-        // Setup: Alice deposits enough for two requests
+        // Setup: Alice deposits enough for two requests directly with lockToken (CommitToken)
         mockToken.mint(alice, VERY_LARGE_AMOUNT);
-        uint256 aliceFirstShares = deposit(alice, LARGE_AMOUNT);
+
+        vm.startPrank(alice);
+        mockToken.approve(address(lockToken), LARGE_AMOUNT);
+        uint256 aliceFirstShares = lockToken.deposit(LARGE_AMOUNT, alice);
 
         // Alice makes first request
-        requestRedeem(alice, aliceFirstShares);
+        lockToken.requestRedeem(aliceFirstShares, alice, alice);
+        vm.stopPrank();
 
         // Time passes - 1 hour remaining
         vm.warp(block.timestamp + UNLOCKING_DELAY - 1 hours);
         assertEq(lockToken.cooldownRemaining(0, alice), 1 hours);
 
         // Alice accidentally makes another request, resetting her cooldown
-        uint256 aliceSecondShares = deposit(alice, MEDIUM_AMOUNT);
-        requestRedeem(alice, aliceSecondShares);
+        vm.startPrank(alice);
+        mockToken.approve(address(lockToken), MEDIUM_AMOUNT);
+        uint256 aliceSecondShares = lockToken.deposit(MEDIUM_AMOUNT, alice);
+        lockToken.requestRedeem(aliceSecondShares, alice, alice);
+        vm.stopPrank();
 
         // Alice's cooldown is reset to full delay
         assertEq(lockToken.cooldownRemaining(0, alice), UNLOCKING_DELAY);
