@@ -83,7 +83,7 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
     /// @return Address of the reserve asset token
     function reserveAsset() external view returns (IERC20);
 
-    /// @notice Get the current USDC reserve balance
-    /// @return USDC balance available for redemptions
+    /// @notice Get the current reserve asset balance
+    /// @return Reserve asset balance available for redemptions
     function reserveBalance() external view returns (uint256);
 }
