@@ -3,6 +3,8 @@ pragma solidity 0.8.30;
 
 import {MinterTest} from "./BaseTest.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
 
 /**
  * @title MinterV0 Pause/Unpause Tests
@@ -23,8 +25,8 @@ contract MinterV0_PauseUnpauseTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 1_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         vm.prank(minter);
-        vm.expectRevert();
         minterV0.requestMint(order, signature);
     }
 
@@ -56,8 +58,8 @@ contract MinterV0_PauseUnpauseTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 1_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         vm.prank(minter);
-        vm.expectRevert();
         minterV0.requestMint(order, signature);
     }
 
@@ -77,25 +79,25 @@ contract MinterV0_PauseUnpauseTest is MinterTest {
         minterV0.pause();
 
         // Attempt to execute mint (should fail)
+        vm.expectRevert(Pausable.EnforcedPause.selector);
         vm.prank(minter);
-        vm.expectRevert();
         minterV0.executeMint(operationId);
     }
 
     function test_RevertWhen_NonAdminCallsPause() public {
         // Minter tries to pause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, minter));
         vm.prank(minter);
-        vm.expectRevert();
         minterV0.pause();
 
         // Guardian tries to pause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vm.prank(guardian);
-        vm.expectRevert();
         minterV0.pause();
 
         // Alice tries to pause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         vm.prank(alice);
-        vm.expectRevert();
         minterV0.pause();
     }
 
@@ -105,18 +107,18 @@ contract MinterV0_PauseUnpauseTest is MinterTest {
         minterV0.pause();
 
         // Minter tries to unpause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, minter));
         vm.prank(minter);
-        vm.expectRevert();
         minterV0.unpause();
 
         // Guardian tries to unpause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, guardian));
         vm.prank(guardian);
-        vm.expectRevert();
         minterV0.unpause();
 
         // Alice tries to unpause (should fail)
+        vm.expectRevert(abi.encodeWithSelector(IAccessManaged.AccessManagedUnauthorized.selector, alice));
         vm.prank(alice);
-        vm.expectRevert();
         minterV0.unpause();
     }
 
