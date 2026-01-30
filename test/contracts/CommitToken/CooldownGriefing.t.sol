@@ -37,8 +37,8 @@ contract CommitTokenCooldownGriefingTest is CommitTokenBaseTest {
         vm.stopPrank();
 
         // This should revert because bob (msg.sender) is not an operator of alice (owner)
-        vm.prank(bob);
         vm.expectRevert(Errors.invalidCaller());
+        vm.prank(bob);
         lockToken.requestRedeem(1 wei, alice, alice);
 
         // Alice's cooldown should be unchanged
