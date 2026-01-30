@@ -16,8 +16,7 @@ import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
  * @notice Redeems asset tokens for reserve assets at a configurable exchange rate
  * @dev Non-upgradeable. Uses AccessManager for role-based access; ROLE_REDEEMER for redeem(), ADMIN for
  *      deposit/withdraw/setExchangeRate/pause/unpause. Exchange rate is reserve asset per asset (1e18 = 1:1).
- *      The asset MUST support burning by transferring to address(0); redeem transfers asset from caller
- *      to address(0). If the asset reverts or returns false for transfer to address(0), redeem will fail.
+ *      The asset MUST support burnFrom(address,uint256) as defined in ERC20Burnable.
  */
 contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
