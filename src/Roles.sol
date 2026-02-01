@@ -5,6 +5,7 @@ import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManage
 import {ApxUSD} from "./ApxUSD.sol";
 import {ApyUSD} from "./ApyUSD.sol";
 import {CommitToken} from "./CommitToken.sol";
+import {MinterV0} from "./MinterV0.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
@@ -68,12 +69,11 @@ library Roles {
      * @param apxUSD The ApxUSD contract
      */
     function assignAdminTargetsFor(AccessManager self, ApxUSD apxUSD) internal {
-        bytes4[] memory selectors = new bytes4[](5);
+        bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = ApxUSD.pause.selector;
         selectors[1] = ApxUSD.unpause.selector;
         selectors[2] = ApxUSD.setSupplyCap.selector;
-        selectors[3] = ApxUSD.freeze.selector;
-        selectors[4] = ApxUSD.unfreeze.selector;
+        selectors[3] = ApxUSD.setDenyList.selector;
         self.setTargetFunctionRole(address(apxUSD), selectors, ADMIN_ROLE);
     }
 
@@ -83,9 +83,11 @@ library Roles {
      * @param minterContract The MinterV0 contract
      */
     function assignAdminTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
-        bytes4[] memory selectors = new bytes4[](2);
+        bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = IMinterV0.setMaxMintAmount.selector;
         selectors[1] = IMinterV0.setRateLimit.selector;
+        selectors[2] = MinterV0.pause.selector;
+        selectors[3] = MinterV0.unpause.selector;
         self.setTargetFunctionRole(address(minterContract), selectors, ADMIN_ROLE);
     }
 
@@ -95,18 +97,15 @@ library Roles {
      * @param apyUSD The ApyUSD contract
      */
     function assignAdminTargetsFor(AccessManager self, ApyUSD apyUSD) internal {
-        bytes4[] memory selectors = new bytes4[](9);
+        bytes4[] memory selectors = new bytes4[](7);
         selectors[0] = ApyUSD.pause.selector;
         selectors[1] = ApyUSD.unpause.selector;
 
-        selectors[2] = ApyUSD.freeze.selector;
-        selectors[3] = ApyUSD.unfreeze.selector;
-
-        selectors[4] = ApyUSD.setDenyList.selector;
-        selectors[5] = ApyUSD.setUnlockToken.selector;
-        selectors[6] = ApyUSD.setVesting.selector;
-        selectors[7] = ApyUSD.setUnlockingFee.selector;
-        selectors[8] = ApyUSD.setFeeWallet.selector;
+        selectors[2] = ApyUSD.setDenyList.selector;
+        selectors[3] = ApyUSD.setUnlockToken.selector;
+        selectors[4] = ApyUSD.setVesting.selector;
+        selectors[5] = ApyUSD.setUnlockingFee.selector;
+        selectors[6] = ApyUSD.setFeeWallet.selector;
         self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);
     }
 
@@ -155,8 +154,9 @@ library Roles {
      * @param yieldDistributor The YieldDistributor contract
      */
     function assignAdminTargetsFor(AccessManager self, IYieldDistributor yieldDistributor) internal {
-        bytes4[] memory selectors = new bytes4[](1);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IYieldDistributor.setVesting.selector;
+        selectors[1] = IYieldDistributor.setSigningDelegate.selector;
         self.setTargetFunctionRole(address(yieldDistributor), selectors, ADMIN_ROLE);
     }
 

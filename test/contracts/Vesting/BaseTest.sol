@@ -68,18 +68,20 @@ abstract contract VestingTest is Test {
         vm.prank(admin);
         accessManager = new AccessManager(admin);
 
+        // Deploy AddressList
+        denyList = new AddressList(address(accessManager));
+        vm.label(address(denyList), "denyList");
+
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData =
-            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), APX_SUPPLY_CAP));
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
+        );
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         vm.label(address(apxUSDImpl), "apxUSDImpl");
         vm.label(address(apxUSDProxy), "apxUSDProxy");
-
-        // Deploy AddressList
-        denyList = new AddressList(address(accessManager));
 
         // Deploy ApyUSD (vault)
         ApyUSD apyUSDImpl = new ApyUSD();

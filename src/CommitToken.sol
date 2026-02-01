@@ -7,6 +7,7 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {ERC4626} from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC7540.sol";
 
 import {ICommitToken} from "./interfaces/ICommitToken.sol";
@@ -20,7 +21,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
  *      in the async redeem request system. Future versions could support transferability if needed.
  * @dev TODO: Add support for freezing
  */
-contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ERC20Pausable {
+contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ERC20Pausable, ERC165 {
     // ========================================
     // Storage
     // ========================================
@@ -468,5 +469,20 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      */
     function isOperator(address controller, address operator) public view virtual returns (bool) {
         return controller == operator;
+    }
+
+    // ========================================
+    // ERC165 Support
+    // ========================================
+
+    /**
+     * @notice Returns true if the contract implements the interface
+     * @dev Implements ERC-165 as required by ERC-7540 specification
+     * @param interfaceId The interface identifier to check
+     * @return true if the contract implements the interface
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return interfaceId == type(IERC7540Redeem).interfaceId || interfaceId == type(IERC7540Operator).interfaceId
+            || super.supportsInterface(interfaceId);
     }
 }

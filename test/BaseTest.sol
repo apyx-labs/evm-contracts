@@ -118,19 +118,20 @@ abstract contract BaseTest is Test {
         accessManager = new AccessManager(admin);
         vm.label(address(accessManager), "AccessManager");
 
+        // Deploy AddressList
+        denyList = new AddressList(address(accessManager));
+        vm.label(address(denyList), "denyList");
+
         // Deploy ApxUSD (underlying asset)
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData =
-            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), APX_SUPPLY_CAP));
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
+        );
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 
         vm.label(address(apxUSDImpl), "apxUSDImpl");
         vm.label(address(apxUSD), "apxUSD");
-
-        // Deploy AddressList (deny list)
-        denyList = new AddressList(address(accessManager));
-        vm.label(address(denyList), "denyList");
 
         // Deploy ApyUSD (vault)
         ApyUSD apyUSDImpl = new ApyUSD();
@@ -154,7 +155,8 @@ abstract contract BaseTest is Test {
         vm.label(address(vesting), "vesting");
 
         // Deploy YieldDistributor
-        yieldDistributor = new YieldDistributor(address(apxUSD), address(accessManager), address(vesting));
+        yieldDistributor =
+            new YieldDistributor(address(apxUSD), address(accessManager), address(vesting), address(minter));
         vm.label(address(yieldDistributor), "yieldDistributor");
 
         // Deploy UnlockToken
@@ -255,6 +257,19 @@ abstract contract BaseTest is Test {
     }
 
     // ========================================
+    // Address List Helpers
+    // ========================================
+
+    /**
+     * @notice Helper to add an address to the deny list
+     * @param user Address to add to the deny list
+     */
+    function addToDenyList(address user) internal {
+        vm.prank(admin);
+        denyList.add(user);
+    }
+
+    // ========================================
     // ApxUSD Helpers
     // ========================================
 
@@ -292,6 +307,17 @@ abstract contract BaseTest is Test {
     // ========================================
     // ApyUSD Helpers
     // ========================================
+
+    /**
+     * @notice Helper to transfer ApyUSD tokens from one user to another
+     * @param from Address to transfer from
+     * @param to Address to transfer to
+     * @param amount Amount of ApyUSD to transfer
+     */
+    function transferApyUSD(address from, address to, uint256 amount) internal {
+        vm.prank(from);
+        apyUSD.transfer(to, amount);
+    }
 
     /**
      * @notice Helper to deposit apxUSD and receive apyUSD shares

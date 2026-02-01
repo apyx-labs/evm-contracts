@@ -52,13 +52,6 @@ interface IApyUSD is EAddressNotSet, EDenied {
     event UnlockTokenDepositError(uint256 assets, uint256 unlockTokenShares);
 
     /**
-     * @notice Emitted when the deny list contract is updated
-     * @param oldDenyList Previous deny list contract address
-     * @param newDenyList New deny list contract address
-     */
-    event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
-
-    /**
      * @notice Emitted when the Vesting contract is updated
      * @param oldVesting Previous Vesting contract address
      * @param newVesting New Vesting contract address

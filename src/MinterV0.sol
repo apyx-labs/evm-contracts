@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
@@ -24,7 +24,6 @@ import {IMinterV0} from "./interfaces/IMinterV0.sol";
  * - EIP-712 typed structured data hashing
  */
 contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
-    using ECDSA for bytes32;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
 
     // ============================================
@@ -97,20 +96,33 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     // ============================================
 
     /**
-     * @notice Returns the EIP-712 typed hash for an order
-     * @param order The mint order to hash
-     * @return The EIP-712 typed hash
+     * @notice Returns the EIP-712 domain separator
+     * @return The domain separator for this contract
      */
-    function hashOrder(Order calldata order) public pure returns (bytes32) {
-        // @dev This is only done during minting, which is not a hot path
-        // forge-lint: disable-start(asm-keccak256)
-        bytes32 structHash = keccak256(
-            abi.encodePacked(
-                ORDER_TYPEHASH, order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount
-            )
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        return _domainSeparatorV4();
+    }
+
+    /**
+     * @notice Returns the EIP-712 struct hash for an order
+     * @dev Returns the struct hash according to EIP-712 standard
+     * @param order The mint order to hash
+     * @return The struct hash
+     */
+    function structHashOrder(Order calldata order) public pure returns (bytes32) {
+        return keccak256(
+            abi.encode(ORDER_TYPEHASH, order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount)
         );
-        // forge-lint: disable-end(asm-keccak256)
-        return structHash;
+    }
+
+    /**
+     * @notice Returns the EIP-712 typed hash for an order
+     * @dev This returns the full EIP-712 digest that should be signed
+     * @param order The mint order to hash
+     * @return The EIP-712 compliant digest
+     */
+    function hashOrder(Order calldata order) public view returns (bytes32) {
+        return _hashTypedDataV4(structHashOrder(order));
     }
 
     /**
@@ -146,11 +158,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             revert MintAmountTooLarge(order.amount, maxMintAmount);
         }
 
-        // Verify signature
+        // Verify signature using SignatureChecker (supports EOA and ERC-1271 contract signatures)
         bytes32 digest = hashOrder(order);
-        address signer = digest.recover(signature);
-
-        if (signer != order.beneficiary) {
+        if (!SignatureChecker.isValidSignatureNowCalldata(order.beneficiary, digest, signature)) {
             revert InvalidSignature();
         }
     }
