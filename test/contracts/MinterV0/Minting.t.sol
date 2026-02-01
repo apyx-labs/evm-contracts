@@ -825,4 +825,120 @@ contract MinterV0_MintTest is MinterTest {
         IMinterV0.MintStatus status2 = minterV0.mintStatus(operationId);
         assertEq(uint256(status2), uint256(IMinterV0.MintStatus.Expired));
     }
+
+    /**
+     * @notice Comprehensive fuzz test for minting with varied nonce values and multiple beneficiaries
+     * @dev This test fuzzes:
+     *   - Initial nonce value (starting point for each beneficiary)
+     *   - Mint amounts (for each individual mint)
+     *   - Number of mints per beneficiary
+     *   - Multiple beneficiaries (alice and bob)
+     */
+    function testFuzz_MintWithVariedNoncesAndMultipleBeneficiaries(
+        uint48 initialNonce,
+        uint208 mintAmount,
+        uint8 numMints
+    ) public {
+        // Bound inputs to reasonable ranges
+        // Keep initialNonce small (0-50) to make the test practical while still covering varied nonces
+        initialNonce = uint48(bound(initialNonce, 0, 50));
+        mintAmount = uint208(bound(mintAmount, 1e18, MAX_MINT_AMOUNT));
+        numMints = uint8(bound(numMints, 1, 10)); // Test 1-10 mints per beneficiary
+
+        // Calculate total mint amount and ensure it doesn't exceed supply cap
+        uint256 totalMintPerBeneficiary = uint256(mintAmount) * uint256(numMints);
+        uint256 totalMintBothBeneficiaries = totalMintPerBeneficiary * 2;
+
+        // Skip test if total would exceed supply cap
+        vm.assume(totalMintBothBeneficiaries <= APX_SUPPLY_CAP);
+
+        // Set initial nonces for both beneficiaries by consuming dummy orders
+        // This simulates prior activity and establishes the starting nonce
+        if (initialNonce > 0) {
+            for (uint48 i = 0; i < initialNonce; i++) {
+                // Create dummy orders to increment nonces
+                IMinterV0.Order memory dummyAliceOrder = _createOrder(alice, i, 1e18);
+                bytes memory dummyAliceSig = _signOrder(dummyAliceOrder, alicePrivateKey);
+                vm.prank(minter);
+                bytes32 dummyAliceOpId = minterV0.requestMint(dummyAliceOrder, dummyAliceSig);
+                // Clean up dummy order
+                vm.prank(guardian);
+                minterV0.cancelMint(dummyAliceOpId);
+
+                IMinterV0.Order memory dummyBobOrder = _createOrder(bob, i, 1e18);
+                bytes memory dummyBobSig = _signOrder(dummyBobOrder, bobPrivateKey);
+                vm.prank(minter);
+                bytes32 dummyBobOpId = minterV0.requestMint(dummyBobOrder, dummyBobSig);
+                // Clean up dummy order
+                vm.prank(guardian);
+                minterV0.cancelMint(dummyBobOpId);
+            }
+        }
+
+        // Verify initial nonces are set correctly
+        assertEq(minterV0.nonce(alice), initialNonce, "Alice initial nonce not set correctly");
+        assertEq(minterV0.nonce(bob), initialNonce, "Bob initial nonce not set correctly");
+
+        // Arrays to track operation IDs for each beneficiary
+        bytes32[] memory aliceOpIds = new bytes32[](numMints);
+        bytes32[] memory bobOpIds = new bytes32[](numMints);
+
+        // Request mints for both alice and bob with sequential nonces
+        for (uint256 i = 0; i < numMints; i++) {
+            uint48 currentNonce = initialNonce + uint48(i);
+
+            // Alice's mint request
+            IMinterV0.Order memory aliceOrder = _createOrder(alice, currentNonce, mintAmount);
+            bytes memory aliceSig = _signOrder(aliceOrder, alicePrivateKey);
+
+            vm.prank(minter);
+            aliceOpIds[i] = minterV0.requestMint(aliceOrder, aliceSig);
+
+            // Bob's mint request
+            IMinterV0.Order memory bobOrder = _createOrder(bob, currentNonce, mintAmount);
+            bytes memory bobSig = _signOrder(bobOrder, bobPrivateKey);
+
+            vm.prank(minter);
+            bobOpIds[i] = minterV0.requestMint(bobOrder, bobSig);
+
+            // Verify nonces incremented correctly
+            assertEq(minterV0.nonce(alice), currentNonce + 1, "Alice nonce not incremented correctly after request");
+            assertEq(minterV0.nonce(bob), currentNonce + 1, "Bob nonce not incremented correctly after request");
+        }
+
+        // Fast forward past delay to make all mints executable
+        vm.warp(block.timestamp + MINT_DELAY + 1);
+
+        // Execute all mints for both beneficiaries
+        for (uint256 i = 0; i < numMints; i++) {
+            // Execute alice's mint
+            vm.prank(minter);
+            minterV0.executeMint(aliceOpIds[i]);
+
+            // Execute bob's mint
+            vm.prank(minter);
+            minterV0.executeMint(bobOpIds[i]);
+        }
+
+        // Verify final balances
+        assertEq(apxUSD.balanceOf(alice), totalMintPerBeneficiary, "Alice did not receive correct total amount");
+        assertEq(apxUSD.balanceOf(bob), totalMintPerBeneficiary, "Bob did not receive correct total amount");
+
+        // Verify total supply
+        assertEq(apxUSD.totalSupply(), totalMintBothBeneficiaries, "Total supply does not match sum of all mints");
+
+        // Verify final nonces
+        uint48 expectedFinalNonce = initialNonce + uint48(numMints);
+        assertEq(minterV0.nonce(alice), expectedFinalNonce, "Alice final nonce incorrect");
+        assertEq(minterV0.nonce(bob), expectedFinalNonce, "Bob final nonce incorrect");
+
+        // Verify all pending orders were cleaned up
+        for (uint256 i = 0; i < numMints; i++) {
+            IMinterV0.Order memory aliceOrder = minterV0.pendingOrder(aliceOpIds[i]);
+            assertEq(aliceOrder.beneficiary, address(0), "Alice order not cleaned up after execution");
+
+            IMinterV0.Order memory bobOrder = minterV0.pendingOrder(bobOpIds[i]);
+            assertEq(bobOrder.beneficiary, address(0), "Bob order not cleaned up after execution");
+        }
+    }
 }
