@@ -15,6 +15,6 @@ abstract contract ApxUSDBaseTest is BaseTest {
      */
     function mint(address to, uint256 amount) internal {
         vm.prank(admin);
-        apxUSD.mint(to, amount);
+        apxUSD.mint(to, amount, 0);
     }
 }

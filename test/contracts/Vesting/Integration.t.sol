@@ -195,7 +195,7 @@ contract VestingIntegrationTest is VestingTest {
         // Mint apxUSD to alice (already done in setUp, but adding more)
         depositAmount = bound(depositAmount, 2, DEPOSIT_AMOUNT);
         vm.prank(admin);
-        apxUSD.mint(alice, depositAmount);
+        apxUSD.mint(alice, depositAmount, 0);
 
         // Deposit apxUSD to apyUSD
         deposit(alice, depositAmount);

@@ -11,7 +11,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_FrozenAddressCannotTransfer() public {
         // Mint tokens to alice
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         // Deny user
         vm.prank(admin);
@@ -26,7 +26,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_CannotTransferToFrozenAddress() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         address recipient = address(0x7);
 
@@ -43,7 +43,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_FrozenAddressCanApprove() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         // Deny user
         vm.prank(admin);
@@ -65,13 +65,13 @@ contract ApxUSDFreezeableTest is BaseTest {
         // Try to mint to denied address - should fail
         vm.prank(admin);
         vm.expectRevert();
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
     }
 
     function test_TransferAfterUnfreeze() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         // Deny and undeny user
         vm.startPrank(admin);
@@ -96,7 +96,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_TransferFromWithFrozenOwner() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         // User approves spender
         address spender = address(0x7);
@@ -116,7 +116,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_TransferFromWithFrozenRecipient() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         address spender = address(0x7);
         address recipient = address(0x8);
@@ -138,7 +138,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_TransferFromWithFrozenSpender() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         address spender = address(0x7);
 
@@ -175,7 +175,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_BalanceUnchangedAfterFreeze() public {
         // Mint tokens to user
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         uint256 balanceBefore = apxUSD.balanceOf(alice);
 
@@ -219,7 +219,7 @@ contract ApxUSDFreezeableTest is BaseTest {
     function test_FreezeUnfreezeCycle() public {
         // Mint tokens
         vm.prank(admin);
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
 
         address recipient = address(0x7);
 

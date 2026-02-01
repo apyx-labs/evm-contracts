@@ -267,7 +267,7 @@ contract ApyUSDDepositTest is ApyUSDTest {
 
         // Simulate yield by directly transferring assets to vault
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), yieldAmount);
+        apxUSD.mint(address(apyUSD), yieldAmount, 0);
 
         // Verify share price increased
         uint256 totalAssetsBefore = apyUSD.totalAssets();

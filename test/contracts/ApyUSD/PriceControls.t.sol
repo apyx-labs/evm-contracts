@@ -56,7 +56,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         // Simulate yield to increase share price
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT);
+        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT, 0);
 
         uint256 depositAmount = MEDIUM_AMOUNT;
         // Set minShares too high (expecting 1:1 but will get less due to increased share price)
@@ -126,7 +126,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         // Simulate yield to increase share price
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT);
+        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT, 0);
 
         uint256 sharesToMint = MEDIUM_AMOUNT;
         // Set maxAssets too low (will need more assets due to increased share price)
@@ -329,7 +329,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         // Simulate front-running: yield is added, increasing share price
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT / 10);
+        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT / 10, 0);
 
         // Bob's transaction still succeeds because slippage is within tolerance
         vm.startPrank(bob);
@@ -354,7 +354,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         // Simulate large front-running: significant yield is added
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT);
+        apxUSD.mint(address(apyUSD), MEDIUM_AMOUNT, 0);
 
         // Bob's transaction should revert due to excessive slippage
         vm.startPrank(bob);

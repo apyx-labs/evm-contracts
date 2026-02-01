@@ -21,9 +21,9 @@ abstract contract ApyUSDTest is BaseTest {
      */
     function mintApxUSD() internal {
         vm.startPrank(admin);
-        apxUSD.mint(alice, LARGE_AMOUNT);
-        apxUSD.mint(bob, LARGE_AMOUNT);
-        apxUSD.mint(charlie, LARGE_AMOUNT);
+        apxUSD.mint(alice, LARGE_AMOUNT, 0);
+        apxUSD.mint(bob, LARGE_AMOUNT, 0);
+        apxUSD.mint(charlie, LARGE_AMOUNT, 0);
         vm.stopPrank();
     }
 

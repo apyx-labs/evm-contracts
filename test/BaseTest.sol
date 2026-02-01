@@ -274,13 +274,22 @@ abstract contract BaseTest is Test {
     // ========================================
 
     /**
-     * @notice Mints ApxUSD tokens to test accounts for testing
+     * @notice Helper to mint ApxUSD tokens to a user
      * @param user Address to mint to
      * @param amount Amount of ApxUSD to mint
      */
     function mintApxUSD(address user, uint256 amount) internal {
+        mintApxUSD(user, amount, 0);
+    }
+
+    /**
+     * @notice Mints ApxUSD tokens to test accounts for testing
+     * @param user Address to mint to
+     * @param amount Amount of ApxUSD to mint
+     */
+    function mintApxUSD(address user, uint256 amount, uint256 nonce) internal {
         vm.prank(admin);
-        apxUSD.mint(user, amount);
+        apxUSD.mint(user, amount, nonce);
     }
 
     /**

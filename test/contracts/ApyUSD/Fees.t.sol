@@ -413,7 +413,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
 
         // Simulate yield
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), SMALL_AMOUNT);
+        apxUSD.mint(address(apyUSD), SMALL_AMOUNT, 0);
 
         // Set 1% fee and fee wallet
         vm.prank(admin);

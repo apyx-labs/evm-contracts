@@ -43,13 +43,13 @@ contract ApxUSDTest is ApxUSDBaseTest {
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(ApxUSD.SupplyCapExceeded.selector, overCapAmount, APX_SUPPLY_CAP));
-        apxUSD.mint(alice, overCapAmount);
+        apxUSD.mint(alice, overCapAmount, 0);
     }
 
     function test_RevertWhen_MintWithoutMinterRole() public {
         vm.prank(alice);
         vm.expectRevert();
-        apxUSD.mint(alice, MEDIUM_AMOUNT);
+        apxUSD.mint(alice, MEDIUM_AMOUNT, 0);
     }
 
     function test_SetSupplyCap() public {
