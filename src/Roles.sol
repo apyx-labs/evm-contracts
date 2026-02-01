@@ -10,6 +10,8 @@ import {IMinterV0} from "./interfaces/IMinterV0.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
+import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
+import {RedemptionPoolV0} from "./RedemptionPoolV0.sol";
 
 /**
  * @title Roles
@@ -40,6 +42,10 @@ library Roles {
     /// @dev Can call YieldDistributor.depositYield() to deposit yield to vesting
     uint64 public constant ROLE_YIELD_OPERATOR = 7;
 
+    /// @notice Redeemer role - granted to addresses that can perform redemptions
+    /// @dev Can call RedemptionPoolV0.redeem() to burn asset and pay out reserve
+    uint64 public constant ROLE_REDEEMER = 8;
+
     // ========================================
     // Extension Functions for AccessManager
     // ========================================
@@ -54,6 +60,7 @@ library Roles {
         self.setRoleAdmin(MINT_GUARD_ROLE, ADMIN_ROLE);
         self.setRoleAdmin(YIELD_DISTRIBUTOR_ROLE, ADMIN_ROLE);
         self.setRoleAdmin(ROLE_YIELD_OPERATOR, ADMIN_ROLE);
+        self.setRoleAdmin(ROLE_REDEEMER, ADMIN_ROLE);
     }
 
     /**
@@ -154,6 +161,22 @@ library Roles {
     }
 
     /**
+     * @notice Assigns ADMIN_ROLE function selectors for IRedemptionPool contract (extension function)
+     * @param self The AccessManager contract
+     * @param pool The IRedemptionPool contract
+     */
+    function assignAdminTargetsFor(AccessManager self, RedemptionPoolV0 pool) internal {
+        bytes4[] memory selectors = new bytes4[](6);
+        selectors[0] = RedemptionPoolV0.deposit.selector;
+        selectors[1] = RedemptionPoolV0.withdraw.selector;
+        selectors[2] = RedemptionPoolV0.withdrawTokens.selector;
+        selectors[3] = RedemptionPoolV0.setExchangeRate.selector;
+        selectors[4] = RedemptionPoolV0.pause.selector;
+        selectors[5] = RedemptionPoolV0.unpause.selector;
+        self.setTargetFunctionRole(address(pool), selectors, ADMIN_ROLE);
+    }
+
+    /**
      * @notice Assigns MINTER_ROLE function selectors for MinterV0 contract (extension function)
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
@@ -208,5 +231,16 @@ library Roles {
         bytes4[] memory operatorSelectors = new bytes4[](1);
         operatorSelectors[0] = IYieldDistributor.depositYield.selector;
         self.setTargetFunctionRole(address(yieldDistributor), operatorSelectors, ROLE_YIELD_OPERATOR);
+    }
+
+    /**
+     * @notice Assigns ADMIN_ROLE and ROLE_REDEEMER function selectors for RedemptionPool contract (extension function)
+     * @param self The AccessManager contract
+     * @param pool The RedemptionPool contract (e.g. RedemptionPoolV0)
+     */
+    function assignRedeemerTargetsFor(AccessManager self, IRedemptionPool pool) internal {
+        bytes4[] memory redeemerSelectors = new bytes4[](1);
+        redeemerSelectors[0] = IRedemptionPool.redeem.selector;
+        self.setTargetFunctionRole(address(pool), redeemerSelectors, ROLE_REDEEMER);
     }
 }

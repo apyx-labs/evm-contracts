@@ -9,6 +9,9 @@ import {
     ERC20PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
 import {
+    ERC20BurnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import {
     AccessManagedUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
@@ -19,13 +22,13 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 /**
  * @title ApxUSD
  * @notice A stablecoin backed by off-chain preferred shares with dividend yields
- * @dev Implements ERC-20 with Permit (EIP-2612), pausability, freezing, and role-based access control
+ * @dev Implements ERC-20 with Permit (EIP-2612), pausability, deny listing, and role-based access control
  *
  * Features:
  * - Supply cap to limit total issuance
  * - MINT_STRAT for authorized minting contracts
  * - Pausable for emergency situations
- * - Freezeable addresses for compliance
+ * - DenyList addresses for compliance
  * - UUPS upgradeable pattern
  */
 contract ApxUSD is
@@ -34,6 +37,7 @@ contract ApxUSD is
     ERC20PermitUpgradeable,
     ERC20PausableUpgradeable,
     ERC20DenyListUpgradable,
+    ERC20BurnableUpgradeable,
     AccessManagedUpgradeable,
     UUPSUpgradeable
 {
