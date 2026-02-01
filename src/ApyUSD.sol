@@ -112,6 +112,8 @@ contract ApyUSD is
         $.denyList = IAddressList(initialDenyList);
         // unlockToken will be set via setUnlockToken() after deployment
         // vesting will be set via setVesting() after deployment
+        // unlockingFee will be set via setUnlockingFee() after deployment
+        // feeWallet will be set via setFeeWallet() after deployment
 
         emit DenyListUpdated(address(0), initialDenyList);
     }
