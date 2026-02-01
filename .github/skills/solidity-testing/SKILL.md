@@ -1,3 +1,8 @@
+---
+name: solidity-testing
+description: Guidelines for writing Solidity tests using Foundry Forge. Use this skill when writing or reviewing Solidity test files. Covers BaseTest inheritance, labeled addresses, vm.prank usage, error helpers, and fuzzing patterns.
+---
+
 # Solidity Testing Skill
 
 This skill provides guidelines and best practices for writing Solidity tests using Foundry Forge tooling in this repository.
@@ -271,7 +276,7 @@ function test_RevertWhen_CustomContractError() public {
 
 **PREFER to fuzz values and amounts** to test a wider range of inputs and edge cases.
 
-Foundry's fuzzing automatically generates random inputs for test parameters. Use `bound()` to constrain fuzzed values to valid ranges and `vm.assume()` to exclude invalid inputs.
+Foundry's fuzzing automatically generates random inputs for test parameters. Use `bound()` to constrain fuzzed values to valid ranges.
 
 ### Basic Fuzzing
 
@@ -303,20 +308,6 @@ function testFuzz_TransferAndWithdraw(uint256 depositAmount, uint256 withdrawAmo
     
     vm.prank(alice);
     lockToken.requestWithdraw(withdrawAmount, alice, alice);
-    
-    // Assertions...
-}
-```
-
-### Using vm.assume()
-
-```solidity
-function testFuzz_DivisionSafe(uint256 numerator, uint256 denominator) public {
-    // Exclude invalid inputs
-    vm.assume(denominator != 0);
-    vm.assume(numerator < type(uint256).max / 1e18); // Prevent overflow
-    
-    uint256 result = (numerator * 1e18) / denominator;
     
     // Assertions...
 }
@@ -408,7 +399,7 @@ For detailed information on all available Foundry cheatcodes and testing utiliti
 - `vm.warp(uint256)` - Set block.timestamp
 - `vm.roll(uint256)` - Set block.number
 - `vm.deal(address, uint256)` - Set ETH balance
-- `vm.assume(bool)` - Filter out fuzz inputs
+- `vm.assume(bool)` - Filter out fuzz inputs (use sparingly, prefer `bound()` for ranges)
 - `bound(uint256, uint256, uint256)` - Constrain fuzz inputs to a range
 - `makeAddr(string)` - Create labeled address
 - `makeAddrAndKey(string)` - Create labeled address with private key
