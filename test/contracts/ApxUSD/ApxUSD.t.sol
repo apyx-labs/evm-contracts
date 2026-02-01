@@ -3,6 +3,8 @@ pragma solidity 0.8.30;
 
 import {ApxUSDBaseTest} from "./BaseTest.sol";
 import {ApxUSD} from "../../../src/ApxUSD.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @dev todo: move apxUSD minting tests into own file
@@ -20,6 +22,32 @@ contract ApxUSDTest is ApxUSDBaseTest {
         assertEq(apxUSD.totalSupply(), 0);
         assertEq(apxUSD.supplyCapRemaining(), APX_SUPPLY_CAP);
         assertEq(apxUSD.authority(), address(accessManager));
+    }
+
+    /**
+     * @notice Test that initialization reverts when supply cap is zero
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroSupplyCap() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero supply cap (should revert)
+        bytes memory initData =
+            abi.encodeCall(newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), 0));
+
+        vm.expectRevert(Errors.invalidSupplyCap());
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
+     * @notice Test that initialization reverts when called twice
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeTwice() public {
+        // Try to initialize the already-initialized apxUSD contract again
+        vm.expectRevert();
+        apxUSD.initialize("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP);
     }
 
     function test_Mint() public {
