@@ -55,7 +55,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @notice Ensures only vault contract can call transfer functions
      * @dev This is only applied to the transferVestedYield function, so it is more efficient to inline
      */
-    // forge-lint: disable-next-line(unwrapped-modifier-logic)
+    // forge-lint: disable-next-item(unwrapped-modifier-logic)
     modifier onlyBeneficiary() {
         if (msg.sender != beneficiary) revert UnauthorizedTransfer();
         _;
