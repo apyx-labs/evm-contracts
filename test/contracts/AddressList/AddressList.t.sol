@@ -13,6 +13,22 @@ import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManage
  */
 contract AddressList_Test is AddressListTest {
     // ========================================
+    // Helper Functions
+    // ========================================
+
+    /**
+     * @notice Helper function to check if an address is one of the provided addresses
+     * @param addr The address to check
+     * @param a First address to compare against
+     * @param b Second address to compare against
+     * @param c Third address to compare against
+     * @return True if addr matches any of a, b, or c
+     */
+    function isOneOfAddresses(address addr, address a, address b, address c) internal pure returns (bool) {
+        return addr == a || addr == b || addr == c;
+    }
+
+    // ========================================
     // Constructor Tests
     // ========================================
 
@@ -261,9 +277,9 @@ contract AddressList_Test is AddressListTest {
         address addr2 = denyList.at(2);
 
         // All three addresses should be in the set
-        assertTrue(addr0 == alice || addr0 == bob || addr0 == charlie, "Index 0 should be one of the added addresses");
-        assertTrue(addr1 == alice || addr1 == bob || addr1 == charlie, "Index 1 should be one of the added addresses");
-        assertTrue(addr2 == alice || addr2 == bob || addr2 == charlie, "Index 2 should be one of the added addresses");
+        assertTrue(isOneOfAddresses(addr0, alice, bob, charlie), "Index 0 should be one of the added addresses");
+        assertTrue(isOneOfAddresses(addr1, alice, bob, charlie), "Index 1 should be one of the added addresses");
+        assertTrue(isOneOfAddresses(addr2, alice, bob, charlie), "Index 2 should be one of the added addresses");
 
         // All three should be unique
         assertTrue(addr0 != addr1 && addr0 != addr2 && addr1 != addr2, "All indices should return unique addresses");

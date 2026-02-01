@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {BaseTest as GlobalBaseTest} from "../../BaseTest.sol";
 
 /**
- * @title AddressListTest
+ * @title AddressList Base Test Contract
  * @notice Base test contract for AddressList testing
  * @dev Inherits from global BaseTest which provides:
  *   - AccessManager setup with admin role
