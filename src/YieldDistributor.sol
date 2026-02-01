@@ -6,6 +6,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
+import {ERC1271Delegated} from "./exts/ERC1271Delegated.sol";
 
 /**
  * @title YieldDistributor
@@ -21,7 +22,7 @@ import {IVesting} from "./interfaces/IVesting.sol";
  * - Admin-controlled vesting contract configuration
  * - Access control via AccessManager
  */
-contract YieldDistributor is AccessManaged, IYieldDistributor {
+contract YieldDistributor is AccessManaged, ERC1271Delegated, IYieldDistributor {
     using SafeERC20 for IERC20;
 
     // ========================================
@@ -44,11 +45,16 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
      * @param _asset Address of the apxUSD token contract
      * @param _authority Address of the AccessManager contract
      * @param _vesting Address of the Vesting contract
+     * @param _signingDelegate Address of the signature delegate
      */
-    constructor(address _asset, address _authority, address _vesting) AccessManaged(_authority) {
+    constructor(address _asset, address _authority, address _vesting, address _signingDelegate)
+        AccessManaged(_authority)
+        ERC1271Delegated(_signingDelegate)
+    {
         if (_asset == address(0)) revert InvalidAddress("asset");
         if (_authority == address(0)) revert InvalidAddress("authority");
         if (_vesting == address(0)) revert InvalidAddress("vesting");
+        if (_signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
 
         asset = IERC20(_asset);
         vesting = IVesting(_vesting);
@@ -82,6 +88,18 @@ contract YieldDistributor is AccessManaged, IYieldDistributor {
         vesting = IVesting(newVesting);
 
         emit VestingContractUpdated(oldVesting, newVesting);
+    }
+
+    /**
+     * @inheritdoc IYieldDistributor
+     */
+    function setSigningDelegate(address newSigningDelegate) external restricted {
+        if (newSigningDelegate == address(0)) revert InvalidAddress("newSigningDelegate");
+
+        address oldSigningDelegate = signingDelegate;
+        signingDelegate = newSigningDelegate;
+
+        emit SigningDelegateUpdated(oldSigningDelegate, newSigningDelegate);
     }
 
     /**

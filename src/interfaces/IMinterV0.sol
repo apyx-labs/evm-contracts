@@ -110,12 +110,11 @@ interface IMinterV0 is EInvalidAddress, EInvalidAmount {
     function hashOrder(Order calldata order) external view returns (bytes32);
 
     /**
-     * @notice Validates an order without executing it
+     * @notice Validates an order without executing it (reverts if invalid)
      * @param order The mint order to validate
      * @param signature The beneficiary's signature over the order
-     * @return bool True if the order is valid
      */
-    function validateOrder(Order calldata order, bytes calldata signature) external view returns (bool);
+    function validateOrder(Order calldata order, bytes calldata signature) external view;
 
     /**
      * @notice Requests a mint by validating the order and scheduling with AccessManager

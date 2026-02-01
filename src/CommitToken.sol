@@ -12,7 +12,14 @@ import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC754
 import {ICommitToken} from "./interfaces/ICommitToken.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
 
-// @dev TODO: Add support for freezing
+/**
+ * @title CommitToken
+ * @notice ERC4626 vault with asynchronous redeem requests and cooldown periods
+ * @dev This contract is non-transferable as an implementation convenience for the current version.
+ *      The non-transferability simplifies accounting and prevents transfer-related complexity
+ *      in the async redeem request system. Future versions could support transferability if needed.
+ * @dev TODO: Add support for freezing
+ */
 contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ERC20Pausable {
     // ========================================
     // Storage
@@ -148,6 +155,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
 
     /**
      * @notice Commit tokens are not transferable and only support minting and burning
+     * @dev Non-transferability is an implementation convenience for this version to simplify
+     *      the async redeem request accounting. Future versions may support transferability.
      * @inheritdoc ERC20
      */
     function _update(address from, address to, uint256 value) internal override(ERC20, ERC20Pausable) {

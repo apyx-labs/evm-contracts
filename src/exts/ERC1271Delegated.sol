@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
+import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 
 /**
  * @title ERC1271Delegated
@@ -11,9 +12,9 @@ import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/Signa
  *      so the delegate may be an EOA (ECDSA) or a contract (ERC-1271). See EIP-1271 and
  *      OpenZeppelin SignatureChecker documentation.
  */
-abstract contract ERC1271Delegated is IERC1271 {
+abstract contract ERC1271Delegated is IERC1271, EInvalidAddress {
     /// @notice Address that is allowed to sign on behalf of this contract (e.g. Foundation multisig)
-    address public signatureDelegate;
+    address public signingDelegate;
 
     /// @notice ERC-1271 magic value returned when the signature is valid
     bytes4 private constant _ERC1271_MAGIC = IERC1271.isValidSignature.selector;
@@ -23,10 +24,11 @@ abstract contract ERC1271Delegated is IERC1271 {
 
     /**
      * @notice Sets the signature delegate
-     * @param delegate_ Address that may sign on behalf of this contract
+     * @param _signingDelegate Address that may sign on behalf of this contract
      */
-    constructor(address delegate_) {
-        signatureDelegate = delegate_;
+    constructor(address _signingDelegate) {
+        if (_signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
+        signingDelegate = _signingDelegate;
     }
 
     /**
@@ -41,7 +43,9 @@ abstract contract ERC1271Delegated is IERC1271 {
         override
         returns (bytes4 magicValue)
     {
-        if (SignatureChecker.isValidSignatureNowCalldata(signatureDelegate, hash, signature)) {
+        if (signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
+
+        if (SignatureChecker.isValidSignatureNowCalldata(signingDelegate, hash, signature)) {
             return _ERC1271_MAGIC;
         }
         return _ERC1271_INVALID;

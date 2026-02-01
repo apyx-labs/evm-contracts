@@ -32,8 +32,14 @@ contract LinearVestV0 is AccessManaged, IVesting {
     /// @notice Total amount currently vesting
     uint256 public vestingAmount;
 
+    /// @notice Total amount that has been fully vested but not yet transferred to the beneficiary
+    uint256 public fullyVestedAmount;
+
     /// @notice Timestamp of the last deposit (when vesting period was reset)
     uint256 public lastDepositTimestamp;
+
+    /// @notice Timestamp of the last transfer (when vested yield was transferred to the beneficiary)
+    uint256 public lastTransferTimestamp;
 
     /// @notice Vesting period in seconds
     uint256 public vestingPeriod;
@@ -84,10 +90,22 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /**
-     * @notice Returns the amount of yield that has vested and is available
-     * @return Amount of vested yield
+     * @notice Returns the amount of yield that has vested and is available, including
+     *         fully vested yield. This is used to calculate vested amounts including
+     *         fully vested yield.
+     * @return Amount of vested yield including fully vested yield
      */
-    function vestedAmount() public view override returns (uint256) {
+    function vestedAmount() external view override returns (uint256) {
+        return fullyVestedAmount + _vestedAmount();
+    }
+
+    /**
+     * @notice Returns the amount of yield that has vested and is available, excluding
+     *         fully vested yield. This is used to calculate vested amounts without
+     *         double counting the fully vested yield.
+     * @return Amount of vested yield excluding fully vested yield
+     */
+    function _vestedAmount() internal view returns (uint256) {
         // slither-disable-next-line incorrect-equality
         if (vestingAmount == 0) return 0;
 
@@ -95,12 +113,20 @@ contract LinearVestV0 is AccessManaged, IVesting {
         unchecked {
             timeSinceLastDeposit = block.timestamp - lastDepositTimestamp;
         }
+
+        uint256 timeSinceLastTransfer;
+        unchecked {
+            timeSinceLastTransfer = block.timestamp - lastTransferTimestamp;
+        }
+
         // slither-disable-next-line timestamp
         if (timeSinceLastDeposit >= vestingPeriod) {
             return vestingAmount; // Fully vested
         }
+        uint256 timeBetweenDepositAndTransfer = lastTransferTimestamp - lastDepositTimestamp;
+        uint256 originalVestingAmount = vestingAmount * vestingPeriod / (vestingPeriod - timeBetweenDepositAndTransfer);
 
-        return (vestingAmount * timeSinceLastDeposit) / vestingPeriod;
+        return (originalVestingAmount * timeSinceLastTransfer) / vestingPeriod;
     }
 
     /**
@@ -108,17 +134,17 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @return Amount of unvested yield
      */
     function unvestedAmount() external view override returns (uint256) {
-        return _unvestedAmount(vestedAmount());
+        return _unvestedAmount(_vestedAmount());
     }
 
     /**
      * @notice Returns the amount of yield that is still vesting
      * @dev Internal function to calculate unvested amount without recalculating vested amount
-     * @param _vestedAmount Amount of vested yield
+     * @param amount Amount of vested yield
      * @return Amount of unvested yield
      */
-    function _unvestedAmount(uint256 _vestedAmount) internal view returns (uint256) {
-        return vestingAmount - _vestedAmount;
+    function _unvestedAmount(uint256 amount) internal view returns (uint256) {
+        return vestingAmount - amount;
     }
 
     // ========================================
@@ -134,16 +160,17 @@ contract LinearVestV0 is AccessManaged, IVesting {
     function depositYield(uint256 amount) external override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
 
-        // Calculate unvested amount BEFORE transferring (since transfer will modify vestingAmount)
-        uint256 vested = vestedAmount();
+        // Calculate unvested amount BEFORE transferring
+        uint256 vested = _vestedAmount();
         uint256 unvested = _unvestedAmount(vested);
 
-        // Add new amount to existing unvested amount
+        // Add new amount to fully vested and unvested amount
+        fullyVestedAmount += vested;
         vestingAmount = unvested + amount;
-        lastDepositTimestamp = block.timestamp;
 
-        // Transfer out any vested yield before resetting (if any)
-        _transferVestedYield(vested);
+        // Update timestamps
+        lastDepositTimestamp = block.timestamp;
+        lastTransferTimestamp = block.timestamp;
 
         // Transfer assets from caller
         asset.safeTransferFrom(msg.sender, address(this), amount);
@@ -155,25 +182,21 @@ contract LinearVestV0 is AccessManaged, IVesting {
      * @dev Only callable by vault contract. No-op if no vested yield available.
      */
     function transferVestedYield() external override onlyBeneficiary {
-        uint256 vested = vestedAmount();
+        uint256 vested = _vestedAmount();
         vestingAmount -= vested;
 
-        _transferVestedYield(vested);
-    }
+        uint256 transferAmount = vested + fullyVestedAmount;
 
-    /**
-     * @notice Internal function to transfer vested yield to the beneficiary
-     * @dev No-op if no vested yield available. Updates vesting state.
-     * @param _vestedAmount Amount of vested yield to transfer
-     */
-    function _transferVestedYield(uint256 _vestedAmount) internal {
+        fullyVestedAmount = 0;
+        lastTransferTimestamp = block.timestamp;
+
         // No-op if no vested yield available
         // slither-disable-next-line incorrect-equality,timestamp
-        if (_vestedAmount == 0) return;
+        if (transferAmount == 0) return;
 
         // Transfer vested yield to beneficiary
-        asset.safeTransfer(beneficiary, _vestedAmount);
-        emit VestedYieldTransferred(beneficiary, _vestedAmount);
+        asset.safeTransfer(beneficiary, transferAmount);
+        emit VestedYieldTransferred(beneficiary, transferAmount);
     }
 
     /**

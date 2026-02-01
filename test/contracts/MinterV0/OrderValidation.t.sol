@@ -26,9 +26,8 @@ contract MinterV0_OrderValidationTest is MinterTest {
 
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
-        // Should validate successfully
-        bool isValid = minterV0.validateOrder(order, signature);
-        assertTrue(isValid);
+        // Should validate successfully (no revert)
+        minterV0.validateOrder(order, signature);
     }
 
     function test_RevertWhen_ValidateOrderNotBeforeFuture() public {

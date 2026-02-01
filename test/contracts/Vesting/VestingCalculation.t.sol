@@ -18,6 +18,9 @@ contract VestingCalculationTest is VestingTest {
         deal(address(apxUSD), yieldDistributor, amount);
         depositYield(yieldDistributor, amount);
 
+        assertEq(vesting.vestedAmount(), 0, "No yield should be vested initially");
+        assertEq(vesting.unvestedAmount(), amount, "All yield should be unvested initially");
+
         warpPastVestingPeriod();
 
         assertEq(vesting.vestedAmount(), amount, "All yield should be vested after period");
