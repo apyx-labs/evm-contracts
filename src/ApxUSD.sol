@@ -120,7 +120,10 @@ contract ApxUSD is
      * @dev Only callable through AccessManager with MINT_STRAT_ROLE
      * @param to Address to receive the minted tokens
      * @param amount Amount of tokens to mint (in wei, 18 decimals)
-     * @param nonce Nonce for the mint. Included to ensure uniqueness when scheduling with AccessManager.
+     * @param nonce Nonce for the mint
+     * @dev The nonce is not enforced in ApxUSD and is only included to ensure uniqueness
+     *      when scheduling operations with AccessManager. The nonce MUST be enforced by
+     *      a Minter contract (ie MinterV0).
      */
     function mint(address to, uint256 amount, uint256 nonce) external restricted {
         ApxUSDStorage storage $ = _getApxUSDStorage();
