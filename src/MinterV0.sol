@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 import {DoubleEndedQueue} from "@openzeppelin/contracts/utils/structs/DoubleEndedQueue.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
@@ -24,7 +24,6 @@ import {IMinterV0} from "./interfaces/IMinterV0.sol";
  * - EIP-712 typed structured data hashing
  */
 contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
-    using ECDSA for bytes32;
     using DoubleEndedQueue for DoubleEndedQueue.Bytes32Deque;
 
     // ============================================
@@ -146,11 +145,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             revert MintAmountTooLarge(order.amount, maxMintAmount);
         }
 
-        // Verify signature
+        // Verify signature using SignatureChecker (supports EOA and ERC-1271 contract signatures)
         bytes32 digest = hashOrder(order);
-        address signer = digest.recover(signature);
-
-        if (signer != order.beneficiary) {
+        if (!SignatureChecker.isValidSignatureNowCalldata(order.beneficiary, digest, signature)) {
             revert InvalidSignature();
         }
     }

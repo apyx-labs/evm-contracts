@@ -148,8 +148,9 @@ library Roles {
      * @param yieldDistributor The YieldDistributor contract
      */
     function assignAdminTargetsFor(AccessManager self, IYieldDistributor yieldDistributor) internal {
-        bytes4[] memory selectors = new bytes4[](1);
+        bytes4[] memory selectors = new bytes4[](2);
         selectors[0] = IYieldDistributor.setVesting.selector;
+        selectors[1] = IYieldDistributor.setSigningDelegate.selector;
         self.setTargetFunctionRole(address(yieldDistributor), selectors, ADMIN_ROLE);
     }
 
