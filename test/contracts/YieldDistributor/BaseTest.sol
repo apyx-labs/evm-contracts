@@ -9,6 +9,7 @@ import {MinterV0} from "../../../src/MinterV0.sol";
 import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {YieldDistributor} from "../../../src/YieldDistributor.sol";
 import {Roles} from "../../../src/Roles.sol";
+import {AddressList} from "../../../src/AddressList.sol";
 import {BaseTest} from "../../BaseTest.sol";
 
 /**

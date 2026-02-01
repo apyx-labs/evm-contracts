@@ -18,6 +18,9 @@ contract ApxUSDDeployer is AccessManaged, Deployer {
     /// @notice Token symbol for the deployed ApxUSD (e.g. "apxUSD")
     string public symbol;
 
+    /// @notice Deny list (AddressList) for the deployed ApxUSD
+    address public denyList;
+
     /// @notice Maximum total supply for the deployed ApxUSD (e.g. 1_000_000e18)
     uint256 public supplyCap;
 
@@ -28,11 +31,12 @@ contract ApxUSDDeployer is AccessManaged, Deployer {
      * @param _symbol Token symbol for the deployed ApxUSD (e.g. "apxUSD")
      * @param _supplyCap Maximum total supply for the deployed ApxUSD (e.g. 1_000_000e18)
      */
-    constructor(address _authority, string memory _name, string memory _symbol, uint256 _supplyCap)
+    constructor(string memory _name, string memory _symbol, address _authority, address _denyList, uint256 _supplyCap)
         AccessManaged(_authority)
     {
         name = _name;
         symbol = _symbol;
+        denyList = _denyList;
         supplyCap = _supplyCap;
     }
 
@@ -43,7 +47,7 @@ contract ApxUSDDeployer is AccessManaged, Deployer {
      */
     function deploy() external restricted returns (address proxy) {
         ApxUSD impl = new ApxUSD();
-        bytes memory initData = abi.encodeCall(ApxUSD.initialize, (name, symbol, authority(), supplyCap));
+        bytes memory initData = abi.encodeCall(ApxUSD.initialize, (name, symbol, authority(), denyList, supplyCap));
         ERC1967Proxy proxyContract = new ERC1967Proxy(address(impl), initData);
         proxy = address(proxyContract);
 

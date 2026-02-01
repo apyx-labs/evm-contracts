@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {ApyUSDTest} from "./BaseTest.sol";
 import {ApyUSD} from "../../../src/ApyUSD.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title ApyUSDInitializationTest
@@ -27,9 +28,6 @@ contract ApyUSDInitializationTest is ApyUSDTest {
 
         // Check authority
         assertEq(apyUSD.authority(), address(accessManager), "Authority should be accessManager");
-
-        // Check deny list
-        assertEq(apyUSD.denyList(), address(denyList), "Deny list should match");
     }
 
     function test_RevertWhen_InitializeWithZeroAuthority() public {
@@ -41,7 +39,7 @@ contract ApyUSDInitializationTest is ApyUSDTest {
             newImpl.initialize, ("Apyx Yield USD", "apyUSD", address(0), address(apxUSD), address(denyList))
         );
 
-        vm.expectRevert("authority is zero address");
+        vm.expectRevert(Errors.invalidAddress("initialAuthority"));
         new ERC1967Proxy(address(newImpl), initData);
     }
 
@@ -54,7 +52,7 @@ contract ApyUSDInitializationTest is ApyUSDTest {
             newImpl.initialize, ("Apyx Yield USD", "apyUSD", address(accessManager), address(0), address(denyList))
         );
 
-        vm.expectRevert("asset is zero address");
+        vm.expectRevert(Errors.invalidAddress("asset"));
         new ERC1967Proxy(address(newImpl), initData);
     }
 
@@ -67,7 +65,7 @@ contract ApyUSDInitializationTest is ApyUSDTest {
             newImpl.initialize, ("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(0))
         );
 
-        vm.expectRevert("denyList is zero address");
+        vm.expectRevert(Errors.invalidAddress("initialDenyList"));
         new ERC1967Proxy(address(newImpl), initData);
     }
 

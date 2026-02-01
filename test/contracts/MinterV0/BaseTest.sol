@@ -10,6 +10,7 @@ import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {MinterV0} from "../../../src/MinterV0.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
 import {Roles} from "../../../src/Roles.sol";
+import {AddressList} from "../../../src/AddressList.sol";
 
 /**
  * @title MinterTest
@@ -27,6 +28,7 @@ abstract contract MinterTest is Test {
     ApxUSD public apxUSD;
     MinterV0 public minterV0;
     AccessManager public accessManager;
+    AddressList public denyList;
 
     address public admin = address(0x1);
     address public minter = address(0x2);
@@ -62,10 +64,14 @@ abstract contract MinterTest is Test {
         vm.prank(admin);
         accessManager = new AccessManager(admin);
 
+        // Deploy AddressList
+        denyList = new AddressList(address(accessManager));
+
         // Deploy ApxUSD
         ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData =
-            abi.encodeCall(apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), APX_SUPPLY_CAP));
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
+        );
         ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSD = ApxUSD(address(apxUSDProxy));
 

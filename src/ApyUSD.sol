@@ -14,10 +14,10 @@ import {
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {ERC20DenyListUpgradable} from "./exts/ERC20DenyListUpgradable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
-import {ERC20FreezeableUpgradable} from "./exts/ERC20FreezeableUpgradable.sol";
 import {IApyUSD} from "./interfaces/IApyUSD.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
@@ -42,7 +42,7 @@ contract ApyUSD is
     Initializable,
     ERC20PermitUpgradeable,
     ERC20PausableUpgradeable,
-    ERC20FreezeableUpgradable,
+    ERC20DenyListUpgradable,
     AccessManagedUpgradeable,
     UUPSUpgradeable,
     ERC4626Upgradeable,
@@ -59,8 +59,6 @@ contract ApyUSD is
 
     /// @custom:storage-location erc7201:apyx.storage.ApyUSD
     struct ApyUSDStorage {
-        /// @notice Reference to the AddressList contract for deny list checking
-        IAddressList denyList;
         /// @notice Reference to the UnlockToken contract for unlocking delay
         IUnlockToken unlockToken;
         /// @notice Reference to the Vesting contract for yield distribution
@@ -100,18 +98,17 @@ contract ApyUSD is
         address asset,
         address initialDenyList
     ) public initializer {
-        require(initialAuthority != address(0), "authority is zero address");
-        require(asset != address(0), "asset is zero address");
-        require(initialDenyList != address(0), "denyList is zero address");
+        if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
+        if (asset == address(0)) revert InvalidAddress("asset");
+        if (initialDenyList == address(0)) revert InvalidAddress("initialDenyList");
 
         __ERC20_init(name, symbol);
         __ERC20Permit_init(name);
         __ERC20Pausable_init();
+        __ERC20DenyListedUpgradable_init(IAddressList(initialDenyList));
         __ERC4626_init(IERC20(asset));
         __AccessManaged_init(initialAuthority);
 
-        ApyUSDStorage storage $ = _getApyUSDStorage();
-        $.denyList = IAddressList(initialDenyList);
         // unlockToken will be set via setUnlockToken() after deployment
         // vesting will be set via setVesting() after deployment
         // unlockingFee will be set via setUnlockingFee() after deployment
@@ -140,7 +137,7 @@ contract ApyUSD is
      */
     function _update(address from, address to, uint256 value)
         internal
-        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20FreezeableUpgradable)
+        override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20DenyListUpgradable)
     {
         super._update(from, to, value);
     }
@@ -219,13 +216,12 @@ contract ApyUSD is
      * @param assets Amount of assets to deposit
      * @param shares Amount of shares to mint
      */
-    function _deposit(address caller, address receiver, uint256 assets, uint256 shares) internal override {
-        ApyUSDStorage storage $ = _getApyUSDStorage();
-
-        // Check deny list
-        _revertIfDenied($, caller);
-        _revertIfDenied($, receiver);
-
+    function _deposit(address caller, address receiver, uint256 assets, uint256 shares)
+        internal
+        override
+        checkNotDenied(caller)
+        checkNotDenied(receiver)
+    {
         // Use parent ERC4626 implementation
         super._deposit(caller, receiver, assets, shares);
     }
@@ -246,6 +242,9 @@ contract ApyUSD is
     function _withdraw(address caller, address receiver, address owner, uint256 assets, uint256 shares)
         internal
         override
+        checkNotDenied(caller)
+        checkNotDenied(receiver)
+        checkNotDenied(owner)
     {
         ApyUSDStorage storage $ = _getApyUSDStorage();
 
@@ -255,11 +254,6 @@ contract ApyUSD is
         if (receiver != owner) {
             revert InvalidCaller();
         }
-
-        // Check that no party is denied
-        _revertIfDenied($, caller);
-        _revertIfDenied($, receiver);
-        _revertIfDenied($, owner);
 
         // Require unlockToken is set
         if (address($.unlockToken) == address(0)) {
@@ -321,28 +315,7 @@ contract ApyUSD is
      * @param newDenyList Address of the new AddressList contract
      */
     function setDenyList(IAddressList newDenyList) external restricted {
-        require(address(newDenyList) != address(0), "newDenyList is zero address");
-
-        ApyUSDStorage storage $ = _getApyUSDStorage();
-        address oldDenyList = address($.denyList);
-        $.denyList = newDenyList;
-
-        emit DenyListUpdated(oldDenyList, address(newDenyList));
-    }
-
-    /**
-     * @notice Returns the current deny list contract address
-     * @return Address of the AddressList contract
-     */
-    function denyList() external view returns (address) {
-        ApyUSDStorage storage $ = _getApyUSDStorage();
-        return address($.denyList);
-    }
-
-    function _revertIfDenied(ApyUSDStorage storage $, address user) internal view {
-        if ($.denyList.contains(user)) {
-            revert Denied(user);
-        }
+        _setDenyList(newDenyList);
     }
 
     /**
@@ -352,7 +325,7 @@ contract ApyUSD is
      * @param newUnlockToken The new UnlockToken contract
      */
     function setUnlockToken(IUnlockToken newUnlockToken) external restricted {
-        require(address(newUnlockToken) != address(0), "unlockToken is zero address");
+        if (address(newUnlockToken) == address(0)) revert InvalidAddress("newUnlockToken");
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
         address oldUnlockToken = address($.unlockToken);
@@ -585,23 +558,5 @@ contract ApyUSD is
      */
     function unpause() external restricted {
         _unpause();
-    }
-
-    /**
-     * @notice Freezes an address, preventing transfers to or from it
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param target The address to freeze
-     */
-    function freeze(address target) external restricted {
-        _freeze(target);
-    }
-
-    /**
-     * @notice Unfreezes an address, allowing transfers to or from it
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param target The address to unfreeze
-     */
-    function unfreeze(address target) external restricted {
-        _unfreeze(target);
     }
 }
