@@ -1,17 +1,28 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {AddressListTest} from "./BaseTest.sol";
+import {BaseTest} from "../../BaseTest.sol";
 import {AddressList} from "../../../src/AddressList.sol";
 import {IAddressList} from "../../../src/interfaces/IAddressList.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @title AddressList Tests
  * @notice Comprehensive test suite for AddressList contract
  * @dev Tests all functions with positive and negative cases as specified in Zellic Security Assessment
  */
-contract AddressList_Test is AddressListTest {
+contract AddressList_Test is BaseTest {
+    // Additional helper accounts for testing
+    address public unauthorized;
+
+    function setUp() public virtual override {
+        super.setUp();
+
+        // Create additional test account
+        unauthorized = makeAddr("unauthorized");
+    }
+
     // ========================================
     // Helper Functions
     // ========================================
@@ -36,7 +47,7 @@ contract AddressList_Test is AddressListTest {
      * @notice Test that constructor reverts when initialAuthority is the zero address
      */
     function test_RevertWhen_ConstructorCalledWithZeroAddress() public {
-        vm.expectRevert(abi.encodeWithSignature("InvalidAddress(string)", "initialAuthority"));
+        vm.expectRevert(Errors.invalidAddress("initialAuthority"));
         new AddressList(address(0));
     }
 
@@ -90,8 +101,8 @@ contract AddressList_Test is AddressListTest {
      * @notice Test that add() reverts if user is the zero address
      */
     function test_RevertWhen_AddCalledWithZeroAddress() public {
+        vm.expectRevert(Errors.invalidAddress("user"));
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSignature("InvalidAddress(string)", "user"));
         denyList.add(address(0));
     }
 
@@ -100,8 +111,8 @@ contract AddressList_Test is AddressListTest {
      */
     function test_RevertWhen_AddCalledByUnauthorizedUser() public {
         // Unauthorized user tries to add address
-        vm.prank(unauthorized);
         vm.expectRevert(); // AccessManaged will revert with AccessManagedUnauthorized
+        vm.prank(unauthorized);
         denyList.add(alice);
 
         // Verify alice was not added
@@ -153,8 +164,8 @@ contract AddressList_Test is AddressListTest {
         denyList.add(alice);
 
         // Unauthorized user tries to remove alice
-        vm.prank(unauthorized);
         vm.expectRevert(); // AccessManaged will revert with AccessManagedUnauthorized
+        vm.prank(unauthorized);
         denyList.remove(alice);
 
         // Verify alice is still in the list
