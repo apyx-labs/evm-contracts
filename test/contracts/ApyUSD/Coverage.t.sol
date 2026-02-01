@@ -234,12 +234,7 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         vm.stopPrank();
     }
 
-    /**
-     * @notice Test that setDenyList does not validate address(0)
-     * @dev The implementation doesn't check for address(0), so we skip this test
-     * This is intentional as setting to address(0) may be a way to disable the deny list
-     */
-    // Skipped - implementation allows address(0)
+    // Note: setDenyList implementation allows address(0) - no validation test needed
 
     /**
      * @notice Test that only admin can set deny list
@@ -275,15 +270,29 @@ contract ApyUSDCoverageTest is ApyUSDTest {
 
     /**
      * @notice Test that setUnlockToken validates address(0)
-     * @dev Note: The function has InvalidAddress check but it's restricted,
-     * so access control is checked first. We verify the validation exists in code.
+     * @dev We verify the validation exists by checking the code rejects address(0)
      */
-    function test_SetUnlockTokenValidatesAddressZero() public pure {
-        // This test just documents that the validation exists in the code
-        // The actual validation is: if (address(newUnlockToken) == address(0)) revert InvalidAddress("newUnlockToken");
-        // We cannot directly test this without proper access control setup
-        // The implementation correctly validates for address(0)
-        assertTrue(true, "Implementation has address(0) validation");
+    function test_RevertWhen_SetUnlockTokenToAddressZero() public {
+        // Deploy a new ApyUSD implementation to test directly
+        ApyUSD testImpl = new ApyUSD();
+        bytes memory initData = abi.encodeCall(
+            testImpl.initialize, ("Test ApyUSD", "testAPY", address(accessManager), address(apxUSD), address(denyList))
+        );
+        ERC1967Proxy testProxy = new ERC1967Proxy(address(testImpl), initData);
+        ApyUSD testApyUSD = ApyUSD(address(testProxy));
+
+        // Grant admin role to this test contract for the test ApyUSD
+        vm.startPrank(admin);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = testApyUSD.setUnlockToken.selector;
+        accessManager.setTargetFunctionRole(address(testApyUSD), selectors, 0); // ADMIN_ROLE = 0
+        // Grant ADMIN_ROLE to this test contract
+        accessManager.grantRole(0, address(this), 0); // role 0, account this, executionDelay 0
+        vm.stopPrank();
+
+        // Now test should be able to call setUnlockToken and hit the validation
+        vm.expectRevert(Errors.invalidAddress("newUnlockToken"));
+        testApyUSD.setUnlockToken(IUnlockToken(address(0)));
     }
 
     /**
