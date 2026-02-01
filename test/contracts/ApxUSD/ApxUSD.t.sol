@@ -42,6 +42,39 @@ contract ApxUSDTest is ApxUSDBaseTest {
     }
 
     /**
+     * @notice Test that initialization reverts when authority is zero address
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroAuthority() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero authority (should revert)
+        bytes memory initData =
+            abi.encodeCall(newImpl.initialize, ("Apyx USD", "apxUSD", address(0), address(denyList), APX_SUPPLY_CAP));
+
+        vm.expectRevert(Errors.invalidAddress("initialAuthority"));
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
+     * @notice Test that initialization reverts when denyList is zero address
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroDenyList() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero denyList (should revert)
+        bytes memory initData = abi.encodeCall(
+            newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(0), APX_SUPPLY_CAP)
+        );
+
+        vm.expectRevert(Errors.invalidAddress("initialDenyList"));
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
      * @notice Test that initialization reverts when called twice
      * @dev Based on Zellic Security Assessment (Section 5.2)
      */
