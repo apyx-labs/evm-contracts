@@ -110,6 +110,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @return The struct hash
      */
     function structHashOrder(Order calldata order) public pure returns (bytes32) {
+        // forge-lint: disable-next-item(asm-keccak256)
         return keccak256(
             abi.encode(ORDER_TYPEHASH, order.beneficiary, order.notBefore, order.notAfter, order.nonce, order.amount)
         );
@@ -463,10 +464,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @return Encoded calldata with nonce appended for uniqueness
      */
     function _encodeOrderData(Order memory order) internal view returns (bytes memory) {
-        return abi.encodePacked(
-            abi.encodeCall(apxUSD.mint, (order.beneficiary, order.amount)),
-            bytes1(uint8(order.nonce % 256)) // Append nonce byte for uniqueness
-        );
+        return abi.encodeCall(apxUSD.mint, (order.beneficiary, order.amount, order.nonce));
     }
 
     /**

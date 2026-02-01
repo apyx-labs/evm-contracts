@@ -120,8 +120,9 @@ contract ApxUSD is
      * @dev Only callable through AccessManager with MINT_STRAT_ROLE
      * @param to Address to receive the minted tokens
      * @param amount Amount of tokens to mint (in wei, 18 decimals)
+     * @param nonce Nonce for the mint. Included to ensure uniqueness when scheduling with AccessManager.
      */
-    function mint(address to, uint256 amount) external restricted {
+    function mint(address to, uint256 amount, uint256 nonce) external restricted {
         ApxUSDStorage storage $ = _getApxUSDStorage();
 
         uint256 newTotalSupply = totalSupply() + amount;
