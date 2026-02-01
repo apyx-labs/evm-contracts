@@ -43,7 +43,7 @@ contract ApxUSD is
         uint256 supplyCap;
     }
 
-    // keccak256(abi.encode(uint256(keccak256("prefusd.storage.ApxUSD")) - 1)) & ~bytes32(uint256(0xff))
+    // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApxUSD")) - 1)) & ~bytes32(uint256(0xff))
     // OR just storage-location ApxUSD
     bytes32 private constant APXUSD_STORAGE_LOC = 0xd4bd5aaf4064e82ca5c0ebf6f76b7f421377722e7c3f989b53116d58938a1600;
 

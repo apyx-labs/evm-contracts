@@ -150,7 +150,8 @@ abstract contract BaseTest is Test {
         vm.label(address(vesting), "vesting");
 
         // Deploy YieldDistributor
-        yieldDistributor = new YieldDistributor(address(apxUSD), address(accessManager), address(vesting));
+        yieldDistributor =
+            new YieldDistributor(address(apxUSD), address(accessManager), address(vesting), address(minter));
         vm.label(address(yieldDistributor), "yieldDistributor");
 
         // Deploy UnlockToken

@@ -23,6 +23,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
+import {EInvalidCaller} from "./errors/InvalidCaller.sol";
 
 /**
  * @title ApyUSD
@@ -45,7 +46,8 @@ contract ApyUSD is
     AccessManagedUpgradeable,
     UUPSUpgradeable,
     ERC4626Upgradeable,
-    IApyUSD
+    IApyUSD,
+    EInvalidCaller
 {
     using SafeERC20 for IERC20;
     using Math for uint256;
@@ -106,6 +108,11 @@ contract ApyUSD is
         __ERC20DenyListedUpgradable_init(IAddressList(initialDenyList));
         __ERC4626_init(IERC20(asset));
         __AccessManaged_init(initialAuthority);
+
+        // unlockToken will be set via setUnlockToken() after deployment
+        // vesting will be set via setVesting() after deployment
+        // unlockingFee will be set via setUnlockingFee() after deployment
+        // feeWallet will be set via setFeeWallet() after deployment
 
         emit DenyListUpdated(address(0), initialDenyList);
     }
@@ -240,6 +247,13 @@ contract ApyUSD is
         checkNotDenied(owner)
     {
         ApyUSDStorage storage $ = _getApyUSDStorage();
+
+        // Prevent griefing by requiring receiver == owner
+        // This prevents third parties from resetting another user's cooldown
+        // while still allowing users to accidentally reset their own cooldown
+        if (receiver != owner) {
+            revert InvalidCaller();
+        }
 
         // Require unlockToken is set
         if (address($.unlockToken) == address(0)) {
