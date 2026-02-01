@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {ApxUSDBaseTest} from "./BaseTest.sol";
 import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Errors} from "../../utils/Errors.sol";
 
 /**
@@ -46,7 +47,7 @@ contract ApxUSDTest is ApxUSDBaseTest {
      */
     function test_RevertWhen_InitializeTwice() public {
         // Try to initialize the already-initialized apxUSD contract again
-        vm.expectRevert();
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
         apxUSD.initialize("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP);
     }
 
