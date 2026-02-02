@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
 
 /**
@@ -53,7 +54,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
 
     /**
      * @notice Ensures only vault contract can call transfer functions
-     * @dev This is only applied to the transferVestedYield function, so it is more efficient to inline
+     * @dev This is only applied to the pullVestedYield function, so it is more efficient to inline
      */
     // forge-lint: disable-next-item(unwrapped-modifier-logic)
     modifier onlyBeneficiary() {
@@ -90,61 +91,71 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /**
-     * @notice Returns the amount of yield that has vested and is available, including
-     *         fully vested yield. This is used to calculate vested amounts including
-     *         fully vested yield.
-     * @return Amount of vested yield including fully vested yield
+     * @inheritdoc IVesting
      */
-    function vestedAmount() external view override returns (uint256) {
-        return fullyVestedAmount + _vestedAmount();
+    function vestingPeriodStart() public view override returns (uint256) {
+        return lastDepositTimestamp;
     }
 
     /**
-     * @notice Returns the amount of yield that has vested and is available, excluding
-     *         fully vested yield. This is used to calculate vested amounts without
-     *         double counting the fully vested yield.
-     * @return Amount of vested yield excluding fully vested yield
+     * @inheritdoc IVesting
      */
-    function _vestedAmount() internal view returns (uint256) {
+    function vestingPeriodEnd() public view override returns (uint256) {
+        return lastDepositTimestamp + vestingPeriod;
+    }
+
+    /**
+     * @inheritdoc IVesting
+     */
+    function vestingPeriodRemaining() public view override returns (uint256) {
+        // slither-disable-next-line timestamp
+        if (block.timestamp > vestingPeriodEnd()) {
+            return 0;
+        }
+        return vestingPeriodEnd() - block.timestamp;
+    }
+
+    /**
+     * @inheritdoc IVesting
+     */
+    function vestedAmount() public view override returns (uint256) {
+        return fullyVestedAmount + newlyVestedAmount();
+    }
+
+    /**
+     * @inheritdoc IVesting
+     */
+    function newlyVestedAmount() public view override returns (uint256) {
         // slither-disable-next-line incorrect-equality
         if (vestingAmount == 0) return 0;
 
-        uint256 timeSinceLastDeposit;
-        unchecked {
-            timeSinceLastDeposit = block.timestamp - lastDepositTimestamp;
+        uint256 _vestingPeriodEnd = vestingPeriodEnd();
+        if (lastTransferTimestamp >= _vestingPeriodEnd) return 0;
+
+        uint256 newlyVestedPeriod;
+        if (block.timestamp < vestingPeriodEnd()) {
+            unchecked {
+                newlyVestedPeriod = block.timestamp - lastTransferTimestamp;
+            }
+        } else {
+            unchecked {
+                newlyVestedPeriod = _vestingPeriodEnd - lastTransferTimestamp;
+            }
         }
 
-        uint256 timeSinceLastTransfer;
-        unchecked {
-            timeSinceLastTransfer = block.timestamp - lastTransferTimestamp;
-        }
-
-        // slither-disable-next-line timestamp
-        if (timeSinceLastDeposit >= vestingPeriod) {
-            return vestingAmount; // Fully vested
-        }
-        uint256 timeBetweenDepositAndTransfer = lastTransferTimestamp - lastDepositTimestamp;
-        uint256 originalVestingAmount = vestingAmount * vestingPeriod / (vestingPeriod - timeBetweenDepositAndTransfer);
-
-        return (originalVestingAmount * timeSinceLastTransfer) / vestingPeriod;
+        return Math.mulDiv(vestingAmount, newlyVestedPeriod, vestingPeriod, Math.Rounding.Floor);
     }
 
     /**
-     * @notice Returns the amount of yield that is still vesting
-     * @return Amount of unvested yield
+     * @inheritdoc IVesting
      */
-    function unvestedAmount() external view override returns (uint256) {
-        return _unvestedAmount(_vestedAmount());
-    }
+    function unvestedAmount() public view override returns (uint256) {
+        uint256 periodRemaining = vestingPeriodRemaining();
 
-    /**
-     * @notice Returns the amount of yield that is still vesting
-     * @dev Internal function to calculate unvested amount without recalculating vested amount
-     * @param amount Amount of vested yield
-     * @return Amount of unvested yield
-     */
-    function _unvestedAmount(uint256 amount) internal view returns (uint256) {
-        return vestingAmount - amount;
+        // slither-disable-next-line incorrect-equality
+        if (periodRemaining == 0) return 0;
+
+        return Math.mulDiv(vestingAmount, periodRemaining, vestingPeriod, Math.Rounding.Ceil);
     }
 
     // ========================================
@@ -152,21 +163,14 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // ========================================
 
     /**
-     * @notice Deposits yield into the vesting contract
-     * @dev Transfers out any vested yield before resetting the vesting period.
-     *      Resets the vesting period by adding new deposit to existing unvested amount.
-     * @param amount Amount of yield to deposit
+     * @inheritdoc IVesting
      */
     function depositYield(uint256 amount) external override restricted {
         if (amount == 0) revert InvalidAmount("amount", amount);
 
-        // Calculate unvested amount BEFORE transferring
-        uint256 vested = _vestedAmount();
-        uint256 unvested = _unvestedAmount(vested);
-
         // Add new amount to fully vested and unvested amount
-        fullyVestedAmount += vested;
-        vestingAmount = unvested + amount;
+        fullyVestedAmount += newlyVestedAmount();
+        vestingAmount = unvestedAmount() + amount;
 
         // Update timestamps
         lastDepositTimestamp = block.timestamp;
@@ -178,14 +182,10 @@ contract LinearVestV0 is AccessManaged, IVesting {
     }
 
     /**
-     * @notice Transfers all vested yield to the vault
-     * @dev Only callable by vault contract. No-op if no vested yield available.
+     * @inheritdoc IVesting
      */
-    function transferVestedYield() external override onlyBeneficiary {
-        uint256 vested = _vestedAmount();
-        vestingAmount -= vested;
-
-        uint256 transferAmount = vested + fullyVestedAmount;
+    function pullVestedYield() external override onlyBeneficiary {
+        uint256 transferAmount = vestedAmount();
 
         fullyVestedAmount = 0;
         lastTransferTimestamp = block.timestamp;
@@ -199,10 +199,12 @@ contract LinearVestV0 is AccessManaged, IVesting {
         emit VestedYieldTransferred(beneficiary, transferAmount);
     }
 
+    // ========================================
+    // Admin Functions
+    // ========================================
+
     /**
-     * @notice Sets the vesting period
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param newPeriod New vesting period in seconds
+     * @inheritdoc IVesting
      */
     function setVestingPeriod(uint256 newPeriod) external override restricted {
         if (newPeriod == 0) revert InvalidAmount("vestingPeriod", newPeriod);
@@ -214,10 +216,7 @@ contract LinearVestV0 is AccessManaged, IVesting {
     }
 
     /**
-     * @notice Sets the beneficiary address. This is used when initializing the vesting contract,
-     *         to set the beneficiary address and when migrating to a new vesting contract.
-     * @dev Only callable through AccessManager with ADMIN_ROLE
-     * @param newBeneficiary New beneficiary contract address
+     * @inheritdoc IVesting
      */
     function setBeneficiary(address newBeneficiary) external override restricted {
         if (newBeneficiary == address(0)) revert InvalidAddress("beneficiary");

@@ -262,7 +262,7 @@ contract ApyUSD is
 
         // Pull all vested yield from vesting contract if available
         if (address($.vesting) != address(0)) {
-            $.vesting.transferVestedYield();
+            $.vesting.pullVestedYield();
         }
 
         // Calculate fee on the raw assets amount
