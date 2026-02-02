@@ -133,14 +133,8 @@ contract LinearVestV0 is AccessManaged, IVesting {
         if (lastTransferTimestamp >= _vestingPeriodEnd) return 0;
 
         uint256 newlyVestedPeriod;
-        if (block.timestamp < vestingPeriodEnd()) {
-            unchecked {
-                newlyVestedPeriod = block.timestamp - lastTransferTimestamp;
-            }
-        } else {
-            unchecked {
-                newlyVestedPeriod = _vestingPeriodEnd - lastTransferTimestamp;
-            }
+        unchecked {
+            newlyVestedPeriod = Math.min(block.timestamp, _vestingPeriodEnd) - lastTransferTimestamp;
         }
 
         return Math.mulDiv(vestingAmount, newlyVestedPeriod, vestingPeriod, Math.Rounding.Floor);
