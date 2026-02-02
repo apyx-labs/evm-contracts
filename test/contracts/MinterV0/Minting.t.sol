@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {MinterTest} from "./BaseTest.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title MinterV0 Mint Tests
@@ -842,15 +843,18 @@ contract MinterV0_MintTest is MinterTest {
         // Bound inputs to reasonable ranges
         // Keep initialNonce small (0-50) to make the test practical while still covering varied nonces
         initialNonce = uint48(bound(initialNonce, 0, 50));
-        mintAmount = uint208(bound(mintAmount, 1e18, MAX_MINT_AMOUNT));
         numMints = uint8(bound(numMints, 1, 10)); // Test 1-10 mints per beneficiary
 
-        // Calculate total mint amount and ensure it doesn't exceed supply cap
+        // Calculate max mintAmount that won't exceed supply cap for both beneficiaries
+        // APX_SUPPLY_CAP / (numMints * 2 beneficiaries) gives max amount per mint
+        uint256 maxMintForSupplyCap = APX_SUPPLY_CAP / (uint256(numMints) * 2);
+
+        // Bound mintAmount to the minimum of MAX_MINT_AMOUNT and maxMintForSupplyCap
+        mintAmount = uint208(bound(mintAmount, 1e18, Math.min(MAX_MINT_AMOUNT, maxMintForSupplyCap)));
+
+        // Calculate total mint amounts for verification
         uint256 totalMintPerBeneficiary = uint256(mintAmount) * uint256(numMints);
         uint256 totalMintBothBeneficiaries = totalMintPerBeneficiary * 2;
-
-        // Skip test if total would exceed supply cap
-        vm.assume(totalMintBothBeneficiaries <= APX_SUPPLY_CAP);
 
         // Set initial nonces for both beneficiaries by consuming dummy orders
         // This simulates prior activity and establishes the starting nonce
