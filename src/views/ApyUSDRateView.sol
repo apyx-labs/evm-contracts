@@ -29,6 +29,14 @@ contract ApyUSDRateView is EInvalidAddress {
     }
 
     /**
+     * @notice Returns the precision of the APY (10 ** decimals)
+     * @return precision Precision of the APY
+     */
+    function precision() public view returns (uint256) {
+        return 10 ** ApyUSD(vault).decimals();
+    }
+
+    /**
      * @notice Returns the annualized yield (unvested per second × SECONDS_PER_YEAR)
      * @return annualYield Annualized yield in asset units, or 0 if no vesting or zero period remaining
      */
@@ -54,6 +62,6 @@ contract ApyUSDRateView is EInvalidAddress {
         uint256 annualYield = annualizedYield();
         if (annualYield == 0) return 0;
 
-        percentYield = (annualYield * ApyUSD(vault).decimals()) / totalAssets;
+        percentYield = (annualYield * precision()) / totalAssets;
     }
 }
