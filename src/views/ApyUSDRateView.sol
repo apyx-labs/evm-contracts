@@ -14,7 +14,7 @@ import {EInvalidAddress} from "../errors/InvalidAddress.sol";
  */
 contract ApyUSDRateView is EInvalidAddress {
     /// @notice Seconds per year (365.25 days) for annualizing the yield rate
-    uint256 public constant SECONDS_PER_YEAR = 365.25 * 24 * 3600; // 31_557_600
+    uint256 public constant SECONDS_PER_YEAR = 31_557_600; // 365.25 days
 
     /// @notice The ApyUSD vault address this view reads from
     address public immutable vault;
