@@ -54,7 +54,7 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
     event BeneficiaryUpdated(address oldBeneficiary, address newBeneficiary);
 
     // ========================================
-    // View Functions
+    // View Functions - Vesting Period
     // ========================================
 
     /**
@@ -70,10 +70,39 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
     function vestingPeriod() external view returns (uint256);
 
     /**
-     * @notice Returns the amount of yield that has vested and is available
-     * @return Amount of vested yield
+     * @notice Returns the start of the current vesting period
+     * @return Start of the current vesting period
+     */
+    function vestingPeriodStart() external view returns (uint256);
+
+    /**
+     * @notice Returns the remaining time in the current vesting period
+     * @return Remaining time in the current vesting period
+     */
+    function vestingPeriodRemaining() external view returns (uint256);
+
+    /**
+     * @notice Returns the end of the current vesting period
+     * @return End of the current vesting period
+     */
+    function vestingPeriodEnd() external view returns (uint256);
+
+    // ========================================
+    // View Functions - Yield
+    // ========================================
+
+    /**
+     * @notice Returns the amount of yield that has vested and is available, including
+     *         fully vested and newly vested yield.
+     * @return Amount of vested yield including fully vested and newly vested yield
      */
     function vestedAmount() external view returns (uint256);
+
+    /**
+     * @notice Returns the amount of yield that has been newly vested since the last transfer
+     * @return Amount of newly vested yield
+     */
+    function newlyVestedAmount() external view returns (uint256);
 
     /**
      * @notice Returns the amount of yield that is still vesting
@@ -82,11 +111,12 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
     function unvestedAmount() external view returns (uint256);
 
     // ========================================
-    // State-Changing Functions
+    // Admin Functions
     // ========================================
 
     /**
-     * @notice Sets the vault contract address
+     * @notice Sets the beneficiary address. This is used when initializing the vesting contract,
+     *         to set the beneficiary address and when migrating to a new vesting contract.
      * @dev Only callable through AccessManager with ADMIN_ROLE
      * @param newBeneficiary New beneficiary contract address
      */
@@ -99,9 +129,14 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
      */
     function setVestingPeriod(uint256 newPeriod) external;
 
+    // ========================================
+    // Depositing and Transferring Yield
+    // ========================================
+
     /**
      * @notice Deposits yield into the vesting contract
-     * @dev Resets the vesting period, adding new deposit to existing unvested amount
+     * @dev Resets the vesting period, adding vested yield to the fullyVestedAmount and
+     *      the new deposit amount to the vestingAmount.
      * @param amount Amount of yield to deposit
      */
     function depositYield(uint256 amount) external;
@@ -110,5 +145,5 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
      * @notice Transfers all vested yield to the vault
      * @dev Only callable by vault contract. No-op if no vested yield available.
      */
-    function transferVestedYield() external;
+    function pullVestedYield() external;
 }
