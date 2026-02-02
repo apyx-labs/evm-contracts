@@ -10,6 +10,10 @@ fs_permissions = [
     { access = "read-write", path = "./reports" },
 ]
 
+ignored_error_codes = [
+    5667, # unused-parameter
+]
+
 [profile.release]
 solc_version = "0.8.30"
 # Use the IR compiler and optimizer

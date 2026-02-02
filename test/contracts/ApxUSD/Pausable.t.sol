@@ -70,7 +70,7 @@ contract ApxUSDPausableTest is BaseTest {
         // Try to mint while paused - should fail
         vm.prank(admin);
         vm.expectRevert();
-        apxUSD.mint(alice, SMALL_AMOUNT);
+        apxUSD.mint(alice, SMALL_AMOUNT, 0);
     }
 
     function test_CanMintAfterUnpause() public {

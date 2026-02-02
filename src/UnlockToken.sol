@@ -44,7 +44,7 @@ contract UnlockToken is CommitToken, IUnlockToken {
     /**
      * @notice Ensures that only the vault can call the function
      */
-    // forge-lint: disable-next-line(unwrapped-modifier-logic)
+    // forge-lint: disable-next-item(unwrapped-modifier-logic)
     modifier onlyVault() {
         if (msg.sender != vault) revert InvalidCaller();
         _;

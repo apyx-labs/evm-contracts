@@ -29,7 +29,7 @@ abstract contract YieldDistributorBaseTest is BaseTest {
      */
     function mintToYieldDistributor(uint256 amount) internal {
         vm.prank(admin);
-        apxUSD.mint(address(yieldDistributor), amount);
+        apxUSD.mint(address(yieldDistributor), amount, 0);
     }
 
     /**

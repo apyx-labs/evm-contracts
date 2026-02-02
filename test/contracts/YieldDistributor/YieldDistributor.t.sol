@@ -215,19 +215,19 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
 
         // First mint and deposit
         vm.prank(admin);
-        apxUSD.mint(address(yieldDistributor), mint1);
+        apxUSD.mint(address(yieldDistributor), mint1, 0);
         vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint1);
 
         // Second mint and deposit
         vm.prank(admin);
-        apxUSD.mint(address(yieldDistributor), mint2);
+        apxUSD.mint(address(yieldDistributor), mint2, 0);
         vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint2);
 
         // Third mint and deposit
         vm.prank(admin);
-        apxUSD.mint(address(yieldDistributor), mint3);
+        apxUSD.mint(address(yieldDistributor), mint3, 0);
         vm.prank(yieldOperator);
         yieldDistributor.depositYield(mint3);
 
