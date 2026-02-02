@@ -106,6 +106,10 @@ copy-abis:
     ./scripts/copy-abi.sh YieldDistributor
     ./scripts/copy-abi.sh ICurveStableswapFactoryNG
     ./scripts/copy-abi.sh ICurveStableswapNG
+    ./scripts/copy-abi.sh ICurveTwocryptoFactoryNG
+    ./scripts/copy-abi.sh ICurveTwocryptoNG
+    ./scripts/copy-abi.sh ApyUSDRateView
+    ./scripts/copy-abi.sh RedemptionPoolV0
 
 convert-deploy-toml-to-json NETWORK="arbitrum":
     ./scripts/convert-deploy-toml-to-json.sh {{NETWORK}} > deploy/{{NETWORK}}.json
