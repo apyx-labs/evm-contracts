@@ -97,7 +97,6 @@ contract DeployApyUSD is BaseDeploy {
         console.log("  - Name:", apyUSD.name());
         console.log("  - Symbol:", apyUSD.symbol());
         console.log("  - Asset:", apyUSD.asset());
-        console.log("  - Deny List:", address(apyUSD.denyList()));
         console.log("  - Authority:", apyUSD.authority());
         console.log("");
         console.log("Next Steps:");

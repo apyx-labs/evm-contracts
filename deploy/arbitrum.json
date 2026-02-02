@@ -55,6 +55,10 @@
     "commitToken_0x9a439269c2779D5900ccFDE02f2fDF8F839E5fD1": {
       "address": "0x1AD137E3789075d66f1e82ec0D1EB42AcD3c6db2",
       "block": 425671429
+    },
+    "apyUSDRateView": {
+      "address": "0xb605c481f246e84A8829c1Ed3EE06b7ed9B5355b",
+      "block": 427786435
     }
   }
 }
