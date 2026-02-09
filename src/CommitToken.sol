@@ -124,7 +124,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
     }
 
     // ========================================
-    // Pause & Freeze
+    // Pause
     // ========================================
 
     /**

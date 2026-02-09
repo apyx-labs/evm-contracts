@@ -31,20 +31,10 @@ import {StdConfig} from "forge-std/src/StdConfig.sol";
  * Output: deploy/<network>.toml
  */
 contract UpdateVesting is BaseDeploy {
+    using Roles for AccessManager;
+
     function run() public {
-        string memory network = getNetwork();
-
-        StdConfig config = loadConfig();
-        StdConfig deployConfig = loadDeployConfig(network);
-
-        uint256 chainId = config.resolveChainId(network);
-        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
-
-        address deployer = config.get(chainId, "deployer").toAddress();
-
-        console.log("Network:  ", network);
-        console.log("Deployer: ", deployer);
-        console.log("Balance:  ", deployer.balance);
+        super.setUp();
 
         address accessManagerAddress = deployConfig.get(chainId, "accessManager_address").toAddress();
         address apxUSDProxy = deployConfig.get(chainId, "apxUSD_address").toAddress();
@@ -85,8 +75,8 @@ contract UpdateVesting is BaseDeploy {
 
         // 2. Configure AccessManager permissions for new LinearVestV0
         console.log("\nConfiguring AccessManager permissions for new LinearVestV0...");
-        Roles.assignAdminTargetsFor(accessManager, newLinearVestV0);
-        Roles.assignYieldDistributorTargetsFor(accessManager, IVesting(newLinearVestV0Address));
+        accessManager.assignAdminTargetsFor(newLinearVestV0);
+        accessManager.assignYieldDistributorTargetsFor(IVesting(newLinearVestV0Address));
         console.log("Configured new LinearVestV0 permissions");
 
         // 3. Update ApyUSD to use new vesting
