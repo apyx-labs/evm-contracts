@@ -43,8 +43,9 @@ contract AddressList is AccessManaged, IAddressList, EInvalidAddress {
     function add(address user) external override restricted {
         if (user == address(0)) revert InvalidAddress("user");
 
-        _addresses.add(user);
-        emit Added(user);
+        if (_addresses.add(user)) {
+            emit Added(user);
+        }
     }
 
     /**
@@ -53,8 +54,9 @@ contract AddressList is AccessManaged, IAddressList, EInvalidAddress {
      * @param user Address to remove
      */
     function remove(address user) external override restricted {
-        _addresses.remove(user);
-        emit Removed(user);
+        if (_addresses.remove(user)) {
+            emit Removed(user);
+        }
     }
 
     /**
