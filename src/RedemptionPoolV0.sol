@@ -28,24 +28,16 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     /// @notice Exchange rate: reserve asset per asset, 1e18 = 1:1 (reserveAmount = assetsAmount * exchangeRate / 1e18)
     uint256 public exchangeRate;
 
-    /// @notice Thrown when asset and reserve asset have different decimals
-    error DecimalsMismatch(uint8 assetDecimals, uint8 reserveDecimals);
-
     /**
      * @notice Initializes the redemption pool
      * @param initialAuthority Address of the AccessManager contract
      * @param asset_ Asset token (e.g. apxUSD)
-     * @param reserveAsset_ Reserve asset token (e.g. USDC); must have same decimals as asset_
+     * @param reserveAsset_ Reserve asset token (e.g. USDC)
      */
     constructor(address initialAuthority, ERC20Burnable asset_, IERC20 reserveAsset_) AccessManaged(initialAuthority) {
         if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
         if (address(asset_) == address(0)) revert InvalidAddress("asset");
         if (address(reserveAsset_) == address(0)) revert InvalidAddress("reserveAsset");
-        if (IERC20Metadata(address(asset_)).decimals() != IERC20Metadata(address(reserveAsset_)).decimals()) {
-            revert DecimalsMismatch(
-                IERC20Metadata(address(asset_)).decimals(), IERC20Metadata(address(reserveAsset_)).decimals()
-            );
-        }
 
         asset = asset_;
         reserveAsset = reserveAsset_;
@@ -56,9 +48,21 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
 
     /// @inheritdoc IRedemptionPool
     /// @dev Does not consider pause state or reserve balance; callers should check paused() and reserveBalance()
-    ///      Rounding is downward in favor of the pool: reserveAmount = floor(assetsAmount * exchangeRate / 1e18)
+    ///      Rounding is downward in favor of the pool.
+    ///      Formula: reserveAmount = (assetsAmount * exchangeRate) / (1e18 * 10^(assetDecimals - reserveDecimals))
     function previewRedeem(uint256 assetsAmount) external view override returns (uint256 reserveAmount) {
-        return (assetsAmount * exchangeRate) / 1e18;
+        uint8 assetDecimals = IERC20Metadata(address(asset)).decimals();
+        uint8 reserveDecimals = IERC20Metadata(address(reserveAsset)).decimals();
+
+        if (assetDecimals >= reserveDecimals) {
+            // Scale down if asset has more decimals
+            uint256 decimalDiff = assetDecimals - reserveDecimals;
+            return (assetsAmount * exchangeRate) / (1e18 * 10 ** decimalDiff);
+        } else {
+            // Scale up if reserve has more decimals
+            uint256 decimalDiff = reserveDecimals - assetDecimals;
+            return (assetsAmount * exchangeRate * 10 ** decimalDiff) / 1e18;
+        }
     }
 
     /// @inheritdoc IRedemptionPool
