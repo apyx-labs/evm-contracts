@@ -13,6 +13,12 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
  */
 contract DenyListEventTest is ApyUSDTest {
     // ========================================
+    // Event Declaration
+    // ========================================
+
+    event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
+
+    // ========================================
     // DenyListUpdated Event Tests
     // ========================================
 
@@ -23,13 +29,13 @@ contract DenyListEventTest is ApyUSDTest {
      */
     function test_DenyListUpdated_EmitsCorrectOldAndNewAddresses() public {
         // Create a new deny list (B)
-        AddressList denyListB = new AddressList(address(accessManager));
+        AddressList newDenyList = new AddressList(address(accessManager));
 
         // Set deny list to B and expect event with (current deny list address, B address)
         vm.prank(admin);
         vm.expectEmit(true, true, false, false);
-        emit DenyListUpdated(address(denyList), address(denyListB));
-        apyUSD.setDenyList(IAddressList(address(denyListB)));
+        emit DenyListUpdated(address(denyList), address(newDenyList));
+        apyUSD.setDenyList(IAddressList(address(newDenyList)));
     }
 
     /**
@@ -90,10 +96,4 @@ contract DenyListEventTest is ApyUSDTest {
 
         vm.stopPrank();
     }
-
-    // ========================================
-    // Event Declaration
-    // ========================================
-
-    event DenyListUpdated(address indexed oldDenyList, address indexed newDenyList);
 }
