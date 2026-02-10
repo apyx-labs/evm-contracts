@@ -187,34 +187,23 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         // 1. Validate order (signature, nonce, expiry, amount)
         validateOrder(order, signature);
 
-        // 2. Check rate limiting
-        _cleanMintHistory();
-        uint256 available = rateLimitAvailable();
-        if (order.amount > available) {
-            revert RateLimitExceeded(order.amount, available);
-        }
-
-        // 3. Increment nonce to prevent replay
+        // 2. Increment nonce to prevent replay
         nonce[order.beneficiary]++;
 
-        // 4. Record mint in history
-        bytes32 mintRecord = _encodeMintRecord(uint48(block.timestamp), order.amount);
-        mintHistory.pushBack(mintRecord);
-
-        // 5. Encode the order data
+        // 3. Encode the order data
         bytes memory data = _encodeOrderData(order);
 
-        // 6. Schedule with AccessManager (when=0 means ASAP)
+        // 4. Schedule with AccessManager (when=0 means ASAP)
         // Note: msg.sender to AccessManager is MinterV0 contract address
         // operationId = keccak256(abi.encode(address(this), address(apxUSD), data))
         IAccessManager manager = IAccessManager(authority());
         // slither-disable-next-line unused-return
         (operationId,) = manager.schedule(address(apxUSD), data, 0);
 
-        // 7. Store order for later execution
+        // 5. Store order for later execution
         pendingOrders[operationId] = order;
 
-        // 8. Emit event
+        // 6. Emit event
         emit MintRequested(operationId, order.beneficiary, order.amount, order.nonce, order.notBefore, order.notAfter);
 
         return operationId;
@@ -237,13 +226,24 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             revert OrderExpired();
         }
 
-        // 3. Clean up storage first (CEI pattern: effects before interactions)
+        // 3. Check rate limiting (enforcement at execution time)
+        _cleanMintHistory();
+        uint256 available = rateLimitAvailable();
+        if (order.amount > available) {
+            revert RateLimitExceeded(order.amount, available);
+        }
+
+        // 4. Record mint in history
+        bytes32 mintRecord = _encodeMintRecord(uint48(block.timestamp), order.amount);
+        mintHistory.pushBack(mintRecord);
+
+        // 5. Clean up storage (CEI pattern: effects before interactions)
         delete pendingOrders[operationId];
 
-        // 4. Encode the same order data (must match what was scheduled)
+        // 6. Encode the same order data (must match what was scheduled)
         bytes memory data = _encodeOrderData(order);
 
-        // 5. Execute through AccessManager
+        // 7. Execute through AccessManager
         // Note: msg.sender to AccessManager is MinterV0 contract address (same as schedule)
         // AccessManager will verify the operation was scheduled and delay has passed
         IAccessManager manager = IAccessManager(authority());
@@ -253,7 +253,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             revert AccessManagedRequiredDelay(msg.sender, 0);
         }
 
-        // 6. Emit event
+        // 8. Emit event
         emit MintExecuted(operationId, order.beneficiary);
     }
 
