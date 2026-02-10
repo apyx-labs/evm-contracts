@@ -138,7 +138,7 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         // Test various amounts
         assertEq(redemptionPoolMismatched.previewRedeem(100e18), 100e6, "100e18 -> 100e6");
         assertEq(redemptionPoolMismatched.previewRedeem(1000e18), 1000e6, "1000e18 -> 1000e6");
-        assertEq(redemptionPoolMismatched.previewRedeem(0.5e18), 0.5e6, "0.5e18 -> 0.5e6");
+        assertEq(redemptionPoolMismatched.previewRedeem(5e17), 5e5, "5e17 -> 5e5");
     }
 
     // ========================================
@@ -290,12 +290,12 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         vm.prank(admin);
         redemptionPoolMismatched.setExchangeRate(0.95e18);
 
-        // Redeem 1.5e18 apxUSD: (1.5e18 * 0.95e18) / 1e18 / 1e12 = 1.425e6
-        // Should round down to 1.425e6 (1425000)
-        uint256 assetsAmount = 1.5e18;
-        uint256 expectedReserve = 1.425e6;
+        // Redeem 15e17 apxUSD (1.5 tokens): (15e17 * 0.95e18) / 1e18 / 1e12 = 1.425e6
+        // Should round down to 1425000 (1.425e6)
+        uint256 assetsAmount = 15e17;
+        uint256 expectedReserve = 1425000;
 
         uint256 actualReserve = redemptionPoolMismatched.previewRedeem(assetsAmount);
-        assertEq(actualReserve, expectedReserve, "should round down to 1.425e6");
+        assertEq(actualReserve, expectedReserve, "should round down to 1425000");
     }
 }
