@@ -12,12 +12,12 @@ contract RedemptionPool_AccessTest is BaseTest {
         // Alice is not redeemer
         vm.prank(alice);
         vm.expectRevert();
-        redemptionPool.redeem(SMALL_AMOUNT, bob);
+        redemptionPool.redeem(SMALL_AMOUNT, bob, 0);
 
         // Admin is not redeemer
         vm.prank(admin);
         vm.expectRevert();
-        redemptionPool.redeem(SMALL_AMOUNT, bob);
+        redemptionPool.redeem(SMALL_AMOUNT, bob, 0);
     }
 
     function test_RevertWhen_WithdrawNotAdmin() public {

@@ -10,6 +10,13 @@ import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
 
 interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EInsufficientBalance {
+    // ============ Errors ============
+
+    /// @notice Thrown when the output of a redeem operation is below the minimum specified
+    /// @param reserveAmount The actual reserve amount that would be received
+    /// @param minReserveAssetOut The minimum reserve amount required
+    error SlippageExceeded(uint256 reserveAmount, uint256 minReserveAssetOut);
+
     // ============ Events ============
 
     /// @notice Emitted when assets are redeemed for reserve assets
@@ -36,8 +43,11 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
     /// @dev Requires ROLE_REDEEMER. Burns/transfers assets and sends reserve assets
     /// @param assetsAmount Amount of assets to redeem
     /// @param receiver Address to receive the reserve assets
+    /// @param minReserveAssetOut Minimum reserve assets to receive (slippage protection)
     /// @return reserveAmount Amount of reserve assets received
-    function redeem(uint256 assetsAmount, address receiver) external returns (uint256 reserveAmount);
+    function redeem(uint256 assetsAmount, address receiver, uint256 minReserveAssetOut)
+        external
+        returns (uint256 reserveAmount);
 
     /// @notice Preview how much reserve assets would be received for a given assets amount
     /// @param assetsAmount Amount of assets to preview
