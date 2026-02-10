@@ -532,9 +532,9 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         bytes32 operationId = minterV0.requestMint(order, signature);
 
-        // Expect MintCancelled event
+        // Expect MintCancelled event (minter is the caller now)
         vm.expectEmit(true, true, true, true);
-        emit IMinterV0.MintCancelled(operationId, alice, guardian);
+        emit IMinterV0.MintCancelled(operationId, alice, minter);
 
         cancelMint(operationId);
     }
@@ -563,7 +563,7 @@ contract MinterV0_MintTest is MinterTest {
         // Try to cancel an operation that was never created
         bytes32 fakeOperationId = bytes32(uint256(99999));
 
-        vm.prank(guardian);
+        vm.prank(minter);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(fakeOperationId);
     }
@@ -582,7 +582,7 @@ contract MinterV0_MintTest is MinterTest {
         cancelMint(operationId);
 
         // Try to cancel again (should fail - order no longer exists)
-        vm.prank(guardian);
+        vm.prank(minter);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
@@ -606,7 +606,7 @@ contract MinterV0_MintTest is MinterTest {
         assertEq(apxUSD.balanceOf(alice), amount);
 
         // Try to cancel after execution (should fail - order no longer exists)
-        vm.prank(guardian);
+        vm.prank(minter);
         vm.expectRevert(IMinterV0.OrderNotFound.selector);
         minterV0.cancelMint(operationId);
     }
@@ -909,7 +909,7 @@ contract MinterV0_MintTest is MinterTest {
                 vm.prank(minter);
                 bytes32 dummyAliceOpId = minterV0.requestMint(dummyAliceOrder, dummyAliceSig);
                 // Clean up dummy order
-                vm.prank(guardian);
+                vm.prank(minter);
                 minterV0.cancelMint(dummyAliceOpId);
 
                 IMinterV0.Order memory dummyBobOrder = _createOrder(bob, i, 1e18);
@@ -917,7 +917,7 @@ contract MinterV0_MintTest is MinterTest {
                 vm.prank(minter);
                 bytes32 dummyBobOpId = minterV0.requestMint(dummyBobOrder, dummyBobSig);
                 // Clean up dummy order
-                vm.prank(guardian);
+                vm.prank(minter);
                 minterV0.cancelMint(dummyBobOpId);
             }
         }

@@ -259,7 +259,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
 
     /**
      * @notice Cancels a scheduled mint operation
-     * @dev Only callable through AccessManager with MINT_GUARD_ROLE
+     * @dev Only callable through AccessManager with MINTER_ROLE
      * @dev This is critical for recovering from the 256 operation limit - expired orders
      *      must be cancelled to free up operation IDs in AccessManager
      * @param operationId The unique identifier of the scheduled operation

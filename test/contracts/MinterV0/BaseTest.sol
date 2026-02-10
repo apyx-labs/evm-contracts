@@ -150,7 +150,7 @@ abstract contract MinterTest is Test {
     }
 
     function cancelMint(bytes32 operationId) internal {
-        vm.prank(guardian);
+        vm.prank(minter);
         minterV0.cancelMint(operationId);
     }
 }

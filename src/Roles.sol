@@ -182,10 +182,11 @@ library Roles {
      * @param minterContract The MinterV0 contract
      */
     function assignMinterTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
-        bytes4[] memory selectors = new bytes4[](3);
+        bytes4[] memory selectors = new bytes4[](4);
         selectors[0] = IMinterV0.requestMint.selector;
         selectors[1] = IMinterV0.executeMint.selector;
         selectors[2] = IMinterV0.cleanMintHistory.selector;
+        selectors[3] = IMinterV0.cancelMint.selector;
         self.setTargetFunctionRole(address(minterContract), selectors, MINTER_ROLE);
     }
 
@@ -193,10 +194,12 @@ library Roles {
      * @notice Assigns mint guard function selectors for MinterV0 contract (extension function)
      * @param self The AccessManager contract
      * @param minterContract The MinterV0 contract
+     * @dev cancelMint is now assigned to MINTER_ROLE to allow minters to clear expired orders
      */
     function assignMintGuardTargetsFor(AccessManager self, IMinterV0 minterContract) internal {
-        bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = IMinterV0.cancelMint.selector;
+        // cancelMint has been moved to MINTER_ROLE to prevent deadlock when operation queue fills
+        // MINT_GUARD_ROLE retains all other guardian functions if added in the future
+        bytes4[] memory selectors = new bytes4[](0);
         self.setTargetFunctionRole(address(minterContract), selectors, MINT_GUARD_ROLE);
     }
 
