@@ -26,8 +26,10 @@ contract MinterV0_AccessManagedTest is MinterTest {
         uint208 mintAmount = 100e18;
         uint256 numOrders = 256;
 
-        // Create and execute 256 orders
-        // Use long expiry to avoid expiration during the test
+        // Store operation IDs for batch execution
+        bytes32[] memory opIds = new bytes32[](numOrders);
+
+        // Create 256 orders (rate limit will NOT be affected at request time)
         uint256 startTime = block.timestamp;
         for (uint256 i = 0; i < numOrders; i++) {
             IMinterV0.Order memory order = IMinterV0.Order({
@@ -39,12 +41,17 @@ contract MinterV0_AccessManagedTest is MinterTest {
             });
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            bytes32 opId = minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
+        }
 
-            // Execute the order immediately (after delay)
-            vm.warp(block.timestamp + MINT_DELAY + 1);
+        // Warp time once to allow execution
+        vm.warp(block.timestamp + MINT_DELAY + 1);
+
+        // Execute all orders - they will be spread across the rate limit window
+        // Only the most recent ones (within the 24h window) will count toward the limit
+        for (uint256 i = 0; i < numOrders; i++) {
             vm.prank(minter);
-            minterV0.executeMint(opId);
+            minterV0.executeMint(opIds[i]);
         }
 
         // All orders executed, operation IDs freed
@@ -63,8 +70,7 @@ contract MinterV0_AccessManagedTest is MinterTest {
         }
 
         // Success! All 512 orders created (256 executed, 256 pending)
-        // However, due to time advancement, old mints may have expired from the rate limit window
-        // We only verify that the second batch was successfully created
+        // The rate limit should show all 256 executions since they happened in the same block
         assertTrue(minterV0.rateLimitMinted() >= numOrders * mintAmount);
     }
 
@@ -93,7 +99,8 @@ contract MinterV0_AccessManagedTest is MinterTest {
         }
 
         // All 256 orders are now pending in AccessManager
-        assertEq(minterV0.rateLimitMinted(), numOrders * mintAmount);
+        // Rate limit NOT updated yet (only at execution time)
+        assertEq(minterV0.rateLimitMinted(), 0, "No rate limit consumed at request time");
 
         // Warp past expiry
         vm.warp(block.timestamp + MINT_DELAY + 2);
@@ -119,9 +126,8 @@ contract MinterV0_AccessManagedTest is MinterTest {
             minterV0.requestMint(order, sig);
         }
 
-        // Success! All new orders created
-        // Note: Cancelled orders still count in rate limit (they're in mint history)
-        // This is intentional - cancellation doesn't free rate limit capacity (prevents gaming)
-        assertEq(minterV0.rateLimitMinted(), numOrders * 2 * mintAmount);
+        // Success! All 512 orders created (first 256 canceled, second 256 pending)
+        // Rate limit still not updated since nothing was executed
+        assertEq(minterV0.rateLimitMinted(), 0, "No executions = no rate limit consumed");
     }
 }

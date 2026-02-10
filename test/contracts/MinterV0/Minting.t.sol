@@ -506,14 +506,28 @@ contract MinterV0_MintTest is MinterTest {
         vm.prank(minter);
         bytes32 operationId = minterV0.requestMint(order, signature);
 
-        // Verify rate limit updated
-        assertEq(minterV0.rateLimitMinted(), amount);
+        // Rate limit is NOT updated at request time (only at execution)
+        assertEq(minterV0.rateLimitMinted(), 0, "No rate limit consumed at request time");
 
-        // Cancel the mint
-        cancelMint(operationId);
+        // Execute the mint to actually consume rate limit
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(operationId);
 
-        // Rate limit should STILL include cancelled amount (prevents gaming)
-        assertEq(minterV0.rateLimitMinted(), amount);
+        // Now rate limit should be updated
+        assertEq(minterV0.rateLimitMinted(), amount, "Rate limit consumed at execution");
+
+        // Request another mint and cancel it before execution
+        IMinterV0.Order memory order2 = _createOrder(bob, 0, amount);
+        bytes memory signature2 = _signOrder(order2, bobPrivateKey);
+        vm.prank(minter);
+        bytes32 operationId2 = minterV0.requestMint(order2, signature2);
+
+        // Cancel the second mint before execution
+        cancelMint(operationId2);
+
+        // Rate limit should still be the same (only first mint was executed)
+        assertEq(minterV0.rateLimitMinted(), amount, "Cancelled request does not affect rate limit");
     }
 
     function test_RevertWhen_CancelMintNonExistentOrder() public {

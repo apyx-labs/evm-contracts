@@ -48,7 +48,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 20_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Check invariant
         assertEq(minterV0.rateLimitMinted() + minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT);
@@ -57,7 +60,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 30_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Check invariant again
         assertEq(minterV0.rateLimitMinted() + minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT);
@@ -66,7 +72,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order3 = _createOrder(alice, 1, 40_000e18);
         bytes memory sig3 = _signOrder(order3, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order3, sig3);
+        bytes32 opId3 = minterV0.requestMint(order3, sig3);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId3);
 
         // Check invariant one more time
         assertEq(minterV0.rateLimitMinted() + minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT);
@@ -79,7 +88,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         assertEq(minterV0.rateLimitMinted(), amount);
     }
@@ -91,7 +103,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         assertEq(minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT - amount);
     }
@@ -101,17 +116,26 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 20_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 30_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         IMinterV0.Order memory order3 = _createOrder(alice, 1, 40_000e18);
         bytes memory sig3 = _signOrder(order3, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order3, sig3);
+        bytes32 opId3 = minterV0.requestMint(order3, sig3);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId3);
 
         // Total minted should be 90k
         assertEq(minterV0.rateLimitMinted(), 90_000e18);
@@ -139,15 +163,21 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 60_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 40_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        bytes32 operationId = minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Second mint should succeed (exactly at limit)
-        assertTrue(operationId != bytes32(0));
+        assertTrue(opId2 != bytes32(0));
         assertEq(minterV0.rateLimitMinted(), RATE_LIMIT_AMOUNT);
         assertEq(minterV0.rateLimitAvailable(), 0);
     }
@@ -157,12 +187,18 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 95_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Try to request 10k more (would exceed 100k limit)
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 10_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
 
+        vm.prank(minter);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
         vm.prank(minter);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -171,7 +207,7 @@ contract MinterV0_RateLimitingTest is MinterTest {
                 5_000e18 // available
             )
         );
-        minterV0.requestMint(order2, sig2);
+        minterV0.executeMint(opId2);
     }
 
     function test_RevertWhen_FirstMintExceedsLimit() public {
@@ -182,8 +218,11 @@ contract MinterV0_RateLimitingTest is MinterTest {
         bytes memory signature = _signOrder(order, alicePrivateKey);
 
         vm.prank(minter);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
         vm.expectRevert(abi.encodeWithSelector(IMinterV0.RateLimitExceeded.selector, tooLargeAmount, RATE_LIMIT_AMOUNT));
-        minterV0.requestMint(order, signature);
+        minterV0.executeMint(opId);
     }
 
     // ----------------------------------------
@@ -195,7 +234,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 100_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         assertEq(minterV0.rateLimitMinted(), 100_000e18);
 
@@ -211,7 +253,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 100_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         assertEq(minterV0.rateLimitAvailable(), 0);
 
@@ -227,14 +272,20 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 40_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Request 30k at T=12 hours
         vm.warp(block.timestamp + 12 hours);
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 30_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Total minted should be 70k
         assertEq(minterV0.rateLimitMinted(), 70_000e18);
@@ -253,16 +304,19 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 100_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         // Warp to exactly T=24 hours
-        vm.warp(startTime + 24 hours);
+        vm.warp(startTime + 24 hours + MINT_DELAY);
 
         // Mint should still count (not expired yet - needs to be > 24 hours)
         assertEq(minterV0.rateLimitMinted(), 100_000e18);
 
         // Warp to T=24 hours + 1 second
-        vm.warp(startTime + 24 hours + 1);
+        vm.warp(startTime + 24 hours + MINT_DELAY + 1);
 
         // Now mint should be expired
         assertEq(minterV0.rateLimitMinted(), 0);
@@ -273,14 +327,20 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 50_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Request 50k at T=12 hours (at limit)
         vm.warp(block.timestamp + 12 hours);
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 50_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // At limit now
         assertEq(minterV0.rateLimitAvailable(), 0);
@@ -295,9 +355,12 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order3 = _createOrder(alice, 1, 50_000e18);
         bytes memory sig3 = _signOrder(order3, alicePrivateKey);
         vm.prank(minter);
-        bytes32 operationId = minterV0.requestMint(order3, sig3);
+        bytes32 opId3 = minterV0.requestMint(order3, sig3);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId3);
 
-        assertTrue(operationId != bytes32(0));
+        assertTrue(opId3 != bytes32(0));
     }
 
     // ----------------------------------------
@@ -309,11 +372,15 @@ contract MinterV0_RateLimitingTest is MinterTest {
         uint208 amount = uint208(9_000e18);
 
         uint256 total = 0;
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 10; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, amount);
             bytes memory signature = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, signature);
+            bytes32 opId = minterV0.requestMint(order, signature);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
             total += amount;
         }
 
@@ -325,23 +392,30 @@ contract MinterV0_RateLimitingTest is MinterTest {
         // Request 5 mints at T=0
         uint208 amount = uint208(10_000e18);
 
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 5; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, amount);
             bytes memory signature = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, signature);
+            bytes32 opId = minterV0.requestMint(order, signature);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
         }
 
         assertEq(minterV0.rateLimitMinted(), 50_000e18);
 
         // Warp to T=25 hours (all expired)
-        vm.warp(block.timestamp + 25 hours);
+        vm.warp(baseTime + 5 * MINT_DELAY + 25 hours);
 
         // Request new mint (triggers cleanup)
         IMinterV0.Order memory newOrder = _createOrder(bob, 0, 5_000e18);
         bytes memory newSignature = _signOrder(newOrder, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(newOrder, newSignature);
+        bytes32 newOpId = minterV0.requestMint(newOrder, newSignature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(newOpId);
 
         // Only new mint should count
         assertEq(minterV0.rateLimitMinted(), 5_000e18);
@@ -354,27 +428,36 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 20_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Request at T=12h
-        vm.warp(startTime + 12 hours);
+        vm.warp(startTime + 12 hours + MINT_DELAY);
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 30_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Request at T=23h
-        vm.warp(startTime + 23 hours);
+        vm.warp(startTime + 23 hours + MINT_DELAY);
         IMinterV0.Order memory order3 = _createOrder(alice, 1, 25_000e18);
         bytes memory sig3 = _signOrder(order3, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order3, sig3);
+        bytes32 opId3 = minterV0.requestMint(order3, sig3);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId3);
 
         // All three should count
         assertEq(minterV0.rateLimitMinted(), 75_000e18);
 
         // Warp to T=25h (first mint expired)
-        vm.warp(startTime + 25 hours);
+        vm.warp(startTime + 25 hours + MINT_DELAY);
 
         // Only T=12h (30k) and T=23h (25k) should remain
         assertEq(minterV0.rateLimitMinted(), 55_000e18);
@@ -389,13 +472,19 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 60_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Beneficiary B: 30k
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 30_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Combined should be 90k
         assertEq(minterV0.rateLimitMinted(), 90_000e18);
@@ -413,8 +502,11 @@ contract MinterV0_RateLimitingTest is MinterTest {
         bytes memory sig3 = _signOrder(order3, charlieKey);
 
         vm.prank(minter);
+        bytes32 opId3 = minterV0.requestMint(order3, sig3);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
         vm.expectRevert(abi.encodeWithSelector(IMinterV0.RateLimitExceeded.selector, 20_000e18, 10_000e18));
-        minterV0.requestMint(order3, sig3);
+        minterV0.executeMint(opId3);
     }
 
     function test_RateLimit_IndependentNonces() public {
@@ -422,12 +514,18 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 40_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 40_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Verify separate nonces
         assertEq(minterV0.nonce(alice), 1);
@@ -457,11 +555,15 @@ contract MinterV0_RateLimitingTest is MinterTest {
             uint208(10_400e18)
         ];
 
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 10; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, amounts[i]);
             bytes memory signature = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, signature);
+            bytes32 opId = minterV0.requestMint(order, signature);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
         }
 
         // All should succeed (total = 100k)
@@ -472,8 +574,11 @@ contract MinterV0_RateLimitingTest is MinterTest {
         bytes memory failSignature = _signOrder(failOrder, alicePrivateKey);
 
         vm.prank(minter);
+        bytes32 failOpId = minterV0.requestMint(failOrder, failSignature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
         vm.expectRevert(abi.encodeWithSelector(IMinterV0.RateLimitExceeded.selector, 10_000e18, 0));
-        minterV0.requestMint(failOrder, failSignature);
+        minterV0.executeMint(failOpId);
     }
 
     function test_RateLimit_VaryingSizes() public {
@@ -481,11 +586,15 @@ contract MinterV0_RateLimitingTest is MinterTest {
         uint208[5] memory amounts =
             [uint208(1_000e18), uint208(5_000e18), uint208(10_000e18), uint208(20_000e18), uint208(64_000e18)];
 
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 5; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, amounts[i]);
             bytes memory signature = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, signature);
+            bytes32 opId = minterV0.requestMint(order, signature);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
         }
 
         // All should succeed
@@ -502,7 +611,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order = _createOrder(alice, 0, 50_000e18);
         bytes memory signature = _signOrder(order, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order, signature);
+        bytes32 opId = minterV0.requestMint(order, signature);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId);
 
         // Call rateLimitMinted() multiple times
         uint256 minted1 = minterV0.rateLimitMinted();
@@ -520,7 +632,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order1 = _createOrder(alice, 0, 30_000e18);
         bytes memory sig1 = _signOrder(order1, alicePrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order1, sig1);
+        bytes32 opId1 = minterV0.requestMint(order1, sig1);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId1);
 
         // Check relationship
         assertEq(minterV0.rateLimitMinted() + minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT);
@@ -530,7 +645,10 @@ contract MinterV0_RateLimitingTest is MinterTest {
         IMinterV0.Order memory order2 = _createOrder(bob, 0, 40_000e18);
         bytes memory sig2 = _signOrder(order2, bobPrivateKey);
         vm.prank(minter);
-        minterV0.requestMint(order2, sig2);
+        bytes32 opId2 = minterV0.requestMint(order2, sig2);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
+        minterV0.executeMint(opId2);
 
         // Check relationship again
         assertEq(minterV0.rateLimitMinted() + minterV0.rateLimitAvailable(), RATE_LIMIT_AMOUNT);
@@ -566,17 +684,25 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_RateLimit_LargeQueueGasUsage() public {
         // Fill queue with a large number of mints
+        bytes32[] memory opIds = new bytes32[](LARGE_NUM_MINTS);
         for (uint256 i = 0; i < LARGE_NUM_MINTS; i++) {
             IMinterV0.Order memory order = _createOrder(alice, uint48(i), 100e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
 
             vm.prank(minter);
             uint256 gasBefore = gasleft();
-            minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
             uint256 gasUsed = gasBefore - gasleft();
 
             // Verify gas usage stays reasonable (under 500k for requestMint)
             assertLt(gasUsed, REASONABLE_GAS_LIMIT, "requestMint gas usage too high");
+        }
+
+        // Execute all mints at once after the delay
+        vm.warp(block.timestamp + MINT_DELAY);
+        for (uint256 i = 0; i < LARGE_NUM_MINTS; i++) {
+            vm.prank(minter);
+            minterV0.executeMint(opIds[i]);
         }
 
         // Verify queue has 150 records
@@ -587,23 +713,34 @@ contract MinterV0_RateLimitingTest is MinterTest {
         // Fill queue with a large number of mints
         // Use 100e18 per mint to avoid rate limit issues
         uint208 mintAmount = 100e18;
+        bytes32[] memory opIds = new bytes32[](LARGE_NUM_MINTS);
         for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
+        }
+
+        // Execute all mints
+        vm.warp(block.timestamp + MINT_DELAY);
+        for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
+            vm.prank(minter);
+            minterV0.executeMint(opIds[i]);
         }
 
         // Advance time to expire all records
         vm.warp(block.timestamp + RATE_LIMIT_PERIOD + 1);
 
-        // Measure gas for automatic cleanup via requestMint
+        // Measure gas for automatic cleanup via executeMint
         IMinterV0.Order memory cleanupOrder = _createOrder(alice, uint48(LARGE_NUM_MINTS), 1000e18);
         bytes memory cleanupSig = _signOrder(cleanupOrder, alicePrivateKey);
 
         vm.prank(minter);
+        bytes32 cleanupOpId = minterV0.requestMint(cleanupOrder, cleanupSig);
+        vm.warp(block.timestamp + MINT_DELAY);
+        vm.prank(minter);
         uint256 gasBefore = gasleft();
-        minterV0.requestMint(cleanupOrder, cleanupSig);
+        minterV0.executeMint(cleanupOpId);
         uint256 gasUsed = gasBefore - gasleft();
 
         // Should clean all LARGE_NUM_MINTS expired records + process new mint
@@ -615,11 +752,19 @@ contract MinterV0_RateLimitingTest is MinterTest {
         // Fill queue with a large number of mints
         // Use 100e18 per mint to avoid rate limit issues
         uint208 mintAmount = 100e18;
+        bytes32[] memory opIds = new bytes32[](LARGE_NUM_MINTS);
         for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
+        }
+
+        // Execute all mints
+        vm.warp(block.timestamp + MINT_DELAY);
+        for (uint48 i = 0; i < LARGE_NUM_MINTS; i++) {
+            vm.prank(minter);
+            minterV0.executeMint(opIds[i]);
         }
 
         // Advance time to expire all
@@ -642,11 +787,19 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_PartialExpiry() public {
         // Add 50 old mints
+        bytes32[] memory opIds = new bytes32[](100);
         for (uint48 i = 0; i < 50; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
+        }
+
+        // Execute first 50 mints
+        vm.warp(block.timestamp + MINT_DELAY);
+        for (uint48 i = 0; i < 50; i++) {
+            vm.prank(minter);
+            minterV0.executeMint(opIds[i]);
         }
 
         // Advance time by half period
@@ -657,7 +810,14 @@ contract MinterV0_RateLimitingTest is MinterTest {
             IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            opIds[i] = minterV0.requestMint(order, sig);
+        }
+
+        // Execute second 50 mints
+        vm.warp(block.timestamp + MINT_DELAY);
+        for (uint48 i = 50; i < 100; i++) {
+            vm.prank(minter);
+            minterV0.executeMint(opIds[i]);
         }
 
         // Advance time to expire first 50
@@ -673,14 +833,18 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_AccessControl() public {
         // Add some mints
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 10; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            bytes32 opId = minterV0.requestMint(order, sig);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
         }
 
-        vm.warp(block.timestamp + RATE_LIMIT_PERIOD + 1);
+        vm.warp(baseTime + 10 * MINT_DELAY + RATE_LIMIT_PERIOD + 1);
 
         // Should revert for unauthorized user
         vm.prank(bob);
@@ -697,11 +861,15 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
     function test_CleanMintHistory_NoExpiredRecords() public {
         // Add recent mints
+        uint256 baseTime = block.timestamp;
         for (uint48 i = 0; i < 10; i++) {
             IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
-            minterV0.requestMint(order, sig);
+            bytes32 opId = minterV0.requestMint(order, sig);
+            vm.warp(baseTime + (i + 1) * MINT_DELAY);
+            vm.prank(minter);
+            minterV0.executeMint(opId);
         }
 
         // Try to clean without advancing time
