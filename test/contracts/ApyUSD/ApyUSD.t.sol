@@ -74,4 +74,30 @@ contract ApyUSDInitializationTest is ApyUSDTest {
         vm.expectRevert();
         apyUSD.initialize("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(denyList));
     }
+
+    /**
+     * @notice Test that nested initializers work correctly with proxy
+     * @dev Verifies fix for issue where nested initializer modifier caused initialization to fail
+     *      The ERC20DenyListUpgradable uses onlyInitializing modifier instead of initializer
+     *      to allow being called from within another initializer function
+     */
+    function test_NestedInitializer_ProxyInitializationWorks() public {
+        // Deploy new implementation
+        ApyUSD newImpl = new ApyUSD();
+
+        // Initialize through proxy - this calls __ERC20DenyListedUpgradable_init internally
+        bytes memory initData = abi.encodeCall(
+            newImpl.initialize, ("Apyx Yield USD", "apyUSD", address(accessManager), address(apxUSD), address(denyList))
+        );
+
+        // This should succeed - nested initializer should work
+        ERC1967Proxy proxy = new ERC1967Proxy(address(newImpl), initData);
+        ApyUSD newApyUSD = ApyUSD(address(proxy));
+
+        // Verify initialization was successful
+        assertEq(newApyUSD.name(), "Apyx Yield USD", "Name should be set");
+        assertEq(newApyUSD.symbol(), "apyUSD", "Symbol should be set");
+        assertEq(address(newApyUSD.asset()), address(apxUSD), "Asset should be set");
+        assertEq(newApyUSD.authority(), address(accessManager), "Authority should be set");
+    }
 }

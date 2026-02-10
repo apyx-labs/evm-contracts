@@ -84,6 +84,32 @@ contract ApxUSDTest is ApxUSDBaseTest {
         apxUSD.initialize("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP);
     }
 
+    /**
+     * @notice Test that nested initializers work correctly with proxy
+     * @dev Verifies fix for issue where nested initializer modifier caused initialization to fail
+     *      The ERC20DenyListUpgradable uses onlyInitializing modifier instead of initializer
+     *      to allow being called from within another initializer function
+     */
+    function test_NestedInitializer_ProxyInitializationWorks() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Initialize through proxy - this calls __ERC20DenyListedUpgradable_init internally
+        bytes memory initData = abi.encodeCall(
+            newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
+        );
+
+        // This should succeed - nested initializer should work
+        ERC1967Proxy proxy = new ERC1967Proxy(address(newImpl), initData);
+        ApxUSD newApxUSD = ApxUSD(address(proxy));
+
+        // Verify initialization was successful
+        assertEq(newApxUSD.name(), "Apyx USD", "Name should be set");
+        assertEq(newApxUSD.symbol(), "apxUSD", "Symbol should be set");
+        assertEq(newApxUSD.supplyCap(), APX_SUPPLY_CAP, "Supply cap should be set");
+        assertEq(newApxUSD.authority(), address(accessManager), "Authority should be set");
+    }
+
     function test_Mint() public {
         mint(alice, MEDIUM_AMOUNT);
 
