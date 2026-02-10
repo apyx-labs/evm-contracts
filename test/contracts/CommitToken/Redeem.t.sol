@@ -4,6 +4,7 @@ pragma solidity 0.8.30;
 import {CommitTokenBaseTest} from "./BaseTest.sol";
 import {ICommitToken} from "../../../src/interfaces/ICommitToken.sol";
 import {Errors} from "../../utils/Errors.sol";
+import {Vm} from "forge-std/src/Vm.sol";
 
 /**
  * @title CommitTokenRedeemTest
@@ -480,6 +481,52 @@ contract CommitTokenRedeemTest is CommitTokenBaseTest {
         assertEq(lockToken.balanceOf(alice), aliceExpectedBalance, "Alice should have expected balance");
         assertEq(lockToken.balanceOf(bob), bobExpectedBalance, "Bob should have expected balance");
         assertEq(lockToken.balanceOf(charlie), charlieExpectedBalance, "Charlie should have expected balance");
+    }
+
+    // ========================================
+    // Event Emission Tests
+    // ========================================
+
+    function _countWithdrawEvents() internal view returns (uint256) {
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bytes32 withdrawEventSignature = keccak256("Withdraw(address,address,address,uint256,uint256)");
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (entries[i].topics[0] == withdrawEventSignature) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    function test_Redeem_EmitsSingleWithdrawEvent() public {
+        mockToken.mint(alice, MEDIUM_AMOUNT);
+        uint256 shares = deposit(alice, MEDIUM_AMOUNT);
+
+        requestRedeem(alice, shares);
+        warpPastUnlockingDelay();
+
+        vm.recordLogs();
+        vm.prank(alice);
+        lockToken.redeem(shares, alice, alice);
+
+        assertEq(_countWithdrawEvents(), 1, "Should emit exactly one Withdraw event");
+    }
+
+    function test_Withdraw_EmitsSingleWithdrawEvent() public {
+        mockToken.mint(alice, MEDIUM_AMOUNT);
+        uint256 assets = deposit(alice, MEDIUM_AMOUNT);
+
+        requestWithdraw(alice, assets);
+        warpPastUnlockingDelay();
+
+        vm.recordLogs();
+        vm.prank(alice);
+        lockToken.withdraw(assets, alice, alice);
+
+        assertEq(_countWithdrawEvents(), 1, "Should emit exactly one Withdraw event");
     }
 }
 

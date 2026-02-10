@@ -402,9 +402,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         delete redeemRequests[owner];
 
         super._withdraw(caller, receiver, owner, assets, shares);
-
-        // Emit standard ERC4626 Withdraw event
-        emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
     /**
