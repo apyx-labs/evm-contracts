@@ -6,6 +6,7 @@ import {AddressList} from "../../../src/AddressList.sol";
 import {IAddressList} from "../../../src/interfaces/IAddressList.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {Errors} from "../../utils/Errors.sol";
+import {Vm} from "forge-std/src/Vm.sol";
 
 /**
  * @title AddressList Tests
@@ -354,5 +355,81 @@ contract AddressList_Test is BaseTest {
         vm.expectEmit(true, false, false, true);
         emit IAddressList.Removed(alice);
         denyList.remove(alice);
+    }
+
+    // ========================================
+    // Event Emission Tests (Issue Fix)
+    // ========================================
+
+    /**
+     * @notice Test that add() emits Added event on first add
+     */
+    function test_Add_EmitsAddedOnFirstAdd() public {
+        // Expect exactly one Added event
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit IAddressList.Added(alice);
+        denyList.add(alice);
+
+        // Verify address was added
+        assertTrue(denyList.contains(alice), "Alice should be in the list");
+    }
+
+    /**
+     * @notice Test that add() does not emit Added event on duplicate add
+     */
+    function test_Add_DoesNotEmitAddedOnDuplicateAdd() public {
+        // Add alice first time
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // Record logs before second add
+        vm.recordLogs();
+
+        // Add alice again (duplicate)
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // Get emitted events
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // Should emit zero Added events for duplicate add
+        assertEq(entries.length, 0, "Should emit zero events on duplicate add");
+    }
+
+    /**
+     * @notice Test that remove() emits Removed event on existing address
+     */
+    function test_Remove_EmitsRemovedOnExistingAddress() public {
+        // Add alice first
+        vm.prank(admin);
+        denyList.add(alice);
+
+        // Expect exactly one Removed event
+        vm.prank(admin);
+        vm.expectEmit(true, false, false, true);
+        emit IAddressList.Removed(alice);
+        denyList.remove(alice);
+
+        // Verify address was removed
+        assertFalse(denyList.contains(alice), "Alice should not be in the list");
+    }
+
+    /**
+     * @notice Test that remove() does not emit Removed event for non-existent address
+     */
+    function test_Remove_DoesNotEmitRemovedForNonExistentAddress() public {
+        // Record logs before remove
+        vm.recordLogs();
+
+        // Try to remove alice who is not in the list
+        vm.prank(admin);
+        denyList.remove(alice);
+
+        // Get emitted events
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // Should emit zero Removed events for non-existent address
+        assertEq(entries.length, 0, "Should emit zero events when removing non-existent address");
     }
 }
