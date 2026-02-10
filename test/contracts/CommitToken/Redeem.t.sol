@@ -4,6 +4,8 @@ pragma solidity 0.8.30;
 import {CommitTokenBaseTest} from "./BaseTest.sol";
 import {ICommitToken} from "../../../src/interfaces/ICommitToken.sol";
 import {Errors} from "../../utils/Errors.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
+import {Vm} from "forge-std/src/Vm.sol";
 
 /**
  * @title CommitTokenRedeemTest
@@ -480,6 +482,70 @@ contract CommitTokenRedeemTest is CommitTokenBaseTest {
         assertEq(lockToken.balanceOf(alice), aliceExpectedBalance, "Alice should have expected balance");
         assertEq(lockToken.balanceOf(bob), bobExpectedBalance, "Bob should have expected balance");
         assertEq(lockToken.balanceOf(charlie), charlieExpectedBalance, "Charlie should have expected balance");
+    }
+
+    // ========================================
+    // Event Emission Tests
+    // ========================================
+
+    function test_Redeem_EmitsSingleWithdrawEvent() public {
+        mockToken.mint(alice, MEDIUM_AMOUNT);
+        uint256 shares = deposit(alice, MEDIUM_AMOUNT);
+
+        requestRedeem(alice, shares);
+        warpPastUnlockingDelay();
+
+        // Record logs to count emitted events
+        vm.recordLogs();
+
+        vm.prank(alice);
+        lockToken.redeem(shares, alice, alice);
+
+        // Get all recorded logs
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // Count Withdraw events
+        uint256 withdrawEventCount = 0;
+        bytes32 withdrawEventSignature = keccak256("Withdraw(address,address,address,uint256,uint256)");
+
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (entries[i].topics[0] == withdrawEventSignature) {
+                withdrawEventCount++;
+            }
+        }
+
+        // Assert only one Withdraw event was emitted
+        assertEq(withdrawEventCount, 1, "Should emit exactly one Withdraw event");
+    }
+
+    function test_Withdraw_EmitsSingleWithdrawEvent() public {
+        mockToken.mint(alice, MEDIUM_AMOUNT);
+        uint256 assets = deposit(alice, MEDIUM_AMOUNT);
+
+        requestWithdraw(alice, assets);
+        warpPastUnlockingDelay();
+
+        // Record logs to count emitted events
+        vm.recordLogs();
+
+        vm.prank(alice);
+        lockToken.withdraw(assets, alice, alice);
+
+        // Get all recorded logs
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+
+        // Count Withdraw events
+        uint256 withdrawEventCount = 0;
+        bytes32 withdrawEventSignature = keccak256("Withdraw(address,address,address,uint256,uint256)");
+
+        for (uint256 i = 0; i < entries.length; i++) {
+            if (entries[i].topics[0] == withdrawEventSignature) {
+                withdrawEventCount++;
+            }
+        }
+
+        // Assert only one Withdraw event was emitted
+        assertEq(withdrawEventCount, 1, "Should emit exactly one Withdraw event");
     }
 }
 
