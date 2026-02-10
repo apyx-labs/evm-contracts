@@ -233,6 +233,8 @@ contract ApyUSD is
     /**
      * @notice Internal withdraw function that deposits assets to UnlockToken and starts redeem request
      * @dev Overrides ERC4626 to delegate unlocking delay to UnlockToken
+     * @dev Fees are deducted from user shares but only transferred to feeWallet if it is set.
+     *      When feeWallet is address(0) or address(this), fees remain in the vault and accrue to depositors.
      * @param caller Address initiating the withdrawal
      * @param receiver Address to receive the UnlockToken shares
      * @param owner Address that owns the shares
@@ -274,6 +276,8 @@ contract ApyUSD is
         super._withdraw(caller, address(this), owner, assets + fee, shares);
 
         // Transfer fee to fee wallet if fee > 0 and fee wallet is set
+        // If feeWallet is not set (address(0)) or is address(this), the fee remains in the vault
+        // and accrues to remaining depositors by increasing the share price
         if (fee > 0 && feeRecipient != address(0) && feeRecipient != address(this)) {
             IERC20(asset()).safeTransfer(feeRecipient, fee);
         }
@@ -408,6 +412,7 @@ contract ApyUSD is
     /**
      * @notice Sets the fee wallet address
      * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @dev When feeWallet is address(0) or address(this), fees remain in the vault and accrue to depositors
      * @param wallet Address to receive fees
      */
     function setFeeWallet(address wallet) external restricted {
