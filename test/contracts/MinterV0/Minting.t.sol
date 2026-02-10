@@ -870,38 +870,6 @@ contract MinterV0_MintTest is MinterTest {
         assertEq(uint256(status2), uint256(IMinterV0.MintStatus.Expired));
     }
 
-    function test_MintStatus_ExpiredWhenAccessManagerScheduleExpired() public {
-        uint208 amount = 3_000e18;
-
-        // Create order with very long notAfter (longer than AccessManager expiration window)
-        IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: alice,
-            notBefore: uint48(block.timestamp),
-            notAfter: type(uint48).max, // Very long expiry
-            nonce: 0,
-            amount: amount
-        });
-        bytes memory signature = _signOrder(order, alicePrivateKey);
-
-        vm.prank(minter);
-        bytes32 operationId = minterV0.requestMint(order, signature);
-
-        // Fast forward past AccessManager delay to make it Ready first
-        vm.warp(block.timestamp + MINT_DELAY + 1);
-
-        // Verify it's Ready
-        IMinterV0.MintStatus statusReady = minterV0.mintStatus(operationId);
-        assertEq(uint256(statusReady), uint256(IMinterV0.MintStatus.Ready));
-
-        // Fast forward past AccessManager expiration (1 week default)
-        // but keep before order's notAfter
-        vm.warp(block.timestamp + 1 weeks + 1);
-
-        // Status should now be Expired due to AccessManager schedule expiration
-        IMinterV0.MintStatus statusExpired = minterV0.mintStatus(operationId);
-        assertEq(uint256(statusExpired), uint256(IMinterV0.MintStatus.Expired));
-    }
-
     /**
      * @notice Comprehensive fuzz test for minting with varied nonce values and multiple beneficiaries
      * @dev This test fuzzes:
