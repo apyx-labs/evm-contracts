@@ -285,7 +285,7 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         assertEq(actualReserve, expectedReserve, "1e12 wei apxUSD should preview to 1 wei USDC");
     }
 
-    function test_EdgeCase_RoundingDownFavorPool() public {
+    function test_EdgeCase_RoundingDownFavorsPool() public {
         // Exchange rate 0.95e18, redeem amount that causes rounding
         vm.prank(admin);
         redemptionPoolMismatched.setExchangeRate(0.95e18);
