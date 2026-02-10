@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {MinterTest} from "./BaseTest.sol";
 import {IMinterV0} from "../../../src/interfaces/IMinterV0.sol";
+import {IAccessManager} from "@openzeppelin/contracts/access/manager/IAccessManager.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
@@ -375,6 +376,48 @@ contract MinterV0_MintTest is MinterTest {
         // This is expected behavior - the expired order remains in storage
         IMinterV0.Order memory retrieved = minterV0.pendingOrder(operationId);
         assertEq(retrieved.beneficiary, alice); // Order still exists
+    }
+
+    function test_RevertWhen_ExecuteMintAfterAccessManagerExpired() public {
+        uint208 amount = 3_000e18;
+
+        // Create order with very long notAfter (longer than AccessManager expiration window)
+        IMinterV0.Order memory order = IMinterV0.Order({
+            beneficiary: alice,
+            notBefore: uint48(block.timestamp),
+            notAfter: type(uint48).max, // Very long expiry
+            nonce: 0,
+            amount: amount
+        });
+
+        bytes memory signature = _signOrder(order, alicePrivateKey);
+
+        vm.prank(minter);
+        bytes32 operationId = minterV0.requestMint(order, signature);
+
+        // Fast forward past AccessManager delay to make it executable
+        vm.warp(block.timestamp + MINT_DELAY + 1);
+
+        // Verify it's executable now
+        IMinterV0.MintStatus statusReady = minterV0.mintStatus(operationId);
+        assertEq(uint256(statusReady), uint256(IMinterV0.MintStatus.Ready));
+
+        // Warp past AccessManager expiration (1 week default)
+        // but keep before order's notAfter
+        vm.warp(block.timestamp + 1 weeks + 1);
+
+        // Verify mintStatus shows Expired
+        IMinterV0.MintStatus statusExpired = minterV0.mintStatus(operationId);
+        assertEq(uint256(statusExpired), uint256(IMinterV0.MintStatus.Expired));
+
+        // Should revert with AccessManagerExpired when trying to execute
+        vm.prank(minter);
+        vm.expectRevert(abi.encodeWithSelector(IAccessManager.AccessManagerExpired.selector, operationId));
+        minterV0.executeMint(operationId);
+
+        // Order still exists since execution reverted
+        IMinterV0.Order memory retrieved = minterV0.pendingOrder(operationId);
+        assertEq(retrieved.beneficiary, alice);
     }
 
     function test_RequestMintWithNotBeforeInPast() public {
