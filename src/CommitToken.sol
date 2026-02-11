@@ -73,6 +73,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      * @param newUnlockingDelay New unlocking delay in seconds
      */
     function setUnlockingDelay(uint48 newUnlockingDelay) external restricted {
+        if (newUnlockingDelay == 0) revert InvalidAmount("unlockingDelay", newUnlockingDelay);
+
         uint48 oldUnlockingDelay = unlockingDelay;
         unlockingDelay = newUnlockingDelay;
         emit UnlockingDelayUpdated(oldUnlockingDelay, newUnlockingDelay);
@@ -298,6 +300,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         override
         returns (uint256 requestId)
     {
+        if (shares == 0) revert InvalidAmount("shares", shares);
+
         // Calculate assets at current rate (rate locking)
         uint256 assets = previewRedeem(shares);
 
@@ -311,6 +315,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      * @inheritdoc ICommitToken
      */
     function requestWithdraw(uint256 assets, address controller, address owner) external returns (uint256 requestId) {
+        if (assets == 0) revert InvalidAmount("assets", assets);
+
         // Calculate shares needed at current rate (rate locking)
         uint256 shares = previewWithdraw(assets);
 

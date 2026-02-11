@@ -319,6 +319,7 @@ contract ApyUSD is
      * @param newDenyList Address of the new AddressList contract
      */
     function setDenyList(IAddressList newDenyList) external restricted {
+        if (address(newDenyList) == address(0)) revert InvalidAddress("newDenyList");
         _setDenyList(newDenyList);
     }
 
