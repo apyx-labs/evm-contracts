@@ -126,8 +126,8 @@ contract StaleVestingAmountBugTest is VestingTest {
             actualAssets + vestedButNonexistent,
             "totalAssets includes vested amount from stale vestingAmount"
         );
-        assertGt(vestedButNonexistent, 0, "Vested amount > 0 from stale vestingAmount");
-        assertGt(totalAssets, actualAssets, "totalAssets is inflated");
+        assertEq(vestedButNonexistent, 0, "Vested amount > 0 after pulling all vested yield");
+        assertEq(totalAssets, actualAssets, "totalAssets is inflated");
 
         // New depositor gets fewer shares than they should
         uint256 bobDeposit = DEPOSIT_AMOUNT;
