@@ -188,5 +188,22 @@ contract StaleVestingAmountBugTest is VestingTest {
         assertEq(
             vesting.unvestedAmount(), yieldAmount / 4, "Unvested amount should be 1/4 of the original yield amount"
         );
+
+        newPeriod = VESTING_PERIOD * 2;
+        vm.prank(admin);
+        vesting.setVestingPeriod(newPeriod);
+
+        assertEq(
+            vesting.vestedAmount(), yieldAmount / 4, "Vested amount should remain the same because no time has passed"
+        );
+        assertEq(
+            vesting.unvestedAmount(),
+            yieldAmount / 4,
+            "Unvested amount should remain the same because no time has passed"
+        );
+
+        // Pull all vested yield
+        vm.prank(address(apyUSD));
+        vesting.pullVestedYield();
     }
 }
