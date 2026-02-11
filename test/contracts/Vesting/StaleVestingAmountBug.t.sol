@@ -51,18 +51,23 @@ contract StaleVestingAmountBugTest is VestingTest {
         vm.prank(address(apyUSD));
         vesting.pullVestedYield();
 
-        // After pulling, contract balance is zero but vestingAmount is NOT reset (BUG!)
+        // After pulling, contract balance is zero but vestingAmount is NOT reset
         assertEq(apxUSD.balanceOf(address(vesting)), 0, "Vesting contract should have zero balance");
-        assertEq(vesting.fullyVestedAmount(), 0, "Fully vested amount should be reset");
-        assertEq(vesting.vestedAmount(), 0, "Vested amount should be zero");
+        assertEq(vesting.unvestedAmount(), 0, "unvestedAmount should be 0 because all yield was pulled");
+        assertEq(vesting.vestedAmount(), 0, "vestedAmount should be zero because all yield was pulled");
 
-        // BUG: vestingAmount is stale (not reset to 0)
-        assertEq(vesting.vestingAmount(), yieldAmount, "BUG: vestingAmount should be 0 but is stale");
+        // vestingAmount should be the yield amount because it is not reset
+        assertEq(
+            vesting.vestingAmount(),
+            yieldAmount,
+            "vestingAmount should be the yield amount because all yield was pulled"
+        );
 
         // Step 4: Admin extends the vesting period
         uint256 newPeriod = VESTING_PERIOD * 2; // Double the period
         vm.prank(admin);
         vesting.setVestingPeriod(newPeriod);
+        assertEq(vesting.vestingAmount(), 0, "vestingAmount should be updated to the remaining unvested yield amount");
 
         // Step 5: Time passes - half of the new vesting period
         skip(newPeriod / 2);
@@ -71,30 +76,16 @@ contract StaleVestingAmountBugTest is VestingTest {
         // The contract thinks it should vest half of the stale vestingAmount
         uint256 calculatedVestedAmount = vesting.vestedAmount();
 
-        // This will be approximately half of yieldAmount (stale vestingAmount)
-        // even though the contract has zero balance!
-        assertGt(calculatedVestedAmount, 0, "Vested amount > 0 due to stale vestingAmount");
-        assertApproxEqAbs(
-            calculatedVestedAmount,
-            yieldAmount / 2,
-            1e18, // Allow for rounding with large period changes
-            "Vested amount calculated from stale vestingAmount"
-        );
+        // The vested amount should be 0 because all yield was pulled
+        assertEq(calculatedVestedAmount, 0, "Vested amount > 0 due to stale vestingAmount");
 
         // Step 6: User attempts to withdraw - this should trigger pullVestedYield()
         // First, user needs to have deposited to apyUSD
         deposit(alice, DEPOSIT_AMOUNT);
-
         uint256 sharesToRedeem = apyUSD.balanceOf(alice) / 2;
 
-        // BUG DEMONSTRATION: This call will REVERT because pullVestedYield() tries to transfer
-        // calculatedVestedAmount (approx yieldAmount/2) but vesting contract only has 0 balance
-        // THIS IS WHERE THE TEST FAILS, DEMONSTRATING THE BUG
         vm.prank(alice);
         apyUSD.redeem(sharesToRedeem, alice, alice);
-
-        // If the bug is fixed, execution reaches here and test passes
-        // With the bug, execution never reaches here because redeem() reverts above
     }
 
     /**

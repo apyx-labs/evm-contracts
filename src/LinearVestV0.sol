@@ -203,6 +203,9 @@ contract LinearVestV0 is AccessManaged, IVesting {
     function setVestingPeriod(uint256 newPeriod) external override restricted {
         if (newPeriod == 0) revert InvalidAmount("vestingPeriod", newPeriod);
 
+        fullyVestedAmount += newlyVestedAmount();
+        vestingAmount = unvestedAmount();
+
         uint256 oldPeriod = vestingPeriod;
         vestingPeriod = newPeriod;
 
