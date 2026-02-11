@@ -16,7 +16,6 @@ import {Roles} from "../../../src/Roles.sol";
 contract RedemptionPool_DecimalMismatchTest is BaseTest {
     using Roles for *;
 
-    MockERC20 public usdc;
     MockERC20 public token18;
     RedemptionPoolV0 public redemptionPoolMismatched;
     RedemptionPoolV0 public redemptionPoolSameDecimals;
@@ -24,16 +23,12 @@ contract RedemptionPool_DecimalMismatchTest is BaseTest {
     function setUp() public override {
         super.setUp();
 
-        // Deploy MockERC20 as USDC with 6 decimals
-        usdc = new MockERC20("Mock USDC", "USDC");
-        usdc.setDecimals(6);
-        vm.label(address(usdc), "usdc");
-
         // Deploy MockERC20 with 18 decimals for regression test
         token18 = new MockERC20("Mock Token 18", "MOCK18");
         vm.label(address(token18), "token18");
 
         // Deploy RedemptionPoolV0 with mismatched decimals (18 vs 6)
+        // Use the USDC from BaseTest
         redemptionPoolMismatched =
             new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), IERC20(address(usdc)));
         vm.label(address(redemptionPoolMismatched), "redemptionPoolMismatched");

@@ -26,9 +26,9 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     /// @notice Reserve asset paid out on redemption; e.g. USDC
     IERC20 public immutable reserveAsset;
     /// @notice True if asset has more decimals than reserve, false otherwise
-    bool public immutable assetHasMoreDecimals;
+    bool private immutable assetHasMoreDecimals;
     /// @notice Scaling factor for decimal conversion: 10^abs(assetDecimals - reserveDecimals)
-    uint256 public immutable decimalScalingFactor;
+    uint256 private immutable decimalScalingFactor;
     /// @notice Exchange rate: reserve asset per asset, 1e18 = 1:1 (reserveAmount = assetsAmount * exchangeRate / 1e18)
     uint256 public exchangeRate;
 

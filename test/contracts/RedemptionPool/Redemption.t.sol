@@ -22,7 +22,8 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         approveRedemptionPool(assetsAmount);
 
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        uint256 receiverBefore = mockToken.balanceOf(bob);
+        uint256 receiverBefore = usdc.balanceOf(bob);
+        uint256 poolReserveBefore = redemptionPool.reserveBalance();
 
         vm.expectEmit(true, true, true, true);
         emit IRedemptionPool.Redeemed(redeemer, assetsAmount, expectedReserve);
@@ -35,11 +36,11 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         // Check that the receiver got the reserve amount
         assertEq(reserveAmount, expectedReserve, "return value should match previewRedeem");
-        assertEq(mockToken.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
+        assertEq(usdc.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
 
         // Check that the redemption pool has no apxUSD and the reserve balance has decreased
         assertEq(apxUSD.balanceOf(address(redemptionPool)), 0, "the redemption pool should have no apxUSD");
-        assertEq(redemptionPool.reserveBalance(), assetsAmount - expectedReserve, "pool reserve should decrease");
+        assertEq(redemptionPool.reserveBalance(), poolReserveBefore - expectedReserve, "pool reserve should decrease");
     }
 
     function test_Redeem_ReserveAmountMatchesPreviewRedeem() public {
@@ -54,12 +55,12 @@ contract RedemptionPool_RedemptionTest is BaseTest {
     }
 
     function test_PreviewRedeem_RoundingDown() public {
-        // exchangeRate 0.1 (1e17): reserve = assetsAmount * 1e17 / 1e18; fractional part truncates
+        // exchangeRate 0.1 (1e17): reserve = assetsAmount * 1e17 / 1e18 / 1e12 (for 6-decimal USDC)
         vm.prank(admin);
         redemptionPool.setExchangeRate(1e17);
         uint256 assetsAmount = 1e18 + 1; // 1e18 + 1 wei
-        // (1e18+1) * 1e17 / 1e18 = 1e17 + 1e17/1e18; integer division truncates 1e17/1e18 to 0
-        uint256 expectedFloor = (assetsAmount * 1e17) / 1e18;
+        // With 6-decimal USDC: (1e18+1) * 1e17 / 1e18 / 1e12 = 1e5; fractional part truncates
+        uint256 expectedFloor = (assetsAmount * 1e17) / 1e18 / 1e12;
         assertEq(redemptionPool.previewRedeem(assetsAmount), expectedFloor, "previewRedeem should round down");
     }
 
@@ -82,11 +83,12 @@ contract RedemptionPool_RedemptionTest is BaseTest {
     function test_RevertWhen_RedeemInsufficientReserveBalance() public {
         mintApxUSD(redeemer, LARGE_AMOUNT);
         approveRedemptionPool(LARGE_AMOUNT);
-        // Deposit only a small reserve; previewRedeem(LARGE_AMOUNT) = LARGE_AMOUNT > reserve
+        // Deposit only a small reserve; previewRedeem(LARGE_AMOUNT) will need more than deposited
         depositRedemptionPoolReserve(SMALL_AMOUNT);
 
         uint256 reserveNeeded = redemptionPool.previewRedeem(LARGE_AMOUNT);
-        vm.expectRevert(Errors.insufficientBalance(address(redemptionPool), SMALL_AMOUNT, reserveNeeded));
+        uint256 actualBalance = redemptionPool.reserveBalance();
+        vm.expectRevert(Errors.insufficientBalance(address(redemptionPool), actualBalance, reserveNeeded));
         vm.prank(redeemer);
         redemptionPool.redeem(LARGE_AMOUNT, bob);
     }
