@@ -88,6 +88,56 @@ contract YieldDistributorTest is YieldDistributorBaseTest {
         );
     }
 
+    function test_RevertWhen_NonAdminWithdraws() public {
+        mintToYieldDistributor(YIELD_AMOUNT);
+
+        vm.expectRevert();
+        vm.prank(yieldOperator);
+        yieldDistributor.withdraw(YIELD_AMOUNT, alice);
+    }
+
+    function test_RevertWhen_NonAdminWithdrawsTokens() public {
+        mintToYieldDistributor(YIELD_AMOUNT);
+
+        vm.expectRevert();
+        vm.prank(yieldOperator);
+        yieldDistributor.withdrawTokens(address(apxUSD), YIELD_AMOUNT, alice);
+    }
+
+    function test_AdminCanWithdraw() public {
+        mintToYieldDistributor(YIELD_AMOUNT);
+
+        uint256 aliceBalanceBefore = apxUSD.balanceOf(alice);
+        uint256 distributorBalanceBefore = yieldDistributor.availableBalance();
+
+        vm.prank(admin);
+        yieldDistributor.withdraw(YIELD_AMOUNT, alice);
+
+        assertEq(apxUSD.balanceOf(alice), aliceBalanceBefore + YIELD_AMOUNT, "Alice should receive tokens");
+        assertEq(
+            yieldDistributor.availableBalance(),
+            distributorBalanceBefore - YIELD_AMOUNT,
+            "Distributor balance should decrease"
+        );
+    }
+
+    function test_AdminCanWithdrawTokens() public {
+        usdc.mint(address(yieldDistributor), YIELD_AMOUNT);
+
+        uint256 aliceBalanceBefore = usdc.balanceOf(alice);
+        uint256 distributorBalanceBefore = yieldDistributor.availableBalance();
+
+        vm.prank(admin);
+        yieldDistributor.withdrawTokens(address(usdc), YIELD_AMOUNT, alice);
+
+        assertEq(usdc.balanceOf(alice), aliceBalanceBefore + YIELD_AMOUNT, "Alice should receive tokens");
+        assertEq(
+            yieldDistributor.availableBalance(),
+            distributorBalanceBefore,
+            "Distributor balance should remain the same because apxUSD is not withdrawn"
+        );
+    }
+
     // ========================================
     // Configuration Tests
     // ========================================
