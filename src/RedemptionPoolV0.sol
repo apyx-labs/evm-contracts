@@ -25,6 +25,10 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     ERC20Burnable public immutable asset;
     /// @notice Reserve asset paid out on redemption; e.g. USDC
     IERC20 public immutable reserveAsset;
+    /// @notice True if asset has more decimals than reserve, false otherwise
+    bool public immutable assetHasMoreDecimals;
+    /// @notice Scaling factor for decimal conversion: 10^abs(assetDecimals - reserveDecimals)
+    uint256 public immutable decimalScalingFactor;
     /// @notice Exchange rate: reserve asset per asset, 1e18 = 1:1 (reserveAmount = assetsAmount * exchangeRate / 1e18)
     uint256 public exchangeRate;
 
@@ -42,6 +46,18 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
         asset = asset_;
         reserveAsset = reserveAsset_;
         exchangeRate = 1e18;
+
+        // Cache decimal scaling information
+        uint8 assetDecimals = IERC20Metadata(address(asset_)).decimals();
+        uint8 reserveDecimals = IERC20Metadata(address(reserveAsset_)).decimals();
+
+        if (assetDecimals >= reserveDecimals) {
+            assetHasMoreDecimals = true;
+            decimalScalingFactor = 10 ** (assetDecimals - reserveDecimals);
+        } else {
+            assetHasMoreDecimals = false;
+            decimalScalingFactor = 10 ** (reserveDecimals - assetDecimals);
+        }
     }
 
     // ============ Core Functions ============
@@ -51,17 +67,12 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     ///      Rounding is downward in favor of the pool.
     ///      Formula: reserveAmount = (assetsAmount * exchangeRate) / (1e18 * 10^(assetDecimals - reserveDecimals))
     function previewRedeem(uint256 assetsAmount) external view override returns (uint256 reserveAmount) {
-        uint8 assetDecimals = IERC20Metadata(address(asset)).decimals();
-        uint8 reserveDecimals = IERC20Metadata(address(reserveAsset)).decimals();
-
-        if (assetDecimals >= reserveDecimals) {
+        if (assetHasMoreDecimals) {
             // Scale down if asset has more decimals
-            uint256 decimalDiff = assetDecimals - reserveDecimals;
-            return (assetsAmount * exchangeRate) / (1e18 * 10 ** decimalDiff);
+            return (assetsAmount * exchangeRate) / (1e18 * decimalScalingFactor);
         } else {
             // Scale up if reserve has more decimals
-            uint256 decimalDiff = reserveDecimals - assetDecimals;
-            return (assetsAmount * exchangeRate * 10 ** decimalDiff) / 1e18;
+            return (assetsAmount * exchangeRate * decimalScalingFactor) / 1e18;
         }
     }
 

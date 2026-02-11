@@ -1,73 +1,35 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {Test} from "forge-std/src/Test.sol";
-import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
+import {BaseTest} from "../../BaseTest.sol";
 import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {RedemptionPoolV0} from "../../../src/RedemptionPoolV0.sol";
-import {MockUSDC} from "../../mocks/MockUSDC.sol";
 import {MockERC20} from "../../mocks/MockERC20.sol";
-import {AddressList} from "../../../src/AddressList.sol";
-import {Roles} from "../../../src/Roles.sol";
 import {IRedemptionPool} from "../../../src/interfaces/IRedemptionPool.sol";
-import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Roles} from "../../../src/Roles.sol";
 
 /**
  * @title RedemptionPool Decimal Mismatch Tests
  * @notice Tests for RedemptionPoolV0 with mismatched decimals between asset and reserveAsset
  */
-contract RedemptionPool_DecimalMismatchTest is Test {
-    using Roles for AccessManager;
+contract RedemptionPool_DecimalMismatchTest is BaseTest {
+    using Roles for *;
 
-    AccessManager public accessManager;
-    ApxUSD public apxUSD;
-    MockUSDC public usdc;
+    MockERC20 public usdc;
     MockERC20 public token18;
     RedemptionPoolV0 public redemptionPoolMismatched;
     RedemptionPoolV0 public redemptionPoolSameDecimals;
-    AddressList public denyList;
 
-    address public admin;
-    address public redeemer;
-    address public bob;
+    function setUp() public override {
+        super.setUp();
 
-    uint256 public constant APX_SUPPLY_CAP = 10_000_000e18;
-
-    function setUp() public {
-        // Set block timestamp to avoid underflow
-        vm.warp(365 days);
-
-        // Create test accounts
-        admin = makeAddr("admin");
-        redeemer = makeAddr("redeemer");
-        bob = makeAddr("bob");
-
-        // Deploy AccessManager
-        vm.prank(admin);
-        accessManager = new AccessManager(admin);
-        vm.label(address(accessManager), "AccessManager");
-
-        // Deploy AddressList
-        denyList = new AddressList(address(accessManager));
-        vm.label(address(denyList), "denyList");
-
-        // Deploy ApxUSD (18 decimals)
-        ApxUSD apxUSDImpl = new ApxUSD();
-        bytes memory apxUSDInitData = abi.encodeCall(
-            apxUSDImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
-        );
-        ERC1967Proxy apxUSDProxy = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
-        apxUSD = ApxUSD(address(apxUSDProxy));
-        vm.label(address(apxUSD), "apxUSD");
-
-        // Deploy MockUSDC (6 decimals)
-        usdc = new MockUSDC();
+        // Deploy MockERC20 as USDC with 6 decimals
+        usdc = new MockERC20("Mock USDC", "USDC");
+        usdc.setDecimals(6);
         vm.label(address(usdc), "usdc");
 
-        // Deploy MockERC20 (18 decimals) for regression test
+        // Deploy MockERC20 with 18 decimals for regression test
         token18 = new MockERC20("Mock Token 18", "MOCK18");
         vm.label(address(token18), "token18");
 
@@ -81,30 +43,18 @@ contract RedemptionPool_DecimalMismatchTest is Test {
             new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), IERC20(address(token18)));
         vm.label(address(redemptionPoolSameDecimals), "redemptionPoolSameDecimals");
 
-        // Configure roles
-        setUpRoles();
+        // Configure roles for the new pools
+        setUpRolesForNewPools();
     }
 
-    function setUpRoles() internal {
+    function setUpRolesForNewPools() internal {
         vm.startPrank(admin);
-
-        // Set role admins
-        accessManager.setRoleAdmins();
 
         // Configure RedemptionPool targets (admin + redeemer) for both pools
         accessManager.assignAdminTargetsFor(redemptionPoolMismatched);
         accessManager.assignRedeemerTargetsFor(IRedemptionPool(address(redemptionPoolMismatched)));
         accessManager.assignAdminTargetsFor(redemptionPoolSameDecimals);
         accessManager.assignRedeemerTargetsFor(IRedemptionPool(address(redemptionPoolSameDecimals)));
-
-        // Configure ApxUSD admin targets
-        accessManager.assignAdminTargetsFor(apxUSD);
-
-        // Grant MINT_STRAT_ROLE to admin for minting
-        accessManager.grantRole(Roles.MINT_STRAT_ROLE, admin, 0);
-
-        // Grant ROLE_REDEEMER to redeemer address
-        accessManager.grantRole(Roles.ROLE_REDEEMER, redeemer, 0);
 
         vm.stopPrank();
     }
@@ -156,15 +106,14 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         redemptionPoolMismatched.deposit(expectedReserve);
         vm.stopPrank();
 
-        // Setup: mint apxUSD to redeemer and approve pool
-        vm.prank(admin);
-        apxUSD.mint(redeemer, assetsAmount, 0);
-        vm.prank(redeemer);
-        apxUSD.approve(address(redemptionPoolMismatched), assetsAmount);
+        // Setup: mint apxUSD to redeemer and approve pool using BaseTest helpers
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(redeemer, address(redemptionPoolMismatched), assetsAmount);
 
         // Record balances before
         uint256 redeemerApxUSDBefore = apxUSD.balanceOf(redeemer);
         uint256 bobUSDCBefore = usdc.balanceOf(bob);
+        uint256 totalSupplyBefore = apxUSD.totalSupply();
 
         // Execute redeem
         vm.prank(redeemer);
@@ -176,11 +125,20 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         // Verify apxUSD was burned
         assertEq(apxUSD.balanceOf(redeemer), redeemerApxUSDBefore - assetsAmount, "apxUSD should be burned");
 
+        // Verify total supply of apxUSD decreased
+        assertEq(apxUSD.totalSupply(), totalSupplyBefore - assetsAmount, "total supply should decrease");
+
         // Verify bob received correct USDC amount
         assertEq(usdc.balanceOf(bob), bobUSDCBefore + expectedReserve, "bob should receive correct USDC");
 
         // Verify pool reserve balance decreased
         assertEq(redemptionPoolMismatched.reserveBalance(), 0, "pool should have no reserve left");
+    }
+
+    // Helper function for approving redemption pool
+    function approveRedemptionPool(address user, address pool, uint256 amount) internal {
+        vm.prank(user);
+        apxUSD.approve(pool, amount);
     }
 
     // ========================================
@@ -216,11 +174,9 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         redemptionPoolMismatched.deposit(expectedReserve);
         vm.stopPrank();
 
-        // Setup: mint apxUSD to redeemer and approve
-        vm.prank(admin);
-        apxUSD.mint(redeemer, assetsAmount, 0);
-        vm.prank(redeemer);
-        apxUSD.approve(address(redemptionPoolMismatched), assetsAmount);
+        // Setup: mint apxUSD to redeemer and approve using BaseTest helpers
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(redeemer, address(redemptionPoolMismatched), assetsAmount);
 
         // Execute redeem
         vm.prank(redeemer);
@@ -246,11 +202,9 @@ contract RedemptionPool_DecimalMismatchTest is Test {
         redemptionPoolSameDecimals.deposit(expectedReserve);
         vm.stopPrank();
 
-        // Setup: mint apxUSD to redeemer and approve
-        vm.prank(admin);
-        apxUSD.mint(redeemer, assetsAmount, 0);
-        vm.prank(redeemer);
-        apxUSD.approve(address(redemptionPoolSameDecimals), assetsAmount);
+        // Setup: mint apxUSD to redeemer and approve using BaseTest helpers
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(redeemer, address(redemptionPoolSameDecimals), assetsAmount);
 
         // Execute redeem
         vm.prank(redeemer);
