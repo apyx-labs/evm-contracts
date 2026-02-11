@@ -30,6 +30,11 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
     /// @param receiver Address that received the tokens
     event Withdraw(address indexed caller, address indexed withdrawAsset, uint256 amount, address indexed receiver);
 
+    /// @notice Emitted when reserve assets are deposited into the pool
+    /// @param depositor Address that deposited the reserve assets
+    /// @param amount Amount of reserve assets deposited
+    event ReservesDeposited(address indexed depositor, uint256 amount);
+
     // ============ Core Functions ============
 
     /// @notice Redeem assets for reserve assets at the current exchange rate

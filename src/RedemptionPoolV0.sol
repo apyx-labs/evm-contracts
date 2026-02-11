@@ -92,6 +92,8 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     function deposit(uint256 reserveAmount) external override restricted nonReentrant {
         if (reserveAmount == 0) revert InvalidAmount("reserveAmount", reserveAmount);
         reserveAsset.safeTransferFrom(msg.sender, address(this), reserveAmount);
+
+        emit ReservesDeposited(msg.sender, reserveAmount);
     }
 
     /// @inheritdoc IRedemptionPool
