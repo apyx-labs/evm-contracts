@@ -16,6 +16,8 @@ import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
  * @dev Like CommitToken, this version is non-transferable for implementation simplicity.
  *      Future versions may support transferability or could be implemented as an NFT
  *      to enable transferring unlocking positions between users.
+ * @dev Inherits CommitToken's custom async redemption flow, which is inspired by but NOT
+ *      compliant with ERC-7540.
  */
 contract UnlockToken is CommitToken, IUnlockToken {
     /// @notice The vault address that can act as an operator (immutable)
