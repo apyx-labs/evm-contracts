@@ -140,4 +140,53 @@ contract StaleVestingAmountBugTest is VestingTest {
         uint256 expectedSharesIfNoInflation = (bobDeposit * aliceShares) / DEPOSIT_AMOUNT;
         assertLt(bobShares, expectedSharesIfNoInflation, "Bob receives fewer shares due to inflated totalAssets");
     }
+
+    function test_SetVestingPeriod_AllowsDrawingVestedYield() public {
+        uint256 yieldAmount = DEPOSIT_AMOUNT;
+
+        // Deposit yield into vesting contract
+        depositYield(yieldDistributor, yieldAmount);
+
+        // Skip halfway through the vesting period
+        skip(VESTING_PERIOD / 2);
+
+        // Pull all vested yield
+        vm.prank(address(apyUSD));
+        vesting.pullVestedYield();
+
+        // Extend vesting period
+        uint256 newPeriod = VESTING_PERIOD * 2;
+        vm.prank(admin);
+        vesting.setVestingPeriod(newPeriod);
+
+        // Check that the vested amount is 0
+        assertEq(vesting.vestedAmount(), 0, "Vested amount should be 0");
+        assertEq(
+            vesting.unvestedAmount(), yieldAmount / 2, "Unvested amount should be the remaining unvested yield amount"
+        );
+        assertEq(
+            vesting.vestingAmount(), yieldAmount / 2, "Vesting amount should be the remaining unvested yield amount"
+        );
+
+        newPeriod = VESTING_PERIOD / 2;
+        vm.prank(admin);
+        vesting.setVestingPeriod(newPeriod);
+
+        // Check that the vested amount is 0
+        assertEq(vesting.vestedAmount(), 0, "Vested amount should not change because no time has passed");
+        assertEq(
+            vesting.unvestedAmount(), yieldAmount / 2, "Unvested amount should be the remaining unvested yield amount"
+        );
+        assertEq(
+            vesting.vestingAmount(), yieldAmount / 2, "Vesting amount should be the remaining unvested yield amount"
+        );
+
+        skip(newPeriod / 2);
+
+        // Check that the vested amount is 1/4 of the original yield amount
+        assertEq(vesting.vestedAmount(), yieldAmount / 4, "Vested amount should be 1/4 of the original yield amount");
+        assertEq(
+            vesting.unvestedAmount(), yieldAmount / 4, "Unvested amount should be 1/4 of the original yield amount"
+        );
+    }
 }
