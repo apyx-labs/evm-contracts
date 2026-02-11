@@ -19,6 +19,10 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
  * @dev This contract is non-transferable as an implementation convenience for the current version.
  *      The non-transferability simplifies accounting and prevents transfer-related complexity
  *      in the async redeem request system. Future versions could support transferability if needed.
+ * @dev This contract implements a custom async redemption flow inspired by ERC-7540, but is NOT
+ *      compliant with the ERC-7540 specification. It deviates from MUST requirements including:
+ *      shares not removed from owner on request, preview functions not reverting, operator
+ *      functionality not supported, and ERC-7575 share() method not implemented.
  * @dev TODO: Add support for freezing
  */
 contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ERC20Pausable, ERC165 {
@@ -512,12 +516,12 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
 
     /**
      * @notice Returns true if the contract implements the interface
-     * @dev Implements ERC-165 as required by ERC-7540 specification
+     * @dev Does NOT claim ERC-7540 compliance via ERC-165. This contract implements a custom
+     *      async redemption flow inspired by ERC-7540 but deviates from the specification.
      * @param interfaceId The interface identifier to check
      * @return true if the contract implements the interface
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IERC7540Redeem).interfaceId || interfaceId == type(IERC7540Operator).interfaceId
-            || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 }

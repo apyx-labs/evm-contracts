@@ -8,7 +8,8 @@ import {IERC7540Redeem, IERC7540Operator} from "forge-std/src/interfaces/IERC754
 /**
  * @title UnlockTokenERC165Test
  * @notice Tests for UnlockToken ERC-165 interface support
- * @dev ERC-7540 requires ERC-165 support for interface detection
+ * @dev UnlockToken implements a custom async flow inspired by ERC-7540 but is NOT compliant
+ *      with the specification, so it does not claim ERC-7540 interface support via ERC-165
  */
 contract UnlockTokenERC165Test is BaseTest {
     function test_SupportsInterface_IERC165() public view {
@@ -16,33 +17,22 @@ contract UnlockTokenERC165Test is BaseTest {
         assertTrue(unlockToken.supportsInterface(type(IERC165).interfaceId), "Should support IERC165");
     }
 
-    function test_SupportsInterface_IERC7540Redeem() public view {
-        // Should support IERC7540Redeem
-        assertTrue(unlockToken.supportsInterface(type(IERC7540Redeem).interfaceId), "Should support IERC7540Redeem");
+    function test_DoesNotSupport_IERC7540Redeem() public view {
+        // Should NOT support IERC7540Redeem (not compliant with spec)
+        assertFalse(
+            unlockToken.supportsInterface(type(IERC7540Redeem).interfaceId), "Should not support IERC7540Redeem"
+        );
     }
 
-    function test_SupportsInterface_IERC7540Operator() public view {
-        // Should support IERC7540Operator
-        assertTrue(unlockToken.supportsInterface(type(IERC7540Operator).interfaceId), "Should support IERC7540Operator");
+    function test_DoesNotSupport_IERC7540Operator() public view {
+        // Should NOT support IERC7540Operator (not compliant with spec)
+        assertFalse(
+            unlockToken.supportsInterface(type(IERC7540Operator).interfaceId), "Should not support IERC7540Operator"
+        );
     }
 
     function test_SupportsInterface_InvalidInterface() public view {
         // Should not support a random interface
         assertFalse(unlockToken.supportsInterface(0x12345678), "Should not support random interface");
-    }
-
-    function test_SupportsInterface_AllRequired() public view {
-        // Verify all required interfaces are supported in a single test
-        bytes4[] memory requiredInterfaces = new bytes4[](3);
-        requiredInterfaces[0] = type(IERC165).interfaceId;
-        requiredInterfaces[1] = type(IERC7540Redeem).interfaceId;
-        requiredInterfaces[2] = type(IERC7540Operator).interfaceId;
-
-        for (uint256 i = 0; i < requiredInterfaces.length; i++) {
-            assertTrue(
-                unlockToken.supportsInterface(requiredInterfaces[i]),
-                string.concat("Should support interface at index ", vm.toString(i))
-            );
-        }
     }
 }
