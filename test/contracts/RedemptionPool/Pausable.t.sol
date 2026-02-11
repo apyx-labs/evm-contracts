@@ -24,7 +24,7 @@ contract RedemptionPool_PausableTest is BaseTest {
 
     function test_Redeem_SuccessAfterUnpause() public {
         uint256 assetsAmount = 100e18;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(100e6); // 100 USDC in 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 

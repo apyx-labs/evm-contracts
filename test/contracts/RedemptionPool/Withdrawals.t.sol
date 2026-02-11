@@ -15,12 +15,9 @@ contract RedemptionPool_WithdrawalsTest is BaseTest {
     // ========================================
 
     function test_Withdraw_Success() public {
-        uint256 amountIn18Decimals = 200e18;
-        depositRedemptionPoolReserve(amountIn18Decimals);
+        uint256 usdcAmount = 200e6; // 200 USDC in 6 decimals
+        depositRedemptionPoolReserve(usdcAmount);
         uint256 receiverBefore = usdc.balanceOf(bob);
-
-        // The actual amount deposited in 6-decimal USDC
-        uint256 usdcAmount = amountIn18Decimals / 1e12;
 
         vm.expectEmit(true, true, true, true);
         emit IRedemptionPool.Withdraw(admin, address(usdc), usdcAmount, bob);
@@ -49,7 +46,7 @@ contract RedemptionPool_WithdrawalsTest is BaseTest {
     // ========================================
 
     function test_RevertWhen_WithdrawZeroAmount() public {
-        depositRedemptionPoolReserve(SMALL_AMOUNT);
+        depositRedemptionPoolReserve(SMALL_AMOUNT / 1e12); // Convert to 6 decimals
 
         vm.expectRevert(Errors.invalidAmount("amount", 0));
         vm.prank(admin);
@@ -57,15 +54,15 @@ contract RedemptionPool_WithdrawalsTest is BaseTest {
     }
 
     function test_RevertWhen_WithdrawZeroReceiver() public {
-        depositRedemptionPoolReserve(SMALL_AMOUNT);
+        depositRedemptionPoolReserve(SMALL_AMOUNT / 1e12); // Convert to 6 decimals
 
         vm.expectRevert(Errors.invalidAddress("receiver"));
         vm.prank(admin);
-        redemptionPool.withdraw(SMALL_AMOUNT, address(0));
+        redemptionPool.withdraw(SMALL_AMOUNT / 1e12, address(0)); // Use 6-decimal amount
     }
 
     function test_RevertWhen_WithdrawInsufficientBalance() public {
-        depositRedemptionPoolReserve(SMALL_AMOUNT);
+        depositRedemptionPoolReserve(SMALL_AMOUNT / 1e12); // Convert to 6 decimals
         uint256 actualBalance = redemptionPool.reserveBalance();
         uint256 excess = actualBalance + 1;
 

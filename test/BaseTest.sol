@@ -417,16 +417,13 @@ abstract contract BaseTest is Test {
 
     /**
      * @notice Deposits reserve (USDC) into the redemption pool
-     * @param amount Amount in 18-decimal format (will be converted to USDC's 6 decimals)
-     * @dev This helper converts from 18-decimal amounts (like apxUSD) to 6-decimal USDC amounts
+     * @param amount Amount of USDC to deposit (in USDC's native 6 decimals)
      */
     function depositRedemptionPoolReserve(uint256 amount) internal {
-        // Convert from 18 decimals to 6 decimals (USDC)
-        uint256 usdcAmount = amount / 1e12;
-        usdc.mint(admin, usdcAmount);
+        usdc.mint(admin, amount);
         vm.startPrank(admin);
-        usdc.approve(address(redemptionPool), usdcAmount);
-        redemptionPool.deposit(usdcAmount);
+        usdc.approve(address(redemptionPool), amount);
+        redemptionPool.deposit(amount);
         vm.stopPrank();
     }
 

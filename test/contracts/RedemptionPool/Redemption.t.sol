@@ -17,7 +17,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
     function test_Redeem_Success() public {
         uint256 assetsAmount = SMALL_AMOUNT;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(assetsAmount / 1e12); // Convert to 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
@@ -45,7 +45,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
     function test_Redeem_ReserveAmountMatchesPreviewRedeem() public {
         uint256 assetsAmount = VERY_SMALL_AMOUNT;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(assetsAmount / 1e12); // Convert to 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
@@ -84,7 +84,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         mintApxUSD(redeemer, LARGE_AMOUNT);
         approveRedemptionPool(LARGE_AMOUNT);
         // Deposit only a small reserve; previewRedeem(LARGE_AMOUNT) will need more than deposited
-        depositRedemptionPoolReserve(SMALL_AMOUNT);
+        depositRedemptionPoolReserve(SMALL_AMOUNT / 1e12); // Convert to 6 decimals
 
         uint256 reserveNeeded = redemptionPool.previewRedeem(LARGE_AMOUNT);
         uint256 actualBalance = redemptionPool.reserveBalance();
