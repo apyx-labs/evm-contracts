@@ -37,7 +37,7 @@ contract RedemptionPool_PausableTest is BaseTest {
         uint256 receiverBefore = mockToken.balanceOf(bob);
 
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, 0);
 
         assertEq(reserveAmount, expectedReserve, "return value should match previewRedeem");
         assertEq(mockToken.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");

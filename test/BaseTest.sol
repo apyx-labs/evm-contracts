@@ -435,7 +435,7 @@ abstract contract BaseTest is Test {
     function redeemRedemptionPool(uint256 amount) internal returns (uint256 reserveAmount) {
         vm.startPrank(redeemer);
         apxUSD.approve(address(redemptionPool), amount);
-        reserveAmount = redemptionPool.redeem(amount, redeemer);
+        reserveAmount = redemptionPool.redeem(amount, redeemer, 0);
         vm.stopPrank();
     }
 }
