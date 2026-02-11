@@ -16,10 +16,10 @@ contract RedemptionPool_DepositTest is BaseTest {
 
     function test_Deposit_EmitsReservesDepositedEvent() public {
         uint256 amount = SMALL_AMOUNT;
-        mockToken.mint(admin, amount);
+        usdc.mint(admin, amount);
 
         vm.startPrank(admin);
-        mockToken.approve(address(redemptionPool), amount);
+        usdc.approve(address(redemptionPool), amount);
 
         vm.expectEmit(true, true, true, true);
         emit IRedemptionPool.ReservesDeposited(admin, amount);
@@ -32,16 +32,16 @@ contract RedemptionPool_DepositTest is BaseTest {
 
     function test_Deposit_Success() public {
         uint256 amount = MEDIUM_AMOUNT;
-        mockToken.mint(admin, amount);
+        usdc.mint(admin, amount);
         uint256 balanceBefore = redemptionPool.reserveBalance();
 
         vm.startPrank(admin);
-        mockToken.approve(address(redemptionPool), amount);
+        usdc.approve(address(redemptionPool), amount);
         redemptionPool.deposit(amount);
         vm.stopPrank();
 
         assertEq(redemptionPool.reserveBalance(), balanceBefore + amount, "pool reserve should increase");
-        assertEq(mockToken.balanceOf(admin), 0, "admin should have no tokens left");
+        assertEq(usdc.balanceOf(admin), 0, "admin should have no tokens left");
     }
 
     // ========================================

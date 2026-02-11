@@ -18,12 +18,13 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
     function test_Redeem_Success() public {
         uint256 assetsAmount = SMALL_AMOUNT;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(assetsAmount / 1e12); // Convert to 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        uint256 receiverBefore = mockToken.balanceOf(bob);
+        uint256 receiverBefore = usdc.balanceOf(bob);
+        uint256 poolReserveBefore = redemptionPool.reserveBalance();
 
         vm.expectEmit(true, true, true, true);
         emit IRedemptionPool.Redeemed(redeemer, assetsAmount, expectedReserve);
@@ -36,16 +37,16 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         // Check that the receiver got the reserve amount
         assertEq(reserveAmount, expectedReserve, "return value should match previewRedeem");
-        assertEq(mockToken.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
+        assertEq(usdc.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
 
         // Check that the redemption pool has no apxUSD and the reserve balance has decreased
         assertEq(apxUSD.balanceOf(address(redemptionPool)), 0, "the redemption pool should have no apxUSD");
-        assertEq(redemptionPool.reserveBalance(), assetsAmount - expectedReserve, "pool reserve should decrease");
+        assertEq(redemptionPool.reserveBalance(), poolReserveBefore - expectedReserve, "pool reserve should decrease");
     }
 
     function test_Redeem_ReserveAmountMatchesPreviewRedeem() public {
         uint256 assetsAmount = VERY_SMALL_AMOUNT;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(assetsAmount / 1e12); // Convert to 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
@@ -55,12 +56,12 @@ contract RedemptionPool_RedemptionTest is BaseTest {
     }
 
     function test_PreviewRedeem_RoundingDown() public {
-        // exchangeRate 0.1 (1e17): reserve = assetsAmount * 1e17 / 1e18; fractional part truncates
+        // exchangeRate 0.1 (1e17): reserve = assetsAmount * 1e17 / 1e18 / 1e12 (for 6-decimal USDC)
         vm.prank(admin);
         redemptionPool.setExchangeRate(1e17);
         uint256 assetsAmount = 1e18 + 1; // 1e18 + 1 wei
-        // (1e18+1) * 1e17 / 1e18 = 1e17 + 1e17/1e18; integer division truncates 1e17/1e18 to 0
-        uint256 expectedFloor = (assetsAmount * 1e17) / 1e18;
+        // With 6-decimal USDC: (1e18+1) * 1e17 / 1e18 / 1e12 = 1e5; fractional part truncates
+        uint256 expectedFloor = (assetsAmount * 1e17) / 1e18 / 1e12;
         assertEq(redemptionPool.previewRedeem(assetsAmount), expectedFloor, "previewRedeem should round down");
     }
 
@@ -83,11 +84,12 @@ contract RedemptionPool_RedemptionTest is BaseTest {
     function test_RevertWhen_RedeemInsufficientReserveBalance() public {
         mintApxUSD(redeemer, LARGE_AMOUNT);
         approveRedemptionPool(LARGE_AMOUNT);
-        // Deposit only a small reserve; previewRedeem(LARGE_AMOUNT) = LARGE_AMOUNT > reserve
-        depositRedemptionPoolReserve(SMALL_AMOUNT);
+        // Deposit only a small reserve; previewRedeem(LARGE_AMOUNT) will need more than deposited
+        depositRedemptionPoolReserve(SMALL_AMOUNT / 1e12); // Convert to 6 decimals
 
         uint256 reserveNeeded = redemptionPool.previewRedeem(LARGE_AMOUNT);
-        vm.expectRevert(Errors.insufficientBalance(address(redemptionPool), SMALL_AMOUNT, reserveNeeded));
+        uint256 actualBalance = redemptionPool.reserveBalance();
+        vm.expectRevert(Errors.insufficientBalance(address(redemptionPool), actualBalance, reserveNeeded));
         vm.prank(redeemer);
         redemptionPool.redeem(LARGE_AMOUNT, bob, 0);
     }
@@ -111,7 +113,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         redemptionPool.setExchangeRate(1e18);
 
         uint256 assetsAmount = 100e18;
-        uint256 minReserveAssetOut = 100e18;
+        uint256 minReserveAssetOut = 100e6;
 
         depositRedemptionPoolReserve(assetsAmount);
         mintApxUSD(redeemer, assetsAmount);
@@ -129,14 +131,14 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         redemptionPool.setExchangeRate(0.9e18);
 
         uint256 assetsAmount = 100e18;
-        uint256 minReserveAssetOut = 100e18; // User expects 100e18 but will only get 90e18
+        uint256 minReserveAssetOut = 100e6; // User expects 100e6 but will only get 90e6
 
         depositRedemptionPoolReserve(assetsAmount);
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        assertEq(expectedReserve, 90e18, "preview should return 90e18");
+        assertEq(expectedReserve, 90e6, "preview should return 90e6");
 
         vm.expectRevert(
             abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, expectedReserve, minReserveAssetOut)
@@ -160,7 +162,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         vm.prank(redeemer);
         uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, minReserveAssetOut);
 
-        assertEq(reserveAmount, 50e18, "reserve amount should be 50e18");
+        assertEq(reserveAmount, 50e6, "reserve amount should be 50e6");
     }
 
     function test_RevertWhen_RateChangeBetweenPreviewAndExecution() public {
@@ -170,7 +172,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         uint256 assetsAmount = 100e18;
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        assertEq(expectedReserve, 100e18, "preview should return 100e18");
+        assertEq(expectedReserve, 100e6, "preview should return 100e6");
 
         // Admin lowers the exchange rate before user's transaction executes
         vm.prank(admin);
@@ -182,7 +184,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         // User's transaction should revert because output (80e18) < minReserveAssetOut (100e18)
         uint256 actualReserve = redemptionPool.previewRedeem(assetsAmount);
-        assertEq(actualReserve, 80e18, "actual reserve should be 80e18");
+        assertEq(actualReserve, 80e6, "actual reserve should be 80e6");
 
         vm.expectRevert(
             abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, actualReserve, expectedReserve)
@@ -198,7 +200,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         uint256 assetsAmount = 100e18;
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        assertEq(expectedReserve, 95e18, "preview should return 95e18");
+        assertEq(expectedReserve, 95e6, "preview should return 95e6");
 
         depositRedemptionPoolReserve(assetsAmount);
         mintApxUSD(redeemer, assetsAmount);

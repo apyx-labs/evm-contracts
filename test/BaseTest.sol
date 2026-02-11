@@ -52,6 +52,9 @@ abstract contract BaseTest is Test {
     // Mock ERC20 for CommitToken tests
     MockERC20 public mockToken;
 
+    // Mock USDC (6 decimals) for RedemptionPool tests
+    MockERC20 public usdc;
+
     // ========================================
     // Test Accounts
     // ========================================
@@ -173,8 +176,13 @@ abstract contract BaseTest is Test {
         );
         vm.label(address(lockToken), "lockToken");
 
-        // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = mockToken)
-        redemptionPool = new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), mockToken);
+        // Deploy Mock USDC (6 decimals) for RedemptionPool
+        usdc = new MockERC20("Mock USDC", "USDC");
+        usdc.setDecimals(6);
+        vm.label(address(usdc), "usdc");
+
+        // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = usdc)
+        redemptionPool = new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), usdc);
         vm.label(address(redemptionPool), "redemptionPool");
 
         // Create redeemer account
@@ -408,13 +416,13 @@ abstract contract BaseTest is Test {
     // ========================================
 
     /**
-     * @notice Deposits reserve (mockToken) into the redemption pool
-     * @param amount Amount of mockToken to deposit (mints to admin then deposits)
+     * @notice Deposits reserve (USDC) into the redemption pool
+     * @param amount Amount of USDC to deposit (in USDC's native 6 decimals)
      */
     function depositRedemptionPoolReserve(uint256 amount) internal {
-        mockToken.mint(admin, amount);
+        usdc.mint(admin, amount);
         vm.startPrank(admin);
-        mockToken.approve(address(redemptionPool), amount);
+        usdc.approve(address(redemptionPool), amount);
         redemptionPool.deposit(amount);
         vm.stopPrank();
     }
