@@ -30,7 +30,12 @@ contract StaleVestingAmountBugTest is VestingTest {
      * When the bug is fixed, this test will pass because redeem() will succeed
      */
     function test_StaleVestingAmount_BlocksWithdrawalsAfterPeriodExtension() public {
-        uint256 yieldAmount = DEPOSIT_AMOUNT; // 1000e18
+        uint256 yieldAmount = DEPOSIT_AMOUNT;
+
+        // Initial user deposits. This needs to be done before the yield is deposited into the vesting contract
+        // to avoid effectively executing an inflation attack by "donating" yield to the vault.
+        uint256 aliceShares = deposit(alice, DEPOSIT_AMOUNT);
+        assertGt(aliceShares, 0, "Alice should have shares after depositing");
 
         // Step 1: Deposit yield into vesting contract
         depositYield(yieldDistributor, yieldAmount);
@@ -81,11 +86,8 @@ contract StaleVestingAmountBugTest is VestingTest {
 
         // Step 6: User attempts to withdraw - this should trigger pullVestedYield()
         // First, user needs to have deposited to apyUSD
-        deposit(alice, DEPOSIT_AMOUNT);
-        uint256 sharesToRedeem = apyUSD.balanceOf(alice) / 2;
-
         vm.prank(alice);
-        apyUSD.redeem(sharesToRedeem, alice, alice);
+        apyUSD.redeem(aliceShares, alice, alice);
     }
 
     /**
@@ -205,5 +207,10 @@ contract StaleVestingAmountBugTest is VestingTest {
         // Pull all vested yield
         vm.prank(address(apyUSD));
         vesting.pullVestedYield();
+
+        assertEq(vesting.vestedAmount(), 0, "Vested amount should be 0");
+        assertEq(
+            vesting.unvestedAmount(), yieldAmount / 4, "Unvested amount should be 1/4 of the original yield amount"
+        );
     }
 }
