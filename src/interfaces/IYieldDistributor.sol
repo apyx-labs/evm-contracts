@@ -48,6 +48,15 @@ interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBal
      */
     event YieldDeposited(address indexed operator, uint256 amount);
 
+    /**
+     * @notice Emitted when tokens are withdrawn via withdrawTokens
+     * @param caller Address that initiated the withdrawal (admin)
+     * @param withdrawAsset Address of the token withdrawn
+     * @param amount Amount withdrawn
+     * @param receiver Address that received the tokens
+     */
+    event Withdraw(address indexed caller, address indexed withdrawAsset, uint256 amount, address indexed receiver);
+
     // ========================================
     // View Functions
     // ========================================
@@ -94,4 +103,26 @@ interface IYieldDistributor is EInvalidAddress, EInvalidAmount, EInsufficientBal
      * @param amount Amount of yield to deposit
      */
     function depositYield(uint256 amount) external;
+
+    // ========================================
+    // Admin Functions
+    // ========================================
+
+    /**
+     * @notice Withdraws yield from the vesting contract
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @param amount Amount of yield to withdraw
+     * @param receiver Address to receive the yield
+     */
+    function withdraw(uint256 amount, address receiver) external;
+
+    /**
+     * @notice Withdraws tokens from the YieldDistributor
+     * @dev Only callable through AccessManager with ADMIN_ROLE
+     * @dev This function is used to support withdrawing tokens that are erroneously sent to the YieldDistributor (e.g. not apxUSD, any other ERC20).
+     * @param withdrawAsset Address of the asset to withdraw
+     * @param amount Amount of the asset to withdraw
+     * @param receiver Address to receive the asset
+     */
+    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver) external;
 }
