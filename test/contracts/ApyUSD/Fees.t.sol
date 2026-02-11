@@ -666,7 +666,8 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 aliceShares = depositApxUSD(alice, depositAmount);
 
         // Step 1: Withdraw withdrawAssets => get burnShares
-        withdrawAssets = bound(withdrawAssets, 0, apyUSD.previewRedeem(aliceShares));
+        // Bound to minimum of 1 to avoid zero-value requests which are now properly rejected
+        withdrawAssets = bound(withdrawAssets, 1, apyUSD.previewRedeem(aliceShares));
         uint256 burnShares = withdrawApxUSD(withdrawAssets, alice, alice);
 
         // Record what Alice received in UnlockToken
