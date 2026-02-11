@@ -10,6 +10,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 import {ApxUSD} from "./ApxUSD.sol";
 import {IMinterV0} from "./interfaces/IMinterV0.sol";
+import {Roles} from "./Roles.sol";
 
 /**
  * @title MinterV0
@@ -259,12 +260,21 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
 
     /**
      * @notice Cancels a scheduled mint operation
-     * @dev Only callable through AccessManager with MINTER_ROLE
+     * @dev Only callable by accounts with MINTER_ROLE or MINT_GUARD_ROLE
      * @dev This is critical for recovering from the 256 operation limit - expired orders
      *      must be cancelled to free up operation IDs in AccessManager
      * @param operationId The unique identifier of the scheduled operation
      */
-    function cancelMint(bytes32 operationId) external restricted {
+    function cancelMint(bytes32 operationId) external {
+        // Check if caller has MINTER_ROLE or MINT_GUARD_ROLE
+        IAccessManager manager = IAccessManager(authority());
+        (bool hasMinterRole,) = manager.hasRole(Roles.MINTER_ROLE, msg.sender);
+        (bool hasGuardRole,) = manager.hasRole(Roles.MINT_GUARD_ROLE, msg.sender);
+
+        if (!hasMinterRole && !hasGuardRole) {
+            revert AccessManagedUnauthorized(msg.sender);
+        }
+
         // 1. Retrieve stored order
         Order memory order = pendingOrders[operationId];
         if (order.beneficiary == address(0)) {
@@ -279,8 +289,6 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
 
         // 4. Cancel through AccessManager
         // This frees the operation ID, allowing it to be reused
-        IAccessManager manager = IAccessManager(authority());
-
         // We do not use the returned nonce but it is returned by the interface
         // slither-disable-next-line unused-return
         manager.cancel(address(this), address(apxUSD), data);
