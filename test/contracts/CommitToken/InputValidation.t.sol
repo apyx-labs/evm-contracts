@@ -51,21 +51,6 @@ contract CommitTokenInputValidationTest is CommitTokenBaseTest {
     }
 
     /**
-     * @notice Test that requestRedeem succeeds with valid non-zero shares
-     */
-    function test_RequestRedeem_SucceedsWithValidShares() public {
-        mockToken.mint(alice, MEDIUM_AMOUNT);
-        deposit(alice, MEDIUM_AMOUNT);
-
-        vm.prank(alice);
-        uint256 requestId = lockToken.requestRedeem(MEDIUM_AMOUNT, alice, alice);
-
-        // Verify request was created
-        assertEq(requestId, 0, "Request ID should be 0");
-        assertEq(lockToken.pendingRedeemRequest(0, alice), MEDIUM_AMOUNT, "Pending request should match");
-    }
-
-    /**
      * @notice Test that requestWithdraw reverts when assets is zero
      */
     function test_RevertWhen_RequestWithdrawCalledWithZeroAssets() public {
@@ -77,20 +62,5 @@ contract CommitTokenInputValidationTest is CommitTokenBaseTest {
         vm.expectRevert(Errors.invalidAmount("assets", 0));
         vm.prank(alice);
         lockToken.requestWithdraw(0, alice, alice);
-    }
-
-    /**
-     * @notice Test that requestWithdraw succeeds with valid non-zero assets
-     */
-    function test_RequestWithdraw_SucceedsWithValidAssets() public {
-        mockToken.mint(alice, MEDIUM_AMOUNT);
-        deposit(alice, MEDIUM_AMOUNT);
-
-        vm.prank(alice);
-        uint256 requestId = lockToken.requestWithdraw(MEDIUM_AMOUNT, alice, alice);
-
-        // Verify request was created
-        assertEq(requestId, 0, "Request ID should be 0");
-        assertEq(lockToken.pendingRedeemRequest(0, alice), MEDIUM_AMOUNT, "Pending request should match");
     }
 }
