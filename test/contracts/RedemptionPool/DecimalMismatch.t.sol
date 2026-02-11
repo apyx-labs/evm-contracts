@@ -112,7 +112,7 @@ contract RedemptionPool_DecimalMismatchTest is BaseTest {
 
         // Execute redeem
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPoolMismatched.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPoolMismatched.redeem(assetsAmount, bob, 0);
 
         // Verify return value
         assertEq(reserveAmount, expectedReserve, "redeem return value should match expected");
@@ -175,7 +175,7 @@ contract RedemptionPool_DecimalMismatchTest is BaseTest {
 
         // Execute redeem
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPoolMismatched.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPoolMismatched.redeem(assetsAmount, bob, 0);
 
         // Verify
         assertEq(reserveAmount, expectedReserve, "should receive 800e6 USDC");
@@ -203,7 +203,7 @@ contract RedemptionPool_DecimalMismatchTest is BaseTest {
 
         // Execute redeem
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPoolSameDecimals.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPoolSameDecimals.redeem(assetsAmount, bob, 0);
 
         // Verify - should work exactly as before
         assertEq(reserveAmount, expectedReserve, "should receive 100e18 token18");
