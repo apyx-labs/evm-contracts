@@ -68,7 +68,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     /// @dev Does not consider pause state or reserve balance; callers should check paused() and reserveBalance()
     ///      Rounding is downward in favor of the pool.
     ///      Formula: reserveAmount = (assetsAmount * exchangeRate) / (1e18 * 10^(assetDecimals - reserveDecimals))
-    function previewRedeem(uint256 assetsAmount) external view override returns (uint256 reserveAmount) {
+    function previewRedeem(uint256 assetsAmount) public view override returns (uint256 reserveAmount) {
         if (assetHasMoreDecimals) {
             // Scale down if asset has more decimals
             return (assetsAmount * exchangeRate) / (1e18 * decimalScalingFactor);
@@ -90,7 +90,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
         if (assetsAmount == 0) revert InvalidAmount("assetsAmount", assetsAmount);
         if (receiver == address(0)) revert InvalidAddress("receiver");
 
-        reserveAmount = this.previewRedeem(assetsAmount);
+        reserveAmount = previewRedeem(assetsAmount);
         if (reserveAmount < minReserveAssetOut) {
             revert SlippageExceeded(reserveAmount, minReserveAssetOut);
         }
