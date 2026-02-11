@@ -83,7 +83,8 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
 
         vm.startPrank(alice);
         mockToken.approve(address(smallCapToken), overCapAmount);
-        vm.expectRevert(Errors.supplyCapExceeded(overCapAmount, smallCap));
+        // Now that maxDeposit() is implemented, ERC4626's deposit() checks against it
+        vm.expectRevert(Errors.erc4626ExceededMaxDeposit(alice, overCapAmount, smallCap));
         smallCapToken.deposit(overCapAmount, alice);
         vm.stopPrank();
     }
@@ -105,7 +106,8 @@ contract CommitTokenSupplyCapTest is CommitTokenBaseTest {
         mockToken.mint(bob, 1);
         vm.startPrank(bob);
         mockToken.approve(address(smallCapToken), 1);
-        vm.expectRevert(Errors.supplyCapExceeded(1, 0));
+        // Now that maxDeposit() is implemented, ERC4626's deposit() checks against it
+        vm.expectRevert(Errors.erc4626ExceededMaxDeposit(bob, 1, 0));
         smallCapToken.deposit(1, bob);
         vm.stopPrank();
     }

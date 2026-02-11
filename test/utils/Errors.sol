@@ -9,6 +9,7 @@ import {EInvalidCaller} from "../../src/errors/InvalidCaller.sol";
 import {EDenied} from "../../src/errors/Denied.sol";
 import {EAddressNotSet} from "../../src/errors/AddressNotSet.sol";
 import {ESupplyCapped} from "../../src/errors/SupplyCapped.sol";
+import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 
 /**
  * @title Errors
@@ -53,5 +54,13 @@ library Errors {
 
     function invalidSupplyCap() external pure returns (bytes4) {
         return ESupplyCapped.InvalidSupplyCap.selector;
+    }
+
+    function erc4626ExceededMaxDeposit(address receiver, uint256 assets, uint256 max)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("ERC4626ExceededMaxDeposit(address,uint256,uint256)", receiver, assets, max);
     }
 }
