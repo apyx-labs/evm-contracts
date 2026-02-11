@@ -8,8 +8,9 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
+import {ESlippageExceeded} from "../errors/SlippageExceeded.sol";
 
-interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EInsufficientBalance {
+interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EInsufficientBalance, ESlippageExceeded {
     // ============ Events ============
 
     /// @notice Emitted when assets are redeemed for reserve assets
@@ -30,14 +31,22 @@ interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EI
     /// @param receiver Address that received the tokens
     event Withdraw(address indexed caller, address indexed withdrawAsset, uint256 amount, address indexed receiver);
 
+    /// @notice Emitted when reserve assets are deposited into the pool
+    /// @param depositor Address that deposited the reserve assets
+    /// @param amount Amount of reserve assets deposited
+    event ReservesDeposited(address indexed depositor, uint256 amount);
+
     // ============ Core Functions ============
 
     /// @notice Redeem assets for reserve assets at the current exchange rate
     /// @dev Requires ROLE_REDEEMER. Burns/transfers assets and sends reserve assets
     /// @param assetsAmount Amount of assets to redeem
     /// @param receiver Address to receive the reserve assets
+    /// @param minReserveAssetOut Minimum reserve assets to receive (slippage protection)
     /// @return reserveAmount Amount of reserve assets received
-    function redeem(uint256 assetsAmount, address receiver) external returns (uint256 reserveAmount);
+    function redeem(uint256 assetsAmount, address receiver, uint256 minReserveAssetOut)
+        external
+        returns (uint256 reserveAmount);
 
     /// @notice Preview how much reserve assets would be received for a given assets amount
     /// @param assetsAmount Amount of assets to preview

@@ -328,9 +328,14 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
             return MintStatus.Expired;
         }
 
-        // Check AccessManager schedule - returns 0 if not scheduled or not yet ready
+        // Check AccessManager schedule - returns 0 if not scheduled or expired
         IAccessManager manager = IAccessManager(authority());
         uint48 scheduleTime = manager.getSchedule(operationId);
+
+        // If scheduleTime is 0, the AccessManager schedule has expired
+        if (scheduleTime == 0) {
+            return MintStatus.Expired;
+        }
 
         // If schedule time is in the future or before notBefore, order is Scheduled but not Ready
         // slither-disable-next-line timestamp

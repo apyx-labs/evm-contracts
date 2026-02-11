@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {BaseTest} from "../../BaseTest.sol";
 import {IRedemptionPool} from "../../../src/interfaces/IRedemptionPool.sol";
+import {ESlippageExceeded} from "../../../src/errors/SlippageExceeded.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Errors} from "../../utils/Errors.sol";
 
@@ -29,7 +30,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         emit IRedemptionPool.Redeemed(redeemer, assetsAmount, expectedReserve);
 
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, 0);
 
         // Check that the redeemer has no apxUSD
         assertEq(apxUSD.balanceOf(redeemer), 0, "redeemer should have no apxUSD");
@@ -71,13 +72,13 @@ contract RedemptionPool_RedemptionTest is BaseTest {
     function test_RevertWhen_RedeemZeroAssets() public {
         vm.expectRevert(Errors.invalidAmount("assetsAmount", 0));
         vm.prank(redeemer);
-        redemptionPool.redeem(0, bob);
+        redemptionPool.redeem(0, bob, 0);
     }
 
     function test_RevertWhen_RedeemZeroReceiver() public {
         vm.expectRevert(Errors.invalidAddress("receiver"));
         vm.prank(redeemer);
-        redemptionPool.redeem(SMALL_AMOUNT, address(0));
+        redemptionPool.redeem(SMALL_AMOUNT, address(0), 0);
     }
 
     function test_RevertWhen_RedeemInsufficientReserveBalance() public {
@@ -90,7 +91,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         uint256 actualBalance = redemptionPool.reserveBalance();
         vm.expectRevert(Errors.insufficientBalance(address(redemptionPool), actualBalance, reserveNeeded));
         vm.prank(redeemer);
-        redemptionPool.redeem(LARGE_AMOUNT, bob);
+        redemptionPool.redeem(LARGE_AMOUNT, bob, 0);
     }
 
     function test_RevertWhen_RedeemWhenPaused() public {
@@ -99,6 +100,116 @@ contract RedemptionPool_RedemptionTest is BaseTest {
 
         vm.expectRevert(abi.encodeWithSelector(Pausable.EnforcedPause.selector));
         vm.prank(redeemer);
-        redemptionPool.redeem(SMALL_AMOUNT, bob);
+        redemptionPool.redeem(SMALL_AMOUNT, bob, 0);
+    }
+
+    // ========================================
+    // Slippage Protection Tests
+    // ========================================
+
+    function test_Redeem_SuccessWhenOutputMeetsMinimum() public {
+        // Set exchange rate to 1e18 (1:1)
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(1e18);
+
+        uint256 assetsAmount = 100e18;
+        uint256 minReserveAssetOut = 100e18;
+
+        depositRedemptionPoolReserve(assetsAmount);
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(assetsAmount);
+
+        vm.prank(redeemer);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, minReserveAssetOut);
+
+        assertEq(reserveAmount, minReserveAssetOut, "reserve amount should equal minimum");
+    }
+
+    function test_RevertWhen_RedeemOutputBelowMinimum() public {
+        // Set exchange rate to 0.9e18 (10% discount)
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(0.9e18);
+
+        uint256 assetsAmount = 100e18;
+        uint256 minReserveAssetOut = 100e18; // User expects 100e18 but will only get 90e18
+
+        depositRedemptionPoolReserve(assetsAmount);
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(assetsAmount);
+
+        uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
+        assertEq(expectedReserve, 90e18, "preview should return 90e18");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, expectedReserve, minReserveAssetOut)
+        );
+        vm.prank(redeemer);
+        redemptionPool.redeem(assetsAmount, bob, minReserveAssetOut);
+    }
+
+    function test_Redeem_SuccessWithMinZero() public {
+        // Test backward compatibility - minReserveAssetOut = 0 always succeeds
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(0.5e18); // 50% discount
+
+        uint256 assetsAmount = 100e18;
+        uint256 minReserveAssetOut = 0;
+
+        depositRedemptionPoolReserve(assetsAmount);
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(assetsAmount);
+
+        vm.prank(redeemer);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, minReserveAssetOut);
+
+        assertEq(reserveAmount, 50e18, "reserve amount should be 50e18");
+    }
+
+    function test_RevertWhen_RateChangeBetweenPreviewAndExecution() public {
+        // User calls previewRedeem to get expected output
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(1e18);
+
+        uint256 assetsAmount = 100e18;
+        uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
+        assertEq(expectedReserve, 100e18, "preview should return 100e18");
+
+        // Admin lowers the exchange rate before user's transaction executes
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(0.8e18);
+
+        depositRedemptionPoolReserve(assetsAmount);
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(assetsAmount);
+
+        // User's transaction should revert because output (80e18) < minReserveAssetOut (100e18)
+        uint256 actualReserve = redemptionPool.previewRedeem(assetsAmount);
+        assertEq(actualReserve, 80e18, "actual reserve should be 80e18");
+
+        vm.expectRevert(
+            abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, actualReserve, expectedReserve)
+        );
+        vm.prank(redeemer);
+        redemptionPool.redeem(assetsAmount, bob, expectedReserve);
+    }
+
+    function test_Redeem_SuccessWhenOutputEqualsMinimum() public {
+        // Test exact boundary - output exactly equals minimum (not an off-by-one)
+        vm.prank(admin);
+        redemptionPool.setExchangeRate(0.95e18);
+
+        uint256 assetsAmount = 100e18;
+        uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
+        assertEq(expectedReserve, 95e18, "preview should return 95e18");
+
+        depositRedemptionPoolReserve(assetsAmount);
+        mintApxUSD(redeemer, assetsAmount);
+        approveRedemptionPool(assetsAmount);
+
+        // Set minReserveAssetOut to exactly the expected output
+        vm.prank(redeemer);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, expectedReserve);
+
+        assertEq(reserveAmount, expectedReserve, "reserve amount should equal minimum exactly");
     }
 }

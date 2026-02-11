@@ -77,7 +77,7 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     }
 
     /// @inheritdoc IRedemptionPool
-    function redeem(uint256 assetsAmount, address receiver)
+    function redeem(uint256 assetsAmount, address receiver, uint256 minReserveAssetOut)
         external
         override
         restricted
@@ -89,6 +89,9 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
         if (receiver == address(0)) revert InvalidAddress("receiver");
 
         reserveAmount = this.previewRedeem(assetsAmount);
+        if (reserveAmount < minReserveAssetOut) {
+            revert SlippageExceeded(reserveAmount, minReserveAssetOut);
+        }
         uint256 balance = reserveBalance();
         if (reserveAmount > balance) {
             revert InsufficientBalance(address(this), balance, reserveAmount);
@@ -107,6 +110,8 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     function deposit(uint256 reserveAmount) external override restricted nonReentrant {
         if (reserveAmount == 0) revert InvalidAmount("reserveAmount", reserveAmount);
         reserveAsset.safeTransferFrom(msg.sender, address(this), reserveAmount);
+
+        emit ReservesDeposited(msg.sender, reserveAmount);
     }
 
     /// @inheritdoc IRedemptionPool

@@ -201,6 +201,38 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         return shares;
     }
 
+    /**
+     * @notice Returns the maximum amount of assets that can be deposited for a receiver
+     * @dev Per ERC-4626, this must not revert and must return the max amount that would be accepted
+     * @param receiver The address that would receive the shares
+     * @return maxAssets Maximum assets that can be deposited
+     */
+    function maxDeposit(address receiver) public view override returns (uint256 maxAssets) {
+        // Return 0 if paused
+        if (paused()) {
+            return 0;
+        }
+        // Return 0 if receiver is denied
+        if (denyList.contains(receiver)) {
+            return 0;
+        }
+        // Return remaining supply cap
+        uint256 supply = totalSupply();
+        return supply >= supplyCap ? 0 : supplyCap - supply;
+    }
+
+    /**
+     * @notice Returns the maximum amount of shares that can be minted for a receiver
+     * @dev Per ERC-4626, this must not revert and must return the max amount that would be accepted
+     * @dev Since conversion is 1:1, this returns the same value as maxDeposit
+     * @param receiver The address that would receive the shares
+     * @return maxShares Maximum shares that can be minted
+     */
+    function maxMint(address receiver) public view override returns (uint256 maxShares) {
+        // Since conversion is 1:1, maxMint equals maxDeposit
+        return maxDeposit(receiver);
+    }
+
     // ========================================
     // ERC4626 Deposit Functions (Synchronous)
     // ========================================
@@ -402,9 +434,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         delete redeemRequests[owner];
 
         super._withdraw(caller, receiver, owner, assets, shares);
-
-        // Emit standard ERC4626 Withdraw event
-        emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
     /**
