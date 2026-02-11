@@ -212,6 +212,7 @@ contract ApxUSD is
     // ----------------------------------------
 
     function setDenyList(IAddressList newDenyList) external restricted {
+        if (address(newDenyList) == address(0)) revert InvalidAddress("newDenyList");
         _setDenyList(newDenyList);
     }
 }
