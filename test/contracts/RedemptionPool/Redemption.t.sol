@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {BaseTest} from "../../BaseTest.sol";
 import {IRedemptionPool} from "../../../src/interfaces/IRedemptionPool.sol";
+import {ESlippageExceeded} from "../../../src/errors/SlippageExceeded.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Errors} from "../../utils/Errors.sol";
 
@@ -138,7 +139,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         assertEq(expectedReserve, 90e18, "preview should return 90e18");
 
         vm.expectRevert(
-            abi.encodeWithSelector(IRedemptionPool.SlippageExceeded.selector, expectedReserve, minReserveAssetOut)
+            abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, expectedReserve, minReserveAssetOut)
         );
         vm.prank(redeemer);
         redemptionPool.redeem(assetsAmount, bob, minReserveAssetOut);
@@ -184,7 +185,7 @@ contract RedemptionPool_RedemptionTest is BaseTest {
         assertEq(actualReserve, 80e18, "actual reserve should be 80e18");
 
         vm.expectRevert(
-            abi.encodeWithSelector(IRedemptionPool.SlippageExceeded.selector, actualReserve, expectedReserve)
+            abi.encodeWithSelector(ESlippageExceeded.SlippageExceeded.selector, actualReserve, expectedReserve)
         );
         vm.prank(redeemer);
         redemptionPool.redeem(assetsAmount, bob, expectedReserve);

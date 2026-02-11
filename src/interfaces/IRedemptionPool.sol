@@ -8,15 +8,9 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 import {EInsufficientBalance} from "../errors/InsufficientBalance.sol";
+import {ESlippageExceeded} from "../errors/SlippageExceeded.sol";
 
-interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EInsufficientBalance {
-    // ============ Errors ============
-
-    /// @notice Thrown when the output of a redeem operation is below the minimum specified
-    /// @param reserveAmount The actual reserve amount that would be received
-    /// @param minReserveAssetOut The minimum reserve amount required
-    error SlippageExceeded(uint256 reserveAmount, uint256 minReserveAssetOut);
-
+interface IRedemptionPool is IAccessManaged, EInvalidAddress, EInvalidAmount, EInsufficientBalance, ESlippageExceeded {
     // ============ Events ============
 
     /// @notice Emitted when assets are redeemed for reserve assets
