@@ -411,20 +411,25 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     /**
      * @notice Returns the total amount minted in the current rate limit period
      * @return Total amount minted in the current period
-     * @dev TODO: Optimize by iterating over the queue in reverse order and breaking when the cutoff is reached
+     * @dev Iterates from newest to oldest records and breaks early when cutoff is reached
      */
     function rateLimitMinted() public view returns (uint256) {
         uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
         uint256 total = 0;
 
         uint256 length = mintHistory.length();
-        for (uint256 i = 0; i < length; i++) {
-            bytes32 data = mintHistory.at(i);
+        // Iterate from newest (back) to oldest (front)
+        for (uint256 i = length; i > 0; i--) {
+            bytes32 data = mintHistory.at(i - 1);
             MintRecord memory record = _decodeMintRecord(data);
 
             // slither-disable-next-line timestamp
             if (record.timestamp >= cutoff) {
                 total += record.amount;
+            } else {
+                // Records are in chronological order, so if this one is too old,
+                // all earlier ones will be too old as well
+                break;
             }
         }
 
