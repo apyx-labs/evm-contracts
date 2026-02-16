@@ -73,7 +73,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
 
     /**
      * @notice Sets the unlocking delay (redeem cooldown)
-     * @dev Only callable through AccessManager with STAKE_STRAT role
+     * @dev Only callable through AccessManager with ADMIN_ROLE
      * @param newUnlockingDelay New unlocking delay in seconds
      */
     function setUnlockingDelay(uint48 newUnlockingDelay) external restricted {
