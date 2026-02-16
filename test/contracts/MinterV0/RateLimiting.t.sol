@@ -623,7 +623,7 @@ contract MinterV0_RateLimitingTest is MinterTest {
         }
 
         // Advance time to expire all
-        vm.warp(block.timestamp + RATE_LIMIT_PERIOD + 1);
+        vm.warp(block.timestamp + uint48(minterV0.MAX_RATE_LIMIT_PERIOD()) + 1);
 
         // Manually clean 50 records at a time
         for (uint48 i = 0; i < LARGE_NUM_MINTS / 50; i++) {
@@ -641,9 +641,14 @@ contract MinterV0_RateLimitingTest is MinterTest {
     }
 
     function test_CleanMintHistory_PartialExpiry() public {
+        uint256 totalMintAmount = 0;
+        uint208 mintAmount = 800e18;
+
         // Add 50 old mints
         for (uint48 i = 0; i < 50; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
+            IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
+            totalMintAmount += mintAmount;
+
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
@@ -651,24 +656,40 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
         // Advance time by half period
         vm.warp(block.timestamp + RATE_LIMIT_PERIOD / 2);
+        assertEq(minterV0.rateLimitMinted(), totalMintAmount);
 
         // Add 50 new mints
         for (uint48 i = 50; i < 100; i++) {
-            IMinterV0.Order memory order = _createOrder(alice, i, 800e18);
+            IMinterV0.Order memory order = _createOrder(alice, i, mintAmount);
+            totalMintAmount += mintAmount;
+
             bytes memory sig = _signOrder(order, alicePrivateKey);
             vm.prank(minter);
             minterV0.requestMint(order, sig);
         }
+        assertEq(minterV0.rateLimitMinted(), totalMintAmount);
 
         // Advance time to expire first 50
         vm.warp(block.timestamp + RATE_LIMIT_PERIOD / 2 + 1);
 
+        // Verify only half of the mints remain
+        assertEq(minterV0.rateLimitMinted(), totalMintAmount / 2);
+
         // Clean should only remove expired records
         vm.prank(minter);
         uint32 cleaned = minterV0.cleanMintHistory(100);
+        assertEq(cleaned, 0, "Mint records should not be cleaned until they are older than MAX_RATE_LIMIT_PERIOD");
 
-        assertEq(cleaned, 50, "Should only clean 50 expired records");
-        assertEq(minterV0.rateLimitMinted(), 50 * 800e18, "Should have 50 records remaining");
+        // Verify only half of the mints remain
+        assertEq(minterV0.rateLimitMinted(), totalMintAmount / 2);
+
+        vm.warp(block.timestamp + uint48(minterV0.MAX_RATE_LIMIT_PERIOD()) + 1);
+
+        // Clean should remove all expired records
+        vm.prank(minter);
+        cleaned = minterV0.cleanMintHistory(100);
+        assertEq(cleaned, 100, "Should clean 100 expired records");
+        assertEq(minterV0.rateLimitMinted(), 0);
     }
 
     function test_CleanMintHistory_AccessControl() public {
@@ -710,5 +731,48 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
         assertEq(cleaned, 0, "Should not clean non-expired records");
         assertEq(minterV0.rateLimitMinted(), 10 * 800e18, "All records should remain");
+    }
+
+    // ----------------------------------------
+    // Varying rate limit period tests
+    // ----------------------------------------
+
+    function test_SetRateLimit_VaryingPeriod() public {
+        // Set rate limit to 100k for 1 day
+        vm.prank(admin);
+        minterV0.setRateLimit(100_000e18, 1 days);
+
+        // Issue 12 mints
+        for (uint48 i = 0; i < 12; i++) {
+            IMinterV0.Order memory order = _createOrder(alice, i, 1000e18);
+            bytes memory sig = _signOrder(order, alicePrivateKey);
+            vm.prank(minter);
+            minterV0.requestMint(order, sig);
+
+            skip(1 hours);
+        }
+        uint256 minted = minterV0.rateLimitMinted();
+
+        vm.prank(minter);
+        uint32 cleaned = minterV0.cleanMintHistory(100);
+        assertEq(cleaned, 0, "Should not clean any records because no records are expired");
+
+        assertEq(
+            minted, minterV0.rateLimitMinted(), "Minted amount should not change after cleaning with no expired records"
+        );
+
+        vm.prank(admin);
+        minterV0.setRateLimit(100_000e18, 1 hours);
+
+        vm.prank(minter);
+        cleaned = minterV0.cleanMintHistory(100);
+        assertEq(cleaned, 0, "Should not clean any records because none exceed MAX_RATE_LIMIT_PERIOD");
+
+        vm.prank(admin);
+        minterV0.setRateLimit(100_000e18, 1 days);
+
+        assertEq(
+            minted, minterV0.rateLimitMinted(), "Minted amount should not change after decreasing rate limit period"
+        );
     }
 }

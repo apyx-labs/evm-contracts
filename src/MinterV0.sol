@@ -52,6 +52,12 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     /// @dev Should this be moved to it's own storage location?
     DoubleEndedQueue.Bytes32Deque mintHistory;
 
+    /// @notice Maximum duration of the rate limit period
+    /// @dev Mint history records are only pruned against this ceiling, not the current
+    ///      rateLimitPeriod. This ensures that if rateLimitPeriod is extended, historical
+    ///      records are still available for accurate rate limit accounting.
+    uint48 public constant MAX_RATE_LIMIT_PERIOD = 14 days;
+
     /// @notice EIP-712 type hash for Order struct
     bytes32 public constant ORDER_TYPEHASH =
         keccak256("Order(address beneficiary,uint48 notBefore,uint48 notAfter,uint48 nonce,uint208 amount)");
@@ -79,7 +85,10 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         if (_apxUSD == address(0)) revert InvalidAddress("apxUSD");
         if (_maxMintAmount == 0) revert InvalidAmount("maxMintAmount", _maxMintAmount);
         if (_rateLimitAmount == 0) revert InvalidAmount("rateLimitAmount", _rateLimitAmount);
-        if (_rateLimitPeriod == 0) revert InvalidAmount("rateLimitPeriod", _rateLimitPeriod);
+        if (_rateLimitPeriod == 0) revert InvalidAmount("rateLimitPeriod::zero", _rateLimitPeriod);
+        if (_rateLimitPeriod > MAX_RATE_LIMIT_PERIOD) {
+            revert InvalidAmount("rateLimitPeriod::tooLong", _rateLimitPeriod);
+        }
 
         apxUSD = ApxUSD(_apxUSD);
 
@@ -374,8 +383,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @param newPeriod New duration of the rate limit period in seconds
      */
     function setRateLimit(uint256 newAmount, uint48 newPeriod) external restricted {
-        require(newAmount > 0, "MinterV0: rate limit amount must be positive");
-        require(newPeriod > 0, "MinterV0: rate limit period must be positive");
+        if (newAmount == 0) revert InvalidAmount("rateLimitAmount", newAmount);
+        if (newPeriod == 0) revert InvalidAmount("rateLimitPeriod::zero", newPeriod);
+        if (newPeriod > MAX_RATE_LIMIT_PERIOD) revert InvalidAmount("rateLimitPeriod::tooLong", newPeriod);
 
         uint256 oldAmount = rateLimitAmount;
         uint48 oldPeriod = rateLimitPeriod;
@@ -401,20 +411,25 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     /**
      * @notice Returns the total amount minted in the current rate limit period
      * @return Total amount minted in the current period
-     * @dev TODO: Optimize by iterating over the queue in reverse order and breaking when the cutoff is reached
+     * @dev Iterates from newest to oldest records and breaks early when cutoff is reached
      */
     function rateLimitMinted() public view returns (uint256) {
         uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
         uint256 total = 0;
 
         uint256 length = mintHistory.length();
-        for (uint256 i = 0; i < length; i++) {
-            bytes32 data = mintHistory.at(i);
+        // Iterate from newest (back) to oldest (front)
+        for (uint256 i = length; i > 0; i--) {
+            bytes32 data = mintHistory.at(i - 1);
             MintRecord memory record = _decodeMintRecord(data);
 
             // slither-disable-next-line timestamp
             if (record.timestamp >= cutoff) {
                 total += record.amount;
+            } else {
+                // Records are in chronological order, so if this one is too old,
+                // all earlier ones will be too old as well
+                break;
             }
         }
 
@@ -434,6 +449,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @notice Manually cleans up to n expired mint records from the history queue
      * @dev Only callable through AccessManager with MINTER_ROLE
      * @dev Useful for gas management when queue grows large
+     * @dev Uses MAX_RATE_LIMIT_PERIOD as the cutoff ceiling instead of rateLimitPeriod.
+     *      This ensures that records are retained long enough to support any valid
+     *      rateLimitPeriod value, preventing under-counting when the period is extended.
      * @param n Maximum number of records to attempt cleaning
      * @return cleaned Number of records actually removed
      */
@@ -485,7 +503,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @return cleaned Number of records actually removed
      */
     function _cleanMintHistoryUpTo(uint32 n) internal returns (uint32 cleaned) {
-        uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
+        uint48 cutoff = uint48(block.timestamp) - MAX_RATE_LIMIT_PERIOD;
 
         cleaned = 0;
         while (cleaned < n && !mintHistory.empty()) {
