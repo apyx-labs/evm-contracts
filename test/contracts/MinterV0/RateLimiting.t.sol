@@ -754,7 +754,7 @@ contract MinterV0_RateLimitingTest is MinterTest {
         uint256 minted = minterV0.rateLimitMinted();
 
         vm.prank(minter);
-        uint256 cleaned = minterV0.cleanMintHistory(100);
+        uint32 cleaned = minterV0.cleanMintHistory(100);
         assertEq(cleaned, 0, "Should not clean any records because no records are expired");
 
         assertEq(
@@ -766,7 +766,7 @@ contract MinterV0_RateLimitingTest is MinterTest {
 
         vm.prank(minter);
         cleaned = minterV0.cleanMintHistory(100);
-        assertEq(cleaned, 0, "Should not clean any records because no exceed MAX_RATE_LIMIT_PERIOD");
+        assertEq(cleaned, 0, "Should not clean any records because none exceed MAX_RATE_LIMIT_PERIOD");
 
         vm.prank(admin);
         minterV0.setRateLimit(100_000e18, 1 days);
