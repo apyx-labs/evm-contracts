@@ -52,6 +52,8 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     /// @dev Should this be moved to it's own storage location?
     DoubleEndedQueue.Bytes32Deque mintHistory;
 
+    uint48 public constant MAX_RATE_LIMIT_PERIOD = 14 days;
+
     /// @notice EIP-712 type hash for Order struct
     bytes32 public constant ORDER_TYPEHASH =
         keccak256("Order(address beneficiary,uint48 notBefore,uint48 notAfter,uint48 nonce,uint208 amount)");
@@ -374,8 +376,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @param newPeriod New duration of the rate limit period in seconds
      */
     function setRateLimit(uint256 newAmount, uint48 newPeriod) external restricted {
-        require(newAmount > 0, "MinterV0: rate limit amount must be positive");
-        require(newPeriod > 0, "MinterV0: rate limit period must be positive");
+        if (newAmount == 0) revert InvalidAmount("rateLimitAmount", newAmount);
+        if (newPeriod == 0) revert InvalidAmount("rateLimitPeriod::zero", newPeriod);
+        if (newPeriod > MAX_RATE_LIMIT_PERIOD) revert InvalidAmount("rateLimitPeriod::tooLong", newPeriod);
 
         uint256 oldAmount = rateLimitAmount;
         uint48 oldPeriod = rateLimitPeriod;
@@ -485,7 +488,7 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @return cleaned Number of records actually removed
      */
     function _cleanMintHistoryUpTo(uint32 n) internal returns (uint32 cleaned) {
-        uint48 cutoff = uint48(block.timestamp) - rateLimitPeriod;
+        uint48 cutoff = uint48(block.timestamp) - MAX_RATE_LIMIT_PERIOD;
 
         cleaned = 0;
         while (cleaned < n && !mintHistory.empty()) {
