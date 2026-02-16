@@ -52,6 +52,10 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
     /// @dev Should this be moved to it's own storage location?
     DoubleEndedQueue.Bytes32Deque mintHistory;
 
+    /// @notice Maximum duration of the rate limit period
+    /// @dev Mint history records are only pruned against this ceiling, not the current
+    ///      rateLimitPeriod. This ensures that if rateLimitPeriod is extended, historical
+    ///      records are still available for accurate rate limit accounting.
     uint48 public constant MAX_RATE_LIMIT_PERIOD = 14 days;
 
     /// @notice EIP-712 type hash for Order struct
@@ -81,7 +85,10 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
         if (_apxUSD == address(0)) revert InvalidAddress("apxUSD");
         if (_maxMintAmount == 0) revert InvalidAmount("maxMintAmount", _maxMintAmount);
         if (_rateLimitAmount == 0) revert InvalidAmount("rateLimitAmount", _rateLimitAmount);
-        if (_rateLimitPeriod == 0) revert InvalidAmount("rateLimitPeriod", _rateLimitPeriod);
+        if (_rateLimitPeriod == 0) revert InvalidAmount("rateLimitPeriod::zero", _rateLimitPeriod);
+        if (_rateLimitPeriod > MAX_RATE_LIMIT_PERIOD) {
+            revert InvalidAmount("rateLimitPeriod::tooLong", _rateLimitPeriod);
+        }
 
         apxUSD = ApxUSD(_apxUSD);
 
@@ -437,6 +444,9 @@ contract MinterV0 is IMinterV0, AccessManaged, EIP712, Pausable {
      * @notice Manually cleans up to n expired mint records from the history queue
      * @dev Only callable through AccessManager with MINTER_ROLE
      * @dev Useful for gas management when queue grows large
+     * @dev Uses MAX_RATE_LIMIT_PERIOD as the cutoff ceiling instead of rateLimitPeriod.
+     *      This ensures that records are retained long enough to support any valid
+     *      rateLimitPeriod value, preventing under-counting when the period is extended.
      * @param n Maximum number of records to attempt cleaning
      * @return cleaned Number of records actually removed
      */
