@@ -38,7 +38,7 @@ commit_token_default_supply_cap = "10000000" # 10M ether (1e18)
 commit_token_default_unlocking_delay = "60"  # seconds
 
 # Vesting
-vesting_period = "86400" # 1 day in seconds
+vesting_period = "2592000" # 30 days in seconds
 
 # Curve ApxUSD Pool (Stableswap-NG)
 curve_pool_apx_usd_usdc_name = "Curve.fi fooUSD-mockUSDC"
