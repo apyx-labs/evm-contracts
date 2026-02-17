@@ -6,6 +6,7 @@ import {ApyUSD} from "../src/ApyUSD.sol";
 import {IAddressList} from "../src/interfaces/IAddressList.sol";
 import {IVesting} from "../src/interfaces/IVesting.sol";
 import {BaseDeploy} from "./BaseDeploy.sol";
+import {StdConfig} from "forge-std/src/StdConfig.sol";
 
 /**
  * @title UpgradeApyUSD
@@ -28,18 +29,19 @@ contract UpgradeApyUSD is BaseDeploy {
 
     // Values to verify after upgrade
     address public expectedAuthority;
-    address public expectedDenyList;
+    IAddressList public expectedDenyList;
+    address public expectedVesting;
 
     function run() public {
-        address deployer = vm.addr(ALICE_PRIVATE_KEY);
         string memory network = getNetwork();
 
-        console2.log("Network:", network);
-        console2.log("Deployer:", deployer);
+        StdConfig config = loadConfig();
+        StdConfig deployConfig = loadDeployConfig(network);
 
-        // Load existing deployment addresses
-        string memory json = loadDeployJson();
-        apyUSDProxy = getContractAddress(json, "apyUSD");
+        uint256 chainId = config.resolveChainId(network);
+        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
+
+        apyUSDProxy = deployConfig.get(chainId, "apyUSD_address").toAddress();
 
         if (apyUSDProxy == address(0)) {
             revert("ApyUSD proxy not found in deploy.json. Deploy ApyUSD first using DeployApyUSD.");
@@ -52,11 +54,14 @@ contract UpgradeApyUSD is BaseDeploy {
         ApyUSD proxy = ApyUSD(apyUSDProxy);
         expectedAuthority = proxy.authority();
         expectedDenyList = proxy.denyList();
+        expectedVesting = proxy.vesting();
 
         console2.log("Current Authority:", expectedAuthority);
-        console2.log("Current DenyList:", expectedDenyList);
+        console2.log("Current DenyList: ", address(expectedDenyList));
+        console2.log("Current Vesting:  ", expectedVesting);
 
-        vm.startBroadcast(ALICE_PRIVATE_KEY);
+        address deployer = config.get(chainId, "deployer").toAddress();
+        vm.startBroadcast(deployer);
 
         // 1. Deploy new ApyUSD implementation
         ApyUSD newImpl = new ApyUSD();
@@ -72,12 +77,8 @@ contract UpgradeApyUSD is BaseDeploy {
         // 3. Verify that authority and denyList haven't changed
         console2.log("\n=== Verification ===");
         address actualAuthority = proxy.authority();
-        address actualDenyList = proxy.denyList();
-
-        console2.log("Expected Authority:", expectedAuthority);
-        console2.log("Actual Authority:", actualAuthority);
-        console2.log("Expected DenyList:", expectedDenyList);
-        console2.log("Actual DenyList:", actualDenyList);
+        IAddressList actualDenyList = proxy.denyList();
+        address actualVesting = proxy.vesting();
 
         if (actualAuthority != expectedAuthority) {
             console2.log("Authority changed after upgrade");
@@ -85,17 +86,28 @@ contract UpgradeApyUSD is BaseDeploy {
             console2.log("Actual Authority:   ", actualAuthority);
             revert("Authority changed after upgrade");
         }
+
         if (actualDenyList != expectedDenyList) {
             console2.log("DenyList changed after upgrade");
-            console2.log("Expected DenyList: ", expectedDenyList);
-            console2.log("Actual DenyList:   ", actualDenyList);
+            console2.log("Expected DenyList: ", address(expectedDenyList));
+            console2.log("Actual DenyList:   ", address(actualDenyList));
 
-            vm.startBroadcast(ALICE_PRIVATE_KEY);
+            vm.startBroadcast(deployer);
             proxy.setDenyList(IAddressList(expectedDenyList));
             vm.stopBroadcast();
             console2.log("DenyList set successfully");
         }
-        console2.log("Authority and DenyList unchanged after upgrade");
+
+        if (actualVesting != expectedVesting) {
+            console2.log("Vesting changed after upgrade");
+            console2.log("Expected Vesting: ", expectedVesting);
+            console2.log("Actual Vesting:   ", actualVesting);
+
+            vm.startBroadcast(deployer);
+            proxy.setVesting(IVesting(expectedVesting));
+            vm.stopBroadcast();
+            console2.log("Vesting set successfully");
+        }
 
         console2.log("\n=== Upgrade Summary ===");
         console2.log("Network:", block.chainid);
@@ -118,16 +130,16 @@ contract SetApyUSDDenyList is BaseDeploy {
     address public addressList;
 
     function run() public {
-        address deployer = vm.addr(ALICE_PRIVATE_KEY);
         string memory network = getNetwork();
 
-        console2.log("Network:", network);
-        console2.log("Deployer:", deployer);
+        StdConfig config = loadConfig();
+        StdConfig deployConfig = loadDeployConfig(network);
 
-        // Load existing deployment addresses
-        string memory json = loadDeployJson();
-        apyUSDProxy = getContractAddress(json, "apyUSD");
-        addressList = getContractAddress(json, "addressList");
+        uint256 chainId = config.resolveChainId(network);
+        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
+
+        apyUSDProxy = deployConfig.get(chainId, "apyUSD").toAddress();
+        addressList = deployConfig.get(chainId, "addressList").toAddress();
 
         if (apyUSDProxy == address(0)) {
             revert("ApyUSD proxy not found in deploy.json. Deploy ApyUSD first using DeployApyUSD.");
@@ -139,7 +151,8 @@ contract SetApyUSDDenyList is BaseDeploy {
         // Get current values before upgrade for verification
         ApyUSD apyUSD = ApyUSD(apyUSDProxy);
 
-        vm.startBroadcast(ALICE_PRIVATE_KEY);
+        address deployer = config.get(chainId, "deployer").toAddress();
+        vm.startBroadcast(deployer);
 
         console2.log("Setting DenyList to:", addressList);
         apyUSD.setDenyList(IAddressList(addressList));
@@ -154,16 +167,16 @@ contract SetApyUSDVesting is BaseDeploy {
     address public vesting;
 
     function run() public {
-        address deployer = vm.addr(ALICE_PRIVATE_KEY);
         string memory network = getNetwork();
 
-        console2.log("Network:", network);
-        console2.log("Deployer:", deployer);
+        StdConfig config = loadConfig();
+        StdConfig deployConfig = loadDeployConfig(network);
 
-        // Load existing deployment addresses
-        string memory json = loadDeployJson();
-        apyUSDProxy = getContractAddress(json, "apyUSD");
-        vesting = getContractAddress(json, "vesting");
+        uint256 chainId = config.resolveChainId(network);
+        vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
+
+        apyUSDProxy = deployConfig.get(chainId, "apyUSD").toAddress();
+        vesting = deployConfig.get(chainId, "vesting").toAddress();
 
         if (apyUSDProxy == address(0)) {
             revert("ApyUSD proxy not found in deploy.json. Deploy ApyUSD first using DeployApyUSD.");
@@ -175,7 +188,8 @@ contract SetApyUSDVesting is BaseDeploy {
         // Get current values before upgrade for verification
         ApyUSD apyUSD = ApyUSD(apyUSDProxy);
 
-        vm.startBroadcast(ALICE_PRIVATE_KEY);
+        address deployer = config.get(chainId, "deployer").toAddress();
+        vm.startBroadcast(deployer);
 
         console2.log("Setting Vesting to:", vesting);
         apyUSD.setVesting(IVesting(vesting));
