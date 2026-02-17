@@ -60,6 +60,11 @@ abstract contract ERC20DenyListUpgradable is Initializable, ERC20Upgradeable, EI
         super._update(from, to, value);
     }
 
+    function denyList() public view returns (IAddressList) {
+        DenyListStorage storage $ = _getDenyListStorage();
+        return $._denyList;
+    }
+
     function _setDenyList(IAddressList newDenyList) internal {
         DenyListStorage storage $ = _getDenyListStorage();
         address oldDenyList = address($._denyList);
