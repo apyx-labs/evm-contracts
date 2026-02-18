@@ -1,0 +1,7 @@
+[mainnet.address]
+accessManager_address = "0xe167330E2Eac88666de253e9607C6d9ae0cA2824"
+addressList_address = "0x2c271ddF484aC0386d216eB7eB9Ff02D4Dc0F6AA"
+
+[mainnet.uint]
+accessManager_block = 24481039
+addressList_block = 24481040
