@@ -24,6 +24,8 @@ import {StdConfig} from "forge-std/src/StdConfig.sol";
  * Output: deploy/<network>.json
  */
 contract DeployAccess is BaseDeploy {
+    using Roles for AccessManager;
+
     AccessManager public accessManager;
     AddressList public addressList;
 
@@ -40,6 +42,7 @@ contract DeployAccess is BaseDeploy {
         vm.assertEq(chainId, block.chainid, "Chain ID mismatch. Check config.toml and RPC URL.");
 
         address deployer = config.get(chainId, "deployer").toAddress();
+        address authority = config.get(chainId, "authority").toAddress();
 
         console.log("Network:  ", network);
         console.log("Deployer: ", deployer);
@@ -59,18 +62,31 @@ contract DeployAccess is BaseDeploy {
 
         // 3. Configure role admins
         console.log("\nConfiguring AccessManager role admins...");
-        // Roles.setRoleAdmins(accessManager);
-        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINTER_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.YIELD_DISTRIBUTOR_ROLE, Roles.ADMIN_ROLE);
-        accessManager.setRoleAdmin(Roles.ROLE_YIELD_OPERATOR, Roles.ADMIN_ROLE);
+
+        uint64 adminRole = accessManager.ADMIN_ROLE();
+
+        accessManager.setRoleAdmin(Roles.MINT_STRAT_ROLE, adminRole);
+        accessManager.labelRole(Roles.MINT_STRAT_ROLE, "ROLE_MINT_STRAT");
+        accessManager.setRoleAdmin(Roles.MINTER_ROLE, adminRole);
+        accessManager.labelRole(Roles.MINTER_ROLE, "ROLE_MINTER");
+        accessManager.setRoleAdmin(Roles.MINT_GUARD_ROLE, adminRole);
+        accessManager.labelRole(Roles.MINT_GUARD_ROLE, "ROLE_MINT_GUARD");
+        accessManager.setRoleAdmin(Roles.YIELD_DISTRIBUTOR_ROLE, adminRole);
+        accessManager.labelRole(Roles.YIELD_DISTRIBUTOR_ROLE, "ROLE_YIELD_DISTRIBUTOR");
+        accessManager.setRoleAdmin(Roles.ROLE_YIELD_OPERATOR, adminRole);
+        accessManager.labelRole(Roles.ROLE_YIELD_OPERATOR, "ROLE_YIELD_OPERATOR");
+        accessManager.setRoleAdmin(Roles.ROLE_REDEEMER, adminRole);
+        accessManager.labelRole(Roles.ROLE_REDEEMER, "ROLE_REDEEMER");
         console.log("Set role admins for all roles");
 
         // 4. Configure AddressList permissions
         console.log("\nConfiguring AddressList permissions...");
-        Roles.assignAdminTargetsFor(accessManager, addressList);
+        accessManager.assignAdminTargetsFor(addressList);
         console.log("Configured AddressList functions to require ADMIN_ROLE");
+
+        // Grant admin role to authority and revoke from deployer
+        accessManager.grantRole(adminRole, authority, 0);
+        accessManager.revokeRole(adminRole, deployer);
 
         vm.stopBroadcast();
 
@@ -80,6 +96,7 @@ contract DeployAccess is BaseDeploy {
         console.log("Deployer: ", deployer);
         console.log("");
         console.log("AccessManager: ", accessManagerAddress);
+        console.log("  - Authority: ", authority);
         console.log("AddressList:   ", addressListAddress);
         console.log("  - Authority: ", addressList.authority());
         console.log("");

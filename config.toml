@@ -2,7 +2,8 @@
 rpc_url = "${ARBITRUM_RPC_URL}"
 
 [arbitrum.address]
-deployer = "${ETH_KEYSTORE_ADDRESS}"
+deployer = "${ARBITRUM_DEPLOYER}"
+authority = "${ARBITRUM_AUTHORITY}"
 
 # Curve
 # https://docs.curve.finance/references/deployed-contracts/#stableswap-ng
@@ -63,3 +64,37 @@ curve_pool_apy_usd_mock_usd_allowed_extra_profit = "10000000000"
 curve_pool_apy_usd_mock_usd_adjustment_step = "5500000000000"
 curve_pool_apy_usd_mock_usd_ma_exp_time = "600"
 curve_pool_apy_usd_mock_usd_initial_price = "1000000000000000000"
+
+[mainnet]
+rpc_url = "${ETHEREUM_RPC_URL}"
+
+[mainnet.address]
+deployer = "${ETHEREUM_DEPLOYER}"
+authority = "${ETHEREUM_AUTHORITY}"
+
+[mainnet.string]
+network_name = "mainnet"
+
+# ApxUSD
+apx_usd_name = "apxUSD"
+apx_usd_symbol = "apxUSD"
+
+apx_usd_supply_cap = "100_000_000"
+apx_usd_max_mint_size = "10_000_000"
+
+apx_usd_rate_limit_mint_size = "10_000_000"
+apx_usd_rate_limit_mint_period = "86400"    # seconds
+
+# Minting 
+apx_usd_mint_delay = "14400" # 4 hours in seconds
+
+# ApyUSD
+apy_usd_unlocking_delay = "2592000" # 30 days in seconds
+
+# Commit Token
+commit_token_default_unlocking_delay = "1209600" # 14 days in seconds
+
+commit_token_supply_cap_apx_usd = "100_000_000"
+commit_token_supply_cap_curve_apx_usd_usdc = "50_000_000"
+commit_token_supply_cap_curve_apy_usd_usdc = "20_000_000"
+commit_token_supply_cap_curve_apx_apy_usd = "20_000_000"

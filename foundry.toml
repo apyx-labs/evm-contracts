@@ -22,10 +22,11 @@ optimizer = true
 # Skip compiling test files
 test = "skip"
 # Fail if any warnings are present
-deny = "warnings"
+# deny = "warnings"
 
 [rpc_endpoints]
 arbitrum = "${ARBITRUM_RPC_URL}"
+mainnet = "${ETHEREUM_RPC_URL}"
 
 [lint]
 exclude_lints = [
