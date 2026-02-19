@@ -1,5 +1,6 @@
 #!/usr/bin/env sh
 
+# Usage: ./convert-deploy-toml-to-json.sh mainnet
 NETWORK=$1
 
 yq -oj "deploy/${NETWORK}.toml" | jq '
