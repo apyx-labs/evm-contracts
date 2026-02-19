@@ -1,7 +1,13 @@
 [mainnet.address]
 accessManager_address = "0xe167330E2Eac88666de253e9607C6d9ae0cA2824"
 addressList_address = "0x2c271ddF484aC0386d216eB7eB9Ff02D4Dc0F6AA"
+apxUSDImpl_address = "0x1D42504C026f8f4f6809308e736646E4437f1fc0"
+apxUSD_address = "0x98A878b1Cd98131B271883B390f68D2c90674665"
+minterV0_address = "0x2c36e1aDfaa80eE0324B04cc814f5207bB7bA76e"
 
 [mainnet.uint]
 accessManager_block = 24481039
 addressList_block = 24481040
+apxUSDImpl_block = 24481769
+apxUSD_block = 24481772
+minterV0_block = 24481773

@@ -30,6 +30,7 @@ contract DeployApxUSD is BaseDeploy {
     MinterV0 public minterV0;
 
     address public accessManagerAddress;
+    address public addressListAddress;
     address public apxUSDProxy;
     address public minterV0Address;
 
@@ -49,10 +50,14 @@ contract DeployApxUSD is BaseDeploy {
         console.log("Balance:  ", deployer.balance);
 
         // Load existing deployment addresses
-        accessManagerAddress = deployConfig.get(chainId, "accessManager").toAddress();
-
+        accessManagerAddress = deployConfig.get(chainId, "accessManager_address").toAddress();
         if (accessManagerAddress == address(0)) {
             revert("AccessManager not found. Deploy AccessManager first using DeployAccess.");
+        }
+
+        addressListAddress = deployConfig.get(chainId, "addressList_address").toAddress();
+        if (addressListAddress == address(0)) {
+            revert("AddressList not found. Deploy AddressList first using DeployAddressList.");
         }
 
         console.log("\n=== Existing Deployment Addresses ===");
@@ -71,8 +76,9 @@ contract DeployApxUSD is BaseDeploy {
         uint256 apxUSDSupplyCap = config.get(chainId, "apx_usd_supply_cap").toUint256();
 
         // 2. Deploy ApxUSD proxy with initialization
-        bytes memory apxUSDInitData =
-            abi.encodeCall(apxUSDImpl.initialize, (apxUSDName, apxUSDSymbol, accessManagerAddress, apxUSDSupplyCap));
+        bytes memory apxUSDInitData = abi.encodeCall(
+            apxUSDImpl.initialize, (apxUSDName, apxUSDSymbol, accessManagerAddress, addressListAddress, apxUSDSupplyCap)
+        );
         ERC1967Proxy apxUSDProxyContract = new ERC1967Proxy(address(apxUSDImpl), apxUSDInitData);
         apxUSDProxy = address(apxUSDProxyContract);
         apxUSD = ApxUSD(apxUSDProxy);
@@ -95,25 +101,25 @@ contract DeployApxUSD is BaseDeploy {
         // Grant MINT_STRAT_ROLE to MinterV0 contract with execution delay
         uint32 apxUSDMintDelay = uint32(config.get(chainId, "apx_usd_mint_delay").toUint256());
 
-        accessManager.grantRole(Roles.MINT_STRAT_ROLE, minterV0Address, apxUSDMintDelay);
-        console.log("Granted MINT_STRAT_ROLE to MinterV0 contract with", apxUSDMintDelay, "second delay");
+        // accessManager.grantRole(Roles.MINT_STRAT_ROLE, minterV0Address, apxUSDMintDelay);
+        // console.log("Granted MINT_STRAT_ROLE to MinterV0 contract with", apxUSDMintDelay, "second delay");
 
-        // 5. Configure ApxUSD function permissions using Roles library
-        console.log("\nConfiguring ApxUSD permissions...");
-        Roles.assignAdminTargetsFor(accessManager, apxUSD);
-        Roles.assignMintingContractTargetsFor(accessManager, apxUSD);
-        console.log("Configured ApxUSD permissions");
+        // // 5. Configure ApxUSD function permissions using Roles library
+        // console.log("\nConfiguring ApxUSD permissions...");
+        // Roles.assignAdminTargetsFor(accessManager, apxUSD);
+        // Roles.assignMintingContractTargetsFor(accessManager, apxUSD);
+        // console.log("Configured ApxUSD permissions");
 
-        // 6. Configure MinterV0 function permissions using Roles library
-        console.log("\nConfiguring MinterV0 permissions...");
+        // // 6. Configure MinterV0 function permissions using Roles library
+        // console.log("\nConfiguring MinterV0 permissions...");
         Roles.assignAdminTargetsFor(accessManager, minterV0);
         Roles.assignMinterTargetsFor(accessManager, minterV0);
         Roles.assignMintGuardTargetsFor(accessManager, minterV0);
-        console.log("Configured MinterV0 permissions");
+        // console.log("Configured MinterV0 permissions");
 
-        // 7. Grant MINTER_ROLE to Bob
-        accessManager.grantRole(Roles.MINTER_ROLE, deployer, 0);
-        console.log("Granted MINTER_ROLE to Bob:", deployer);
+        // // 7. Grant MINTER_ROLE to Bob
+        // accessManager.grantRole(Roles.MINTER_ROLE, deployer, 0);
+        // console.log("Granted MINTER_ROLE to Bob:", deployer);
 
         vm.stopBroadcast();
 
@@ -144,6 +150,8 @@ contract DeployApxUSD is BaseDeploy {
         console.log("Next Steps:");
         console.log("1. Test minting flow with Bob (authorized minter)");
 
+        deployConfig.set(chainId, "apxUSDImpl_address", address(apxUSDImpl));
+        deployConfig.set(chainId, "apxUSDImpl_block", block.number);
         deployConfig.set(chainId, "apxUSD_address", apxUSDProxy);
         deployConfig.set(chainId, "apxUSD_block", block.number);
         deployConfig.set(chainId, "minterV0_address", minterV0Address);
