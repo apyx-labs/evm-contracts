@@ -4,6 +4,9 @@ addressList_address = "0x2c271ddF484aC0386d216eB7eB9Ff02D4Dc0F6AA"
 apxUSDImpl_address = "0x1D42504C026f8f4f6809308e736646E4437f1fc0"
 apxUSD_address = "0x98A878b1Cd98131B271883B390f68D2c90674665"
 minterV0_address = "0x2c36e1aDfaa80eE0324B04cc814f5207bB7bA76e"
+apyUSD_address = "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A"
+apyUSDImpl_address = "0x1C407113acf0F879b3eB161bf774F4C1FDFB531e"
+unlockToken_address = "0x93775E2dFa4e716c361A1f53F212c7AE031BF4e6"
 
 [mainnet.uint]
 accessManager_block = 24481039
@@ -11,3 +14,6 @@ addressList_block = 24481040
 apxUSDImpl_block = 24481769
 apxUSD_block = 24481772
 minterV0_block = 24481773
+apyUSD_block = 24495109
+apyUSDImpl_block = 24495109
+unlockToken_block = 24495927

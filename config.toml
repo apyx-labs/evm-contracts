@@ -79,9 +79,6 @@ network_name = "mainnet"
 apx_usd_name = "apxUSD"
 apx_usd_symbol = "apxUSD"
 
-# ApyUSD
-apy_usd_unlocking_delay = "2592000" # 30 days in seconds
-
 # Commit Token
 commit_token_default_unlocking_delay = "1209600" # 14 days in seconds
 
@@ -99,3 +96,6 @@ apx_usd_mint_delay = 14400                   # 4 hours in seconds
 apx_usd_max_mint_size = 10_000_000e18        # $10M
 apx_usd_rate_limit_mint_size = 10_000_000e18 # $10M
 apx_usd_rate_limit_mint_period = 86400       # 24 hours in seconds
+
+# ApyUSD
+apy_usd_unlocking_delay = 2592000 # 30 days in seconds

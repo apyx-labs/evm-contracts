@@ -66,7 +66,7 @@ contract ApyUSDDeployer is AccessManaged, Deployer, ERC1271Delegated, EInsuffici
      */
     function deploy() external restricted returns (address proxy) {
         uint256 balance = IERC20(asset).balanceOf(address(this));
-        if (balance <= MIN_APXUSD_BALANCE) {
+        if (balance < MIN_APXUSD_BALANCE) {
             revert InsufficientBalance(address(this), balance, MIN_APXUSD_BALANCE);
         }
 
