@@ -13,6 +13,13 @@ fs_permissions = [
 ignored_error_codes = [
     5667, # unused-parameter
 ]
+ignored_warnings_from = [
+    "cmds/",
+    # Dependencies
+    "dependencies/forge-std-1.11.0/src/StdConfig.sol",
+    "dependencies/@openzeppelin-contracts-5.5.0/utils/TransientSlot.sol",
+]
+
 
 [profile.release]
 solc_version = "0.8.30"
