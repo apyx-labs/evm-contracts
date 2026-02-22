@@ -56,18 +56,23 @@ contract DeployCurvePool is BaseDeploy {
         apxUSD = deployConfig.get(chainId, "apxUSD_address").toAddress();
         vm.label(apxUSD, "apxUSD");
 
+        // Load mock token configuration
+        string memory tokenKey = vm.envOr("MOCK_TOKEN_KEY", string("stubUSD"));
+        string memory name = config.get(chainId, string.concat(tokenKey, "_name")).toString();
+        string memory symbol = config.get(chainId, string.concat(tokenKey, "_symbol")).toString();
+        uint256 decimals = config.get(chainId, string.concat(tokenKey, "_decimals")).toUint256();
+
         // Load pool configuration
         factory = ICurveStableswapFactoryNG(config.get(chainId, "curve_stableswap_ng_factory_address").toAddress());
         vm.label(address(factory), "factory");
 
         poolName = config.get(chainId, "curve_pool_apx_usd_usdc_name").toString();
         poolSymbol = config.get(chainId, "curve_pool_apx_usd_usdc_symbol").toString();
-        amplification = vm.parseUint(config.get(chainId, "curve_pool_apx_usd_usdc_amplification").toString());
-        fee = vm.parseUint(config.get(chainId, "curve_pool_apx_usd_usdc_fee").toString());
-        offpegFeeMultiplier =
-            vm.parseUint(config.get(chainId, "curve_pool_apx_usd_usdc_offpeg_fee_multiplier").toString());
-        maExpTime = vm.parseUint(config.get(chainId, "curve_pool_apx_usd_usdc_ma_exp_time").toString());
-        implementationIdx = vm.parseUint(config.get(chainId, "curve_pool_apx_usd_usdc_implementation_idx").toString());
+        amplification = config.get(chainId, "curve_pool_apx_usd_usdc_amplification").toUint256();
+        fee = config.get(chainId, "curve_pool_apx_usd_usdc_fee").toUint256();
+        offpegFeeMultiplier = config.get(chainId, "curve_pool_apx_usd_usdc_offpeg_fee_multiplier").toUint256();
+        maExpTime = config.get(chainId, "curve_pool_apx_usd_usdc_ma_exp_time").toUint256();
+        implementationIdx = config.get(chainId, "curve_pool_apx_usd_usdc_implementation_idx").toUint256();
 
         console2.log("\n=== Configuration ===");
         console2.log("Factory:", address(factory));
@@ -84,33 +89,33 @@ contract DeployCurvePool is BaseDeploy {
 
         vm.startBroadcast(deployer);
 
-        // Deploy stub USD (6 decimals, simulating USDC)
-        mockUSD = new MockERC20("Stub USD", "stubUSD");
-        mockUSD.setDecimals(6);
-        vm.label(address(mockUSD), "stubUSD");
+        // Deploy mock token
+        mockUSD = new MockERC20(name, symbol);
+        mockUSD.setDecimals(uint8(decimals));
+        vm.label(address(mockUSD), symbol);
 
         // Deploy the rate oracle behind a UUPS proxy
         ApxUSDRateOracle oracleImpl = new ApxUSDRateOracle();
         bytes memory oracleInitData = abi.encodeCall(ApxUSDRateOracle.initialize, (accessManagerAddr));
+
         ERC1967Proxy proxy = new ERC1967Proxy(address(oracleImpl), oracleInitData);
         oracleProxy = ApxUSDRateOracle(address(proxy));
         vm.label(address(oracleProxy), "apxUSDRateOracle");
 
         // Deploy the pool
         pool = _deployPool();
-        vm.label(pool, "apxUSDMockUSDPool_address");
+        vm.label(pool, poolName);
 
         vm.stopBroadcast();
 
         deployConfig.set(chainId, "stubToken_address", address(mockUSD));
-        deployConfig.set(chainId, "stubToken_decimals", uint256(6));
         deployConfig.set(chainId, "apxUSDRateOracle_address", address(oracleProxy));
-        deployConfig.set(chainId, "apxUSDMockUSDPool_address", pool);
+        deployConfig.set(chainId, string.concat(poolSymbol, "Pool", "_address"), pool);
 
         // Log deployment summary
         console2.log("\n=== Deployment Summary ===");
         console2.log("Oracle proxy:", address(oracleProxy));
-        console2.log("rate() selector:", bytes4(keccak256("rate()")));
+        console2.log("rate() selector:", vm.toString(oracleProxy.rate.selector));
         console2.log("Pool deployed at:", pool);
         _logPoolInfo(pool);
     }
@@ -132,7 +137,7 @@ contract DeployCurvePool is BaseDeploy {
 
         // Method IDs: rate() selector for apxUSD, empty for stubUSD
         bytes4[] memory methodIds = new bytes4[](2);
-        methodIds[0] = bytes4(keccak256("rate()"));
+        methodIds[0] = oracleProxy.rate.selector;
         methodIds[1] = bytes4(0);
 
         // Oracles: oracle proxy for apxUSD, zero for stubUSD
