@@ -69,4 +69,32 @@ contract OrderDelegate is
         }
         return 0xffffffff;
     }
+
+    /// @notice Pauses the contract (isValidSignature will revert when paused). No unpause.
+    function pause() external restricted {
+        _pause();
+    }
+
+    /// @notice Transfers an ERC20 from this contract to the beneficiary
+    /// @param token Token address
+    /// @param amount Amount to transfer
+    function transferToken(address token, uint256 amount) external restricted nonReentrant {
+        _transferToken(token, amount);
+    }
+
+    /// @notice Transfers the configured asset to the beneficiary (convenience for primary mint token)
+    /// @param amount Amount to transfer
+    function transfer(uint256 amount) external restricted nonReentrant {
+        if (amount == 0) revert InvalidAmount("amount", amount);
+        _transferToken(address(asset), amount);
+    }
+
+    /// @dev Internal transfer to beneficiary; shared by transfer and transferToken
+    function _transferToken(address token, uint256 amount) internal {
+        if (amount == 0) revert InvalidAmount("amount", amount);
+        if (token == address(0)) revert InvalidAddress("token");
+        uint256 balance = IERC20(token).balanceOf(address(this));
+        if (amount > balance) revert InsufficientBalance(address(this), balance, amount);
+        IERC20(token).safeTransfer(beneficiary, amount);
+    }
 }
