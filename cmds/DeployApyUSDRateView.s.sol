@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {Script, console2 as console} from "forge-std/src/Script.sol";
-import {ApyUSDRateView} from "../src/oracles/ApyUSDRateView.sol";
+import {ApyUSDRateView} from "../src/views/ApyUSDRateView.sol";
 import {BaseDeploy} from "./BaseDeploy.sol";
 import {StdConfig} from "forge-std/src/StdConfig.sol";
 
