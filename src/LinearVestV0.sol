@@ -30,7 +30,9 @@ contract LinearVestV0 is AccessManaged, IVesting {
     // forge-lint: disable-next-line(screaming-snake-case-immutable)
     IERC20 public immutable asset;
 
-    /// @notice Total amount currently vesting
+    /// @notice Total amount currently vesting, including any newlyVestedAmount() that has not yet been
+    ///        accrued to the fullyVestedAmount. This amount is updated on depositYield and setVestingPeriod.
+    /// @dev To calculate the current annualizedYield() or apy() use the ApyUSDRateView contract.
     uint256 public vestingAmount;
 
     /// @notice Total amount that has been fully vested but not yet transferred to the beneficiary
