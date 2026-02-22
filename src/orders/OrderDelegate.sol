@@ -5,7 +5,9 @@ import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManage
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC1271} from "@openzeppelin/contracts/interfaces/IERC1271.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {SignatureChecker} from "@openzeppelin/contracts/utils/cryptography/SignatureChecker.sol";
 
 import {ERC1271Delegated} from "../exts/ERC1271Delegated.sol";
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
@@ -51,5 +53,20 @@ contract OrderDelegate is
 
         beneficiary = _beneficiary;
         asset = IERC20(_asset);
+    }
+
+    /// @notice ERC-1271: when paused, reverts so no new mints to this beneficiary
+    function isValidSignature(bytes32 hash, bytes calldata signature)
+        external
+        view
+        override
+        whenNotPaused
+        returns (bytes4 magicValue)
+    {
+        if (signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
+        if (SignatureChecker.isValidSignatureNowCalldata(signingDelegate, hash, signature)) {
+            return IERC1271.isValidSignature.selector;
+        }
+        return 0xffffffff;
     }
 }

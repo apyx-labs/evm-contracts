@@ -40,6 +40,7 @@ abstract contract ERC1271Delegated is IERC1271, EInvalidAddress {
     function isValidSignature(bytes32 hash, bytes calldata signature)
         external
         view
+        virtual
         override
         returns (bytes4 magicValue)
     {
