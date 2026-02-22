@@ -16,10 +16,40 @@ import {console2} from "forge-std/src/console2.sol";
 /// Usage:
 ///   NETWORK=arbitrum RATE=102 forge script cmds/curve/SimulatePriceImpact.sol --fork-url $ARBITRUM_RPC_URL -vvv
 contract SimulatePriceImpact is BaseDeploy {
+    // ========================================
+    // Constants
+    // ========================================
+
     uint256 constant PRECISION = 1e18;
     uint256 constant RATE_SCALE = 1e16;
 
+    // ========================================
+    // State
+    // ========================================
+
     uint256[] internal tradeSizesBps;
+
+    address internal poolAddress;
+    address internal oracleAddress;
+    address internal coin0;
+    address internal coin1;
+    string internal symbol0;
+    string internal symbol1;
+    uint256 internal rateRaw;
+    uint256 internal oldRate;
+    uint256 internal newRate;
+    uint256 internal balance0;
+    uint256 internal balance1;
+    uint256 internal spotPrice;
+    uint256 internal dy;
+    uint256 internal effectivePrice;
+    uint256 internal spotAfter;
+    uint256 internal impactBps;
+    uint256 internal snapshot;
+
+    // ========================================
+    // Setup
+    // ========================================
 
     function setUp() internal override {
         super.setUp();
@@ -34,26 +64,31 @@ contract SimulatePriceImpact is BaseDeploy {
         tradeSizesBps.push(5000);
     }
 
+    // ========================================
+    // Main Entry Point
+    // ========================================
+
     function run() public {
         setUp();
 
-        address poolAddress = deployConfig.get(chainId, "fooUSDstubPool_address").toAddress();
-        address oracleAddress = deployConfig.get(chainId, "apxUSDRateOracle_address").toAddress();
-        uint256 rateRaw = vm.envUint("RATE");
+        poolAddress = deployConfig.get(chainId, "fooUSDstubPool_address").toAddress();
+        oracleAddress = deployConfig.get(chainId, "apxUSDRateOracle_address").toAddress();
+        rateRaw = vm.envOr("RATE", uint256(100));
+        require(rateRaw > 0, "RATE env var must be > 0");
 
         ICurveStableswapNG pool = ICurveStableswapNG(poolAddress);
-        ApxUSDRateOracle oracle = ApxUSDRateOracle(oracleAddress);
         vm.label(poolAddress, "pool");
+        ApxUSDRateOracle oracle = ApxUSDRateOracle(oracleAddress);
         vm.label(oracleAddress, "oracle");
 
-        uint256 newRate = rateRaw * RATE_SCALE;
+        newRate = rateRaw * RATE_SCALE;
 
-        address coin0 = pool.coins(0);
-        address coin1 = pool.coins(1);
-        string memory symbol0 = IERC20Metadata(coin0).symbol();
-        string memory symbol1 = IERC20Metadata(coin1).symbol();
+        coin0 = pool.coins(0);
+        coin1 = pool.coins(1);
+        symbol0 = IERC20Metadata(coin0).symbol();
+        symbol1 = IERC20Metadata(coin1).symbol();
 
-        console2.log("=== Curve Stableswap-NG Price Impact Simulation ===");
+        console2.log("\n=== Curve Stableswap-NG Price Impact Simulation ===");
         console2.log("");
         console2.log("Pool:       ", poolAddress);
         console2.log("coin[0]:    ", symbol0, coin0);
@@ -62,7 +97,7 @@ contract SimulatePriceImpact is BaseDeploy {
         console2.log("fee (1e10): ", pool.fee());
         console2.log("");
 
-        uint256 oldRate = oracle.rate();
+        oldRate = oracle.rate();
         console2.log("Oracle rate before:", oldRate);
         console2.log("Oracle rate after: ", newRate);
         console2.log("");
@@ -71,16 +106,16 @@ contract SimulatePriceImpact is BaseDeploy {
         oracle.setRate(newRate);
         require(oracle.rate() == newRate, "Rate update failed");
 
-        uint256 balance0 = pool.balances(0);
-        uint256 balance1 = pool.balances(1);
+        balance0 = pool.balances(0);
+        balance1 = pool.balances(1);
         console2.log("--- Pool Balances ---");
         console2.log(symbol0, "balance:", balance0);
         console2.log(symbol1, "balance:", balance1);
         console2.log("");
 
-        uint256 spotPrice = pool.get_p(0);
+        spotPrice = pool.get_p(0);
 
-        console2.log("--- Selling", symbol0, "for", symbol1, "---");
+        console2.log(string.concat("--- Selling ", symbol0, " for ", symbol1, " ---"));
         console2.log("");
         console2.log("Spot price (get_p(0)):", spotPrice);
         console2.log("");
@@ -91,21 +126,24 @@ contract SimulatePriceImpact is BaseDeploy {
         for (uint256 t = 0; t < tradeSizesBps.length; t++) {
             uint256 bps = tradeSizesBps[t];
             uint256 tradeAmount = balance0 * bps / 10000;
-
             if (tradeAmount == 0) continue;
 
-            uint256 snapshot = vm.snapshotState();
+            snapshot = vm.snapshotState();
 
-            uint256 dy = pool.get_dy(int128(0), int128(1), tradeAmount);
-            uint256 effectivePrice = dy * PRECISION / tradeAmount;
+            dy = pool.get_dy(int128(0), int128(1), tradeAmount);
+            effectivePrice = dy * PRECISION / tradeAmount;
 
-            deal(coin0, address(this), tradeAmount);
+            vm.startBroadcast(deployer);
+
+            // vm.deal(coin0, address(this), tradeAmount);
             IERC20(coin0).approve(address(pool), tradeAmount);
             pool.exchange(int128(0), int128(1), tradeAmount, 0);
 
-            uint256 spotAfter = pool.get_p(0);
+            vm.stopBroadcast();
 
-            uint256 impactBps;
+            spotAfter = pool.get_p(0);
+
+            impactBps;
             if (spotAfter < spotPrice) {
                 impactBps = (spotPrice - spotAfter) * 10000 / spotPrice;
             } else {
