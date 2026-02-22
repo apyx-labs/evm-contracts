@@ -5,6 +5,8 @@ import {console2} from "forge-std/src/Script.sol";
 import {BaseDeploy} from "../BaseDeploy.sol";
 import {ICurveStableswapFactoryNG} from "../../src/curve/ICurveStableswapFactoryNG.sol";
 import {MockERC20} from "../../test/mocks/MockERC20.sol";
+import {ApxUSDRateOracle} from "../../src/ApxUSDRateOracle.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @title DeployCurvePool
@@ -27,8 +29,10 @@ contract DeployCurvePool is BaseDeploy {
 
     ICurveStableswapFactoryNG internal factory;
 
+    address internal accessManagerAddr;
     address internal apxUSD;
     MockERC20 internal mockUSD;
+    ApxUSDRateOracle internal oracleProxy;
     address internal pool;
 
     string internal poolName;
@@ -45,6 +49,9 @@ contract DeployCurvePool is BaseDeploy {
 
     function run() public {
         super.setUp();
+
+        accessManagerAddr = deployConfig.get(chainId, "accessManager_address").toAddress();
+        vm.label(accessManagerAddr, "accessManager");
 
         apxUSD = deployConfig.get(chainId, "apxUSD_address").toAddress();
         vm.label(apxUSD, "apxUSD");
@@ -77,9 +84,17 @@ contract DeployCurvePool is BaseDeploy {
 
         vm.startBroadcast(deployer);
 
-        // Deploy mock USD
-        mockUSD = new MockERC20("Mock USD", "mockUSD");
-        vm.label(address(mockUSD), "mockUSD");
+        // Deploy stub USD (6 decimals, simulating USDC)
+        mockUSD = new MockERC20("Stub USD", "stubUSD");
+        mockUSD.setDecimals(6);
+        vm.label(address(mockUSD), "stubUSD");
+
+        // Deploy the rate oracle behind a UUPS proxy
+        ApxUSDRateOracle oracleImpl = new ApxUSDRateOracle();
+        bytes memory oracleInitData = abi.encodeCall(ApxUSDRateOracle.initialize, (accessManagerAddr));
+        ERC1967Proxy proxy = new ERC1967Proxy(address(oracleImpl), oracleInitData);
+        oracleProxy = ApxUSDRateOracle(address(proxy));
+        vm.label(address(oracleProxy), "apxUSDRateOracle");
 
         // Deploy the pool
         pool = _deployPool();
@@ -87,11 +102,15 @@ contract DeployCurvePool is BaseDeploy {
 
         vm.stopBroadcast();
 
-        deployConfig.set(chainId, "mockUSD_address", address(mockUSD));
+        deployConfig.set(chainId, "stubToken_address", address(mockUSD));
+        deployConfig.set(chainId, "stubToken_decimals", uint256(6));
+        deployConfig.set(chainId, "apxUSDRateOracle_address", address(oracleProxy));
         deployConfig.set(chainId, "apxUSDMockUSDPool_address", pool);
 
         // Log deployment summary
         console2.log("\n=== Deployment Summary ===");
+        console2.log("Oracle proxy:", address(oracleProxy));
+        console2.log("rate() selector:", bytes4(keccak256("rate()")));
         console2.log("Pool deployed at:", pool);
         _logPoolInfo(pool);
     }
@@ -106,19 +125,19 @@ contract DeployCurvePool is BaseDeploy {
         coins[0] = apxUSD;
         coins[1] = address(mockUSD);
 
-        // Asset types: 0 = Standard ERC20 for both
+        // Asset types: 1 = Oracle for apxUSD, 0 = Standard for stubUSD
         uint8[] memory assetTypes = new uint8[](2);
-        assetTypes[0] = 0;
+        assetTypes[0] = 1;
         assetTypes[1] = 0;
 
-        // Method IDs: empty for standard tokens (no rate oracle)
+        // Method IDs: rate() selector for apxUSD, empty for stubUSD
         bytes4[] memory methodIds = new bytes4[](2);
-        methodIds[0] = bytes4(0);
+        methodIds[0] = bytes4(keccak256("rate()"));
         methodIds[1] = bytes4(0);
 
-        // Oracles: zero address for standard tokens
+        // Oracles: oracle proxy for apxUSD, zero for stubUSD
         address[] memory oracles = new address[](2);
-        oracles[0] = address(0);
+        oracles[0] = address(oracleProxy);
         oracles[1] = address(0);
 
         console2.log("\n=== Deploying Pool ===");
