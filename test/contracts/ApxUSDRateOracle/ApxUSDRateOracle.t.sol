@@ -4,9 +4,10 @@ pragma solidity 0.8.30;
 import {BaseTest} from "./BaseTest.sol";
 import {ApxUSDRateOracle} from "../../../src/ApxUSDRateOracle.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {EInvalidAmount} from "../../../src/errors/InvalidAmount.sol";
 
 contract ApxUSDRateOracleTest is BaseTest {
-    event RateUpdated(uint256 newRate, address indexed updatedBy);
+    event RateUpdated(uint256 oldRate, uint256 newRate);
 
     function test_Initialization() public view {
         assertEq(oracle.rate(), 1e18, "Initial rate should be 1e18");
@@ -16,7 +17,6 @@ contract ApxUSDRateOracleTest is BaseTest {
         bytes32 computed =
             keccak256(abi.encode(uint256(keccak256("apyx.storage.ApxUSDRateOracle")) - 1)) & ~bytes32(uint256(0xff));
 
-        // Must match STORAGE_LOCATION constant in src/ApxUSDRateOracle.sol
         assertEq(computed, 0x27bd078109e9748e45a8094381d0fb92b7b8cc1084b35874a4d9e8826ec4f100, "Storage slot mismatch");
     }
 
@@ -24,7 +24,7 @@ contract ApxUSDRateOracleTest is BaseTest {
         uint256 newRate = 1.02e18;
 
         vm.expectEmit(true, true, false, true, address(oracle));
-        emit RateUpdated(newRate, admin);
+        emit RateUpdated(1e18, newRate);
 
         vm.prank(admin);
         oracle.setRate(newRate);
@@ -34,7 +34,7 @@ contract ApxUSDRateOracleTest is BaseTest {
 
     function test_RevertWhen_SetRateZero() public {
         vm.prank(admin);
-        vm.expectRevert("Rate must be > 0");
+        vm.expectRevert(abi.encodeWithSelector(EInvalidAmount.InvalidAmount.selector, "newRate", 0));
         oracle.setRate(0);
     }
 
