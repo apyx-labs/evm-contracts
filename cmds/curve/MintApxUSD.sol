@@ -40,8 +40,13 @@ contract CreateOrder is MintOrderBase {
         uint48 nonce = minterV0.nonce(beneficiary);
         console2.log("Nonce: ", nonce);
 
+        uint256 humanAmount = vm.envOr("AMOUNT", uint256(1000));
+        uint256 scaledAmount = humanAmount * 1e18;
+
+        console2.log("Amount:      ", scaledAmount);
+
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: beneficiary, amount: 1000e18, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary, amount: scaledAmount, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
         });
         bytes32 digest = minterV0.hashOrder(order);
         console2.log("Digest: ");
@@ -69,8 +74,13 @@ contract SubmitOrder is MintOrderBase {
         uint48 nonce = minterV0.nonce(beneficiary);
         console2.log("Nonce: ", nonce);
 
+        uint256 humanAmount = vm.envOr("AMOUNT", uint256(1000));
+        uint256 scaledAmount = humanAmount * 1e18;
+
+        console2.log("Amount:      ", scaledAmount);
+
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: beneficiary, amount: 1000e18, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary, amount: scaledAmount, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
         });
 
         if (!minterV0.validateOrder(order, signature)) {
