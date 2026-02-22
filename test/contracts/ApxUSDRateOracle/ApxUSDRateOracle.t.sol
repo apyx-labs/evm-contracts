@@ -81,6 +81,11 @@ contract ApxUSDRateOracleTest is BaseTest {
         oracle.upgradeToAndCall(address(newImpl), "");
     }
 
+    function test_RevertWhen_InitializedTwice() public {
+        vm.expectRevert();
+        oracle.initialize(address(accessManager));
+    }
+
     function testFuzz_SetRate(uint256 newRate) public {
         newRate = bound(newRate, 1, type(uint256).max);
 
