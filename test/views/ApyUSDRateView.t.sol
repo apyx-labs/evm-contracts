@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {VestingTest} from "../contracts/Vesting/BaseTest.sol";
-import {ApyUSDRateView} from "../../src/views/ApyUSDRateView.sol";
+import {ApyUSDRateView} from "../../src/oracles/ApyUSDRateView.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
 import {EInvalidAddress} from "../../src/errors/InvalidAddress.sol";
 import {Errors} from "../../test/utils/Errors.sol";
