@@ -8,7 +8,7 @@ import {console2} from "forge-std/src/console2.sol";
 
 /**
  * @title AddLiquidityToMockPool
- * @notice Adds equal amounts of fooUSD (apxUSD) and mockUSD to the Curve pool
+ * @notice Adds apxUSD and a configurable mock token to the Curve pool
  * @dev Reads token and pool addresses from deploy/<network>.toml
  *
  * Usage:
@@ -16,7 +16,9 @@ import {console2} from "forge-std/src/console2.sol";
  *     --rpc-url $ARBITRUM_RPC_URL --broadcast
  *
  * Environment:
- *   AMOUNT - Amount to deposit per token in wei (default: 1000e18)
+ *   MOCK_TOKEN_KEY      - Deploy config key prefix for the mock token (default: "mockUSD")
+ *   MOCK_TOKEN_DECIMALS - Decimal count for the mock token (default: 18)
+ *   AMOUNT              - Human-readable amount per token (default: 1000)
  */
 contract AddLiquidityToMockPool is BaseDeploy {
     // ========================================
@@ -24,14 +26,15 @@ contract AddLiquidityToMockPool is BaseDeploy {
     // ========================================
 
     address internal apxUSDAddress;
-    address internal mockUSDAddress;
+    address internal mockTokenAddress;
     address internal poolAddress;
 
     IERC20 internal apxUSD;
-    IERC20 internal mockUSD;
+    IERC20 internal mockToken;
     ICurveStableswapNG internal pool;
 
-    uint256 internal amount;
+    uint256 internal apxUSDAmount;
+    uint256 internal mockTokenAmount;
 
     // ========================================
     // Main Entry Point
@@ -40,67 +43,73 @@ contract AddLiquidityToMockPool is BaseDeploy {
     function run() public {
         super.setUp();
 
+        string memory tokenKey = vm.envOr("MOCK_TOKEN_KEY", string("mockUSD"));
+        string memory addressKey = string.concat(tokenKey, "_address");
+        uint256 mockTokenDecimals = vm.envOr("MOCK_TOKEN_DECIMALS", uint256(18));
+        uint256 humanAmount = vm.envOr("AMOUNT", uint256(1000));
+
+        apxUSDAmount = humanAmount * 1e18;
+        mockTokenAmount = humanAmount * (10 ** mockTokenDecimals);
+
         // Load addresses from deploy config
         apxUSDAddress = deployConfig.get(chainId, "apxUSD_address").toAddress();
-        mockUSDAddress = deployConfig.get(chainId, "mockUSD_address").toAddress();
+        mockTokenAddress = deployConfig.get(chainId, addressKey).toAddress();
         poolAddress = deployConfig.get(chainId, "apxUSDMockUSDPool_address").toAddress();
 
         vm.label(apxUSDAddress, "apxUSD");
-        vm.label(mockUSDAddress, "mockUSD");
+        vm.label(mockTokenAddress, tokenKey);
         vm.label(poolAddress, "pool");
 
         apxUSD = IERC20(apxUSDAddress);
-        mockUSD = IERC20(mockUSDAddress);
+        mockToken = IERC20(mockTokenAddress);
         pool = ICurveStableswapNG(poolAddress);
-
-        // Amount to deposit (default 1000 tokens)
-        amount = vm.envOr("AMOUNT", uint256(1000e18));
 
         // Log initial state
         console2.log("\n=== Configuration ===");
-        console2.log("Pool:    ", poolAddress);
-        console2.log("ApxUSD:  ", apxUSDAddress);
-        console2.log("MockUSD: ", mockUSDAddress);
-        console2.log("Amount:  ", amount);
+        console2.log("Pool:              ", poolAddress);
+        console2.log("ApxUSD:            ", apxUSDAddress);
+        console2.log("Mock token key:    ", tokenKey);
+        console2.log("Mock token:        ", mockTokenAddress);
+        console2.log("Mock token decimals:", mockTokenDecimals);
+        console2.log("Human amount:      ", humanAmount);
+        console2.log("ApxUSD amount:     ", apxUSDAmount);
+        console2.log("Mock token amount: ", mockTokenAmount);
 
         uint256 apxUSDBalanceBefore = apxUSD.balanceOf(deployer);
-        uint256 mockUSDBalanceBefore = mockUSD.balanceOf(deployer);
+        uint256 mockTokenBalanceBefore = mockToken.balanceOf(deployer);
         uint256 lpBalanceBefore = pool.balanceOf(deployer);
 
         console2.log("\n=== Balances Before ===");
-        console2.log("ApxUSD:  ", apxUSDBalanceBefore);
-        console2.log("MockUSD: ", mockUSDBalanceBefore);
-        console2.log("LP:      ", lpBalanceBefore);
+        console2.log("ApxUSD:     ", apxUSDBalanceBefore);
+        console2.log("Mock token: ", mockTokenBalanceBefore);
+        console2.log("LP:         ", lpBalanceBefore);
 
-        require(apxUSDBalanceBefore >= amount, "Insufficient apxUSD balance");
-        require(mockUSDBalanceBefore >= amount, "Insufficient mockUSD balance");
+        require(apxUSDBalanceBefore >= apxUSDAmount, "Insufficient apxUSD balance");
+        require(mockTokenBalanceBefore >= mockTokenAmount, "Insufficient mock token balance");
 
         vm.startBroadcast(deployer);
 
-        // Approve tokens to pool
-        apxUSD.approve(poolAddress, amount);
-        mockUSD.approve(poolAddress, amount);
+        apxUSD.approve(poolAddress, apxUSDAmount);
+        mockToken.approve(poolAddress, mockTokenAmount);
 
-        // Build amounts array (apxUSD is coin[0], mockUSD is coin[1])
+        // apxUSD is coin[0], mock token is coin[1]
         uint256[] memory amounts = new uint256[](2);
-        amounts[0] = amount;
-        amounts[1] = amount;
+        amounts[0] = apxUSDAmount;
+        amounts[1] = mockTokenAmount;
 
-        // Add liquidity with 0 min LP tokens (for testing; use proper slippage in production)
+        // min LP = 0 for testing; use proper slippage in production
         uint256 lpReceived = pool.add_liquidity(amounts, 0);
 
         vm.stopBroadcast();
 
-        // Log results
         console2.log("\n=== Balances After ===");
-        console2.log("ApxUSD:  ", apxUSD.balanceOf(deployer));
-        console2.log("MockUSD: ", mockUSD.balanceOf(deployer));
-        console2.log("LP:      ", pool.balanceOf(deployer));
+        console2.log("ApxUSD:     ", apxUSD.balanceOf(deployer));
+        console2.log("Mock token: ", mockToken.balanceOf(deployer));
+        console2.log("LP:         ", pool.balanceOf(deployer));
 
         console2.log("\n=== Summary ===");
-        console2.log("LP Received: ", lpReceived);
-        console2.log("ApxUSD Spent:", apxUSDBalanceBefore - apxUSD.balanceOf(deployer));
-        console2.log("MockUSD Spent:", mockUSDBalanceBefore - mockUSD.balanceOf(deployer));
+        console2.log("LP Received:       ", lpReceived);
+        console2.log("ApxUSD Spent:      ", apxUSDBalanceBefore - apxUSD.balanceOf(deployer));
+        console2.log("Mock token Spent:  ", mockTokenBalanceBefore - mockToken.balanceOf(deployer));
     }
 }
-
