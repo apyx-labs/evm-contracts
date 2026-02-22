@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
-import {ApxUSDRateOracle} from "../../../src/ApxUSDRateOracle.sol";
+import {ApxUSDRateOracle} from "../../../src/oracles/ApxUSDRateOracle.sol";
 
 abstract contract BaseTest is Test {
     AccessManager public accessManager;

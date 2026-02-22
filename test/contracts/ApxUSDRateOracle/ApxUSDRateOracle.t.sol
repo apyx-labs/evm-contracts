@@ -2,7 +2,7 @@
 pragma solidity 0.8.30;
 
 import {BaseTest} from "./BaseTest.sol";
-import {ApxUSDRateOracle} from "../../../src/ApxUSDRateOracle.sol";
+import {ApxUSDRateOracle} from "../../../src/oracles/ApxUSDRateOracle.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {EInvalidAmount} from "../../../src/errors/InvalidAmount.sol";
 

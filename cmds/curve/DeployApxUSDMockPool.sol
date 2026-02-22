@@ -5,7 +5,7 @@ import {console2} from "forge-std/src/Script.sol";
 import {BaseDeploy} from "../BaseDeploy.sol";
 import {ICurveStableswapFactoryNG} from "../../src/curve/ICurveStableswapFactoryNG.sol";
 import {MockERC20} from "../../test/mocks/MockERC20.sol";
-import {ApxUSDRateOracle} from "../../src/ApxUSDRateOracle.sol";
+import {ApxUSDRateOracle} from "../../src/oracles/ApxUSDRateOracle.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**

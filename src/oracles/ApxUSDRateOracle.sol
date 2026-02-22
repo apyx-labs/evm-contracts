@@ -6,7 +6,7 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {
     AccessManagedUpgradeable
 } from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
-import {EInvalidAmount} from "./errors/InvalidAmount.sol";
+import {EInvalidAmount} from "../errors/InvalidAmount.sol";
 
 /// @title ApxUSDRateOracle
 /// @notice Provides the exchange rate of apxUSD relative to USDC for Curve Stableswap-NG pools.
