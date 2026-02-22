@@ -13,9 +13,8 @@ contract ApxUSDRateOracleTest is BaseTest {
     }
 
     function test_StorageSlot() public pure {
-        bytes32 computed = keccak256(
-            abi.encode(uint256(keccak256("apyx.storage.ApxUSDRateOracle")) - 1)
-        ) & ~bytes32(uint256(0xff));
+        bytes32 computed =
+            keccak256(abi.encode(uint256(keccak256("apyx.storage.ApxUSDRateOracle")) - 1)) & ~bytes32(uint256(0xff));
 
         // Must match STORAGE_LOCATION constant in src/ApxUSDRateOracle.sol
         assertEq(computed, 0x27bd078109e9748e45a8094381d0fb92b7b8cc1084b35874a4d9e8826ec4f100, "Storage slot mismatch");

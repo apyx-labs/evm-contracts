@@ -3,16 +3,19 @@ pragma solidity 0.8.30;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {AccessManagedUpgradeable} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
+import {
+    AccessManagedUpgradeable
+} from "@openzeppelin/contracts-upgradeable/access/manager/AccessManagedUpgradeable.sol";
+import {EInvalidAmount} from "./errors/InvalidAmount.sol";
 
 /// @title ApxUSDRateOracle
 /// @notice Provides the exchange rate of apxUSD relative to USDC for Curve Stableswap-NG pools.
-/// @dev The rate is manually set by an authorized admin and represents how many USDC 1 apxUSD is worth,
-///      expressed as a uint256 with 1e18 precision.
+/// @dev The rate represents how many USDC 1 apxUSD is worth based on the off-chain collateral
+///      backing apxUSD, expressed as a uint256 with 1e18 precision.
 ///      - 1e18 = 1 apxUSD is worth 1 USDC
 ///      - 1.02e18 = 1 apxUSD is worth 1.02 USDC
 ///      Called by the Curve pool via staticcall to `rate()`.
-contract ApxUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgradeable {
+contract ApxUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, EInvalidAmount {
     /// @custom:storage-location erc7201:apyx.storage.ApxUSDRateOracle
     struct ApxUSDRateOracleStorage {
         uint256 rate;
@@ -27,7 +30,7 @@ contract ApxUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
         }
     }
 
-    event RateUpdated(uint256 newRate, address indexed updatedBy);
+    event RateUpdated(uint256 oldRate, uint256 newRate);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -35,9 +38,9 @@ contract ApxUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
     }
 
     /// @notice Initializes the oracle with a default rate of 1e18 (1:1 peg).
-    /// @param accessManager_ The address of the AccessManager contract.
-    function initialize(address accessManager_) external initializer {
-        __AccessManaged_init(accessManager_);
+    /// @param initialAuthority The address of the authority that can set the rate.
+    function initialize(address initialAuthority) external initializer {
+        __AccessManaged_init(initialAuthority);
 
         ApxUSDRateOracleStorage storage $ = _getStorage();
         $.rate = 1e18;
@@ -53,10 +56,13 @@ contract ApxUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
     /// @notice Sets the rate of apxUSD relative to USDC.
     /// @param newRate The new rate in 1e18 precision (must be > 0).
     function setRate(uint256 newRate) external restricted {
-        require(newRate > 0, "Rate must be > 0");
+        if (newRate == 0) revert InvalidAmount("newRate", newRate);
         ApxUSDRateOracleStorage storage $ = _getStorage();
+
+        uint256 oldRate = $.rate;
         $.rate = newRate;
-        emit RateUpdated(newRate, msg.sender);
+
+        emit RateUpdated(oldRate, newRate);
     }
 
     function _authorizeUpgrade(address newImplementation) internal override restricted {}
