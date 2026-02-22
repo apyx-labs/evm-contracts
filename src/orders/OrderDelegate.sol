@@ -40,12 +40,10 @@ contract OrderDelegate is
      * @param _signingDelegate Address that may sign on behalf of this contract
      * @param _asset Asset token
      */
-    constructor(
-        address _authority,
-        address _beneficiary,
-        address _signingDelegate,
-        address _asset
-    ) AccessManaged(_authority) ERC1271Delegated(_signingDelegate) {
+    constructor(address _authority, address _beneficiary, address _signingDelegate, address _asset)
+        AccessManaged(_authority)
+        ERC1271Delegated(_signingDelegate)
+    {
         if (_authority == address(0)) revert InvalidAddress("authority");
         if (_beneficiary == address(0)) revert InvalidAddress("beneficiary");
         if (_signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
@@ -57,17 +55,13 @@ contract OrderDelegate is
 
     /// @notice ERC-1271: when paused, reverts so no new mints to this beneficiary
     function isValidSignature(bytes32 hash, bytes calldata signature)
-        external
+        public
         view
         override
         whenNotPaused
         returns (bytes4 magicValue)
     {
-        if (signingDelegate == address(0)) revert InvalidAddress("signingDelegate");
-        if (SignatureChecker.isValidSignatureNowCalldata(signingDelegate, hash, signature)) {
-            return IERC1271.isValidSignature.selector;
-        }
-        return 0xffffffff;
+        return super.isValidSignature(hash, signature);
     }
 
     /// @notice Pauses the contract (isValidSignature will revert when paused). No unpause.
@@ -75,26 +69,22 @@ contract OrderDelegate is
         _pause();
     }
 
+    /// @notice Transfers the configured asset to the beneficiary (convenience for primary mint token)
+    /// @param amount Amount to transfer
+    function transfer(uint256 amount) external restricted {
+        transferToken(address(asset), amount);
+    }
+
     /// @notice Transfers an ERC20 from this contract to the beneficiary
     /// @param token Token address
     /// @param amount Amount to transfer
-    function transferToken(address token, uint256 amount) external restricted nonReentrant {
-        _transferToken(token, amount);
-    }
-
-    /// @notice Transfers the configured asset to the beneficiary (convenience for primary mint token)
-    /// @param amount Amount to transfer
-    function transfer(uint256 amount) external restricted nonReentrant {
-        if (amount == 0) revert InvalidAmount("amount", amount);
-        _transferToken(address(asset), amount);
-    }
-
-    /// @dev Internal transfer to beneficiary; shared by transfer and transferToken
-    function _transferToken(address token, uint256 amount) internal {
+    function transferToken(address token, uint256 amount) public restricted nonReentrant {
         if (amount == 0) revert InvalidAmount("amount", amount);
         if (token == address(0)) revert InvalidAddress("token");
+
         uint256 balance = IERC20(token).balanceOf(address(this));
         if (amount > balance) revert InsufficientBalance(address(this), balance, amount);
+
         IERC20(token).safeTransfer(beneficiary, amount);
     }
 }
