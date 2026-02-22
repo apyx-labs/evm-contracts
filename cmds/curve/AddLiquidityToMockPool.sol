@@ -45,16 +45,18 @@ contract AddLiquidityToMockPool is BaseDeploy {
 
         string memory tokenKey = vm.envOr("MOCK_TOKEN_KEY", string("mockUSD"));
         string memory addressKey = string.concat(tokenKey, "_address");
-        uint256 mockTokenDecimals = vm.envOr("MOCK_TOKEN_DECIMALS", uint256(18));
+
+        uint256 tokenDecimals = config.get(chainId, string.concat(tokenKey, "_decimals")).toUint256();
         uint256 humanAmount = vm.envOr("AMOUNT", uint256(1000));
 
         apxUSDAmount = humanAmount * 1e18;
-        mockTokenAmount = humanAmount * (10 ** mockTokenDecimals);
+        mockTokenAmount = humanAmount * (10 ** tokenDecimals);
 
         // Load addresses from deploy config
         apxUSDAddress = deployConfig.get(chainId, "apxUSD_address").toAddress();
         mockTokenAddress = deployConfig.get(chainId, addressKey).toAddress();
-        poolAddress = deployConfig.get(chainId, "apxUSDMockUSDPool_address").toAddress();
+        string memory poolSymbol = config.get(chainId, "curve_pool_apx_usd_usdc_symbol").toString();
+        poolAddress = deployConfig.get(chainId, string.concat(poolSymbol, "Pool", "_address")).toAddress();
 
         vm.label(apxUSDAddress, "apxUSD");
         vm.label(mockTokenAddress, tokenKey);
@@ -70,7 +72,7 @@ contract AddLiquidityToMockPool is BaseDeploy {
         console2.log("ApxUSD:            ", apxUSDAddress);
         console2.log("Mock token key:    ", tokenKey);
         console2.log("Mock token:        ", mockTokenAddress);
-        console2.log("Mock token decimals:", mockTokenDecimals);
+        console2.log("Mock decimals:     ", tokenDecimals);
         console2.log("Human amount:      ", humanAmount);
         console2.log("ApxUSD amount:     ", apxUSDAmount);
         console2.log("Mock token amount: ", mockTokenAmount);

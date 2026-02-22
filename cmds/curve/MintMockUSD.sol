@@ -16,11 +16,11 @@ contract MintMockUSD is BaseDeploy {
         vm.label(tokenAddress, tokenKey);
         MockERC20 token = MockERC20(tokenAddress);
 
-        uint256 tokenDecimals = vm.envOr("MOCK_TOKEN_DECIMALS", uint256(18));
+        uint256 tokenDecimals = config.get(chainId, string.concat(tokenKey, "_decimals")).toUint256();
         uint256 humanAmount = vm.envOr("AMOUNT", uint256(1000));
         uint256 scaledAmount = humanAmount * (10 ** tokenDecimals);
 
-        address beneficiary = vm.envAddress("BENEFICIARY");
+        address beneficiary = vm.envOr("BENEFICIARY", address(0));
         if (beneficiary == address(0)) {
             beneficiary = deployer;
             console2.log("Beneficiary is not set, using deployer: ", beneficiary);

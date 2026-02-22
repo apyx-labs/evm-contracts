@@ -34,7 +34,8 @@ contract CreateOrder is MintOrderBase {
     function run() public {
         super.setUp();
 
-        address beneficiary = vm.envAddress("BENEFICIARY");
+        address beneficiary = vm.envOr("BENEFICIARY", address(0));
+        if (beneficiary == address(0)) beneficiary = deployer;
         console2.log("Beneficiary: ", beneficiary);
 
         uint48 nonce = minterV0.nonce(beneficiary);
@@ -46,7 +47,11 @@ contract CreateOrder is MintOrderBase {
         console2.log("Amount:      ", scaledAmount);
 
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: beneficiary, amount: scaledAmount, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary,
+            amount: uint208(scaledAmount),
+            nonce: nonce,
+            notBefore: 0,
+            notAfter: type(uint48).max
         });
         bytes32 digest = minterV0.hashOrder(order);
         console2.log("Digest: ");
@@ -57,18 +62,16 @@ contract CreateOrder is MintOrderBase {
 contract SubmitOrder is MintOrderBase {
     bytes internal signature;
     bytes32 internal operationId;
-    uint48 internal mintDelay;
 
     function run() public {
         super.setUp();
-
-        mintDelay = uint48(vm.parseUint(config.get(chainId, "apx_usd_mint_delay").toString()));
 
         signature = vm.parseBytes(vm.envString("SIGNATURE"));
         console2.log("Signature:");
         console2.logBytes(signature);
 
-        address beneficiary = vm.envAddress("BENEFICIARY");
+        address beneficiary = vm.envOr("BENEFICIARY", address(0));
+        if (beneficiary == address(0)) beneficiary = deployer;
         console2.log("Beneficiary: ", beneficiary);
 
         uint48 nonce = minterV0.nonce(beneficiary);
@@ -80,12 +83,13 @@ contract SubmitOrder is MintOrderBase {
         console2.log("Amount:      ", scaledAmount);
 
         IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: beneficiary, amount: scaledAmount, nonce: nonce, notBefore: 0, notAfter: type(uint48).max
+            beneficiary: beneficiary,
+            amount: uint208(scaledAmount),
+            nonce: nonce,
+            notBefore: 0,
+            notAfter: type(uint48).max
         });
-
-        if (!minterV0.validateOrder(order, signature)) {
-            revert("Invalid signature");
-        }
+        minterV0.validateOrder(order, signature);
 
         vm.startBroadcast(deployer);
 
@@ -124,11 +128,8 @@ contract ExecuteOrder is MintOrderBase {
         apxUSDAddress = deployConfig.get(chainId, "apxUSD_address").toAddress();
         vm.label(apxUSDAddress, "apxUSDAddress");
 
-        address beneficiary = vm.envAddress("BENEFICIARY");
-        if (beneficiary == address(0)) {
-            beneficiary = deployer;
-            console2.log("Beneficiary is not set, using deployer: ", beneficiary);
-        }
+        address beneficiary = vm.envOr("BENEFICIARY", address(0));
+        if (beneficiary == address(0)) beneficiary = deployer;
         console2.log("Beneficiary: ", beneficiary);
 
         apxUSD = IERC20(apxUSDAddress);

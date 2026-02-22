@@ -108,7 +108,7 @@ contract DeployCurvePool is BaseDeploy {
 
         vm.stopBroadcast();
 
-        deployConfig.set(chainId, "stubToken_address", address(mockUSD));
+        deployConfig.set(chainId, string.concat(tokenKey, "_address"), address(mockUSD));
         deployConfig.set(chainId, "apxUSDRateOracle_address", address(oracleProxy));
         deployConfig.set(chainId, string.concat(poolSymbol, "Pool", "_address"), pool);
 
