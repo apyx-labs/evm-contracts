@@ -12,6 +12,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
 import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
 import {RedemptionPoolV0} from "./RedemptionPoolV0.sol";
+import {OrderDelegate} from "./orders/OrderDelegate.sol";
 
 /**
  * @title Roles
@@ -176,6 +177,19 @@ library Roles {
         selectors[4] = RedemptionPoolV0.pause.selector;
         selectors[5] = RedemptionPoolV0.unpause.selector;
         self.setTargetFunctionRole(address(pool), selectors, ADMIN_ROLE);
+    }
+
+    /**
+     * @notice Assigns admin function selectors for OrderDelegate contract (extension function)
+     * @param self The AccessManager contract
+     * @param orderDelegate The OrderDelegate contract
+     */
+    function assignAdminTargetsFor(AccessManager self, OrderDelegate orderDelegate) internal {
+        bytes4[] memory selectors = new bytes4[](3);
+        selectors[0] = OrderDelegate.pause.selector;
+        selectors[1] = OrderDelegate.transfer.selector;
+        selectors[2] = OrderDelegate.transferToken.selector;
+        self.setTargetFunctionRole(address(orderDelegate), selectors, ADMIN_ROLE);
     }
 
     /**
