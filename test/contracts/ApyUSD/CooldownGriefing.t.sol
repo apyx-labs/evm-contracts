@@ -24,7 +24,7 @@ contract CooldownGriefingTest is ApyUSDTest {
         apyUSD.redeem(aliceDeposit, alice, alice);
 
         // 2. Time passes - 1 hour remaining
-        vm.warp(block.timestamp + 14 days - 1 hours);
+        vm.warp(block.timestamp + UNLOCKING_DELAY - 1 hours);
         assertEq(unlockToken.cooldownRemaining(0, alice), 1 hours);
 
         // 3. Bob tries to grief with 1 wei
@@ -56,7 +56,7 @@ contract CooldownGriefingTest is ApyUSDTest {
         apyUSD.redeem(aliceFirstDeposit, alice, alice);
 
         // 2. Time passes - 1 hour remaining
-        vm.warp(block.timestamp + 14 days - 1 hours);
+        vm.warp(block.timestamp + UNLOCKING_DELAY - 1 hours);
         assertEq(unlockToken.cooldownRemaining(0, alice), 1 hours);
 
         // 3. Alice accidentally makes another withdrawal
@@ -64,7 +64,7 @@ contract CooldownGriefingTest is ApyUSDTest {
         apyUSD.redeem(aliceSecondDeposit, alice, alice); // receiver=alice, owner=alice
 
         // 4. Alice's cooldown is reset to full 14 days (accidental self-griefing)
-        assertEq(unlockToken.cooldownRemaining(0, alice), 14 days);
+        assertEq(unlockToken.cooldownRemaining(0, alice), UNLOCKING_DELAY);
     }
 
     /**
@@ -95,7 +95,7 @@ contract CooldownGriefingTest is ApyUSDTest {
         apyUSD.withdraw(aliceDeposit, alice, alice);
 
         // Time passes
-        vm.warp(block.timestamp + 14 days - 1 hours);
+        vm.warp(block.timestamp + UNLOCKING_DELAY - 1 hours);
         assertEq(unlockToken.cooldownRemaining(0, alice), 1 hours);
 
         // Bob tries to grief using withdraw instead of redeem

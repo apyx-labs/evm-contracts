@@ -88,8 +88,8 @@ abstract contract BaseTest is Test {
     uint32 public constant MINT_DELAY = 1 hours;
 
     // Timing
-    uint48 public constant UNLOCKING_DELAY = 14 days;
-    uint256 public constant VESTING_PERIOD = 8 hours;
+    uint48 public constant UNLOCKING_DELAY = 30 days;
+    uint256 public constant VESTING_PERIOD = 30 days;
 
     // Test amounts
     uint256 public constant VERY_SMALL_AMOUNT = 1e18;
