@@ -52,6 +52,12 @@ abstract contract BaseHandler is BaseTest {
         _;
     }
 
+    modifier timePassed(uint256 duration, uint256 maxDuration) {
+        duration = bound(duration, 1, maxDuration);
+        skip(duration);
+        _;
+    }
+
     function _signMintOrder(IMinterV0.Order memory order, uint256 privateKey) internal view returns (bytes memory) {
         bytes32 digest = minterV0.hashOrder(order);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);

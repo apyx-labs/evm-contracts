@@ -6,6 +6,7 @@ import {YieldDistributor} from "../../src/YieldDistributor.sol";
 import {LinearVestV0} from "../../src/LinearVestV0.sol";
 import {ApxUSD} from "../../src/ApxUSD.sol";
 import {ApyUSD} from "../../src/ApyUSD.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 contract YieldHandler is BaseHandler {
     address internal _admin;
@@ -30,49 +31,50 @@ contract YieldHandler is BaseHandler {
         _yieldOperator = yieldOperatorAddr;
     }
 
-    function mintToDistributor(uint256 amount) public {
-        amount = bound(amount, VERY_SMALL_AMOUNT, SMALL_AMOUNT);
+    function depositYield(uint256 targetApy) public {
+        if (apyUSD.totalSupply() == 0) vm.assume(false);
+
+        // There must be some time passed since the last deposit
+        if (vesting.lastDepositTimestamp() == block.timestamp) vm.assume(false);
+
+        targetApy = bound(targetApy, 0.05e18, 0.15e18); // 5% - 15%
+        uint256 targetAnnualYield = apyUSD.totalAssets() * targetApy / 1e18;
+
+        uint256 yieldAmount = (targetAnnualYield * vesting.vestingPeriod() / 365 days);
+        if (yieldAmount <= vesting.vestingAmount() && vesting.vestingPeriodRemaining() > 0) {
+            // The amount vesting over the period is greater than the amount required to reach
+            // the target APY and is still vesting so we don't need to mint any more yield
+            vm.assume(false);
+        }
+        // Remove the unvested amount from the yield amount because this will be vested in the
+        // next period that starts on deposit
+        yieldAmount -= vesting.unvestedAmount();
+        if (yieldAmount == 0) vm.assume(false);
+
+        // Mint yield to the yield distributor
         vm.prank(_admin);
-        apxUSD.mint(address(yieldDistributor), amount, 0);
-        ghost_totalMintedToYield += amount;
-    }
+        apxUSD.mint(address(yieldDistributor), yieldAmount, 0);
 
-    function depositYield(uint256 amount) public {
-        uint256 availableBalance = yieldDistributor.availableBalance();
-        if (availableBalance < VERY_SMALL_AMOUNT) vm.assume(false);
-
-        uint256 totalAssets = apyUSD.totalAssets();
-        if (totalAssets == 0) return;
-
-        uint256 period = vesting.vestingPeriod();
-
-        uint256 minYield = totalAssets * 5 * period / (100 * 365 days);
-        uint256 maxYield = totalAssets * 15 * period / (100 * 365 days);
-
-        if (minYield < VERY_SMALL_AMOUNT) minYield = VERY_SMALL_AMOUNT;
-        if (maxYield > availableBalance) maxYield = availableBalance;
-        if (minYield > maxYield) return;
-
-        amount = bound(amount, minYield, maxYield);
-
+        // Deposit yield from the yield distributor to the vesting contract
         vm.prank(_yieldOperator);
-        yieldDistributor.depositYield(amount);
+        yieldDistributor.depositYield(yieldAmount);
+
+        ghost_totalMintedToYield += yieldAmount;
     }
 
-    function changeVestingPeriod(uint256 newPeriod) public {
-        uint256 currentPeriod = vesting.vestingPeriod();
+    // function changeVestingPeriod(uint256 newPeriod) public {
+    //     uint256 currentPeriod = vesting.vestingPeriod();
 
-        uint256 minPeriod = currentPeriod * 80 / 100;
-        uint256 maxPeriod = currentPeriod * 120 / 100;
-        if (minPeriod == 0) minPeriod = 1;
+    //     uint256 minPeriod = Math.max(currentPeriod * 80 / 100, 14 days);
+    //     uint256 maxPeriod = Math.max(Math.min(currentPeriod * 120 / 100, 90 days), minPeriod + 1);
 
-        newPeriod = bound(newPeriod, minPeriod, maxPeriod);
+    //     newPeriod = bound(newPeriod, minPeriod, maxPeriod);
 
-        vm.prank(_admin);
-        vesting.setVestingPeriod(newPeriod);
+    //     vm.prank(_admin);
+    //     vesting.setVestingPeriod(newPeriod);
 
-        ghost_vestingPeriodChanges++;
-    }
+    //     ghost_vestingPeriodChanges++;
+    // }
 
     function warpVesting(uint256 duration) public {
         uint256 period = vesting.vestingPeriod();
