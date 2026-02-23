@@ -74,7 +74,7 @@ stubUSD_decimals = 6
 
 # Curve ApxUSD Pool (Stableswap-NG)
 curve_pool_apx_usd_usdc_implementation_idx = 0
-curve_pool_apx_usd_usdc_amplification = 250
+curve_pool_apx_usd_usdc_amplification = 100
 curve_pool_apx_usd_usdc_fee = 1_000_000                         # base fee = 0.01%
 curve_pool_apx_usd_usdc_offpeg_fee_multiplier = 100_000_000_000 # max fee  = 0.10%
 curve_pool_apx_usd_usdc_ma_exp_time = 866
@@ -90,12 +90,19 @@ rpc_url = "${ETHEREUM_RPC_URL}"
 deployer = "${ETHEREUM_DEPLOYER}"
 authority = "${ETHEREUM_AUTHORITY}"
 
+curve_stableswap_ng_factory_address = "0x6A8cbed756804B16E05E741eDaBd5cB544AE21bf"
+usdc_address = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+
 [mainnet.string]
 network_name = "mainnet"
 
 # ApxUSD
 apx_usd_name = "apxUSD"
 apx_usd_symbol = "apxUSD"
+
+# Curve ApxUSD Pool (Stableswap-NG)
+curve_pool_apx_usd_usdc_name = "apxUSD-USDC"
+curve_pool_apx_usd_usdc_symbol = "apxUSDUSDC"    # max 10 chars
 
 # Commit Token
 commit_token_default_unlocking_delay = "1209600" # 14 days in seconds
@@ -117,3 +124,10 @@ apx_usd_rate_limit_mint_period = 86400       # 24 hours in seconds
 
 # ApyUSD
 apy_usd_unlocking_delay = 2592000 # 30 days in seconds
+
+# Curve ApxUSD Pool (Stableswap-NG)
+curve_pool_apx_usd_usdc_implementation_idx = 0
+curve_pool_apx_usd_usdc_amplification = 100
+curve_pool_apx_usd_usdc_fee = 1_000_000                         # base fee = 0.01%
+curve_pool_apx_usd_usdc_offpeg_fee_multiplier = 100_000_000_000 # max fee  = 0.10%
+curve_pool_apx_usd_usdc_ma_exp_time = 866

@@ -7,6 +7,8 @@ minterV0_address = "0x2c36e1aDfaa80eE0324B04cc814f5207bB7bA76e"
 apyUSD_address = "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A"
 apyUSDImpl_address = "0x1C407113acf0F879b3eB161bf774F4C1FDFB531e"
 unlockToken_address = "0x93775E2dFa4e716c361A1f53F212c7AE031BF4e6"
+apxUSDRateOracle_address = "0xa2ef2e7bF32248083E514A737259F3785EA8D37D"
+apxUSDUSDCPool_address = "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414"
 
 [mainnet.uint]
 accessManager_block = 24481039
@@ -17,3 +19,5 @@ minterV0_block = 24481773
 apyUSD_block = 24495109
 apyUSDImpl_block = 24495109
 unlockToken_block = 24495927
+apxUSDRateOracle_block = 24516824
+apxUSDUSDCPool_block = 24516824
