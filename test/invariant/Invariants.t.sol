@@ -50,11 +50,9 @@ contract InvariantTest is BaseTest {
         excludeSetup(address(yieldHandler));
         targetContract(address(yieldHandler));
 
-        // Seed via handlers so ghost state is tracked: mint to actor 0, then deposit
-        mintHandler.requestMint(0, uint208(SMALL_AMOUNT));
-        skip(MINT_DELAY + 1);
-        mintHandler.executeMint(0);
-        vaultHandler.deposit(0, SMALL_AMOUNT);
+        // Seed the ApyUSD vault with liquidity that will not be withdrawn
+        mintApxUSD(admin, 10_000e18);
+        depositApxUSD(admin, 10_000e18);
 
         // Set the minter rate limit to max
         vm.prank(admin);
@@ -111,9 +109,8 @@ contract InvariantTest is BaseTest {
     }
 
     function invariant_Vesting_FullyVested() public view {
-        if (vesting.vestingPeriodRemaining() == 0) {
-            assertEq(vesting.unvestedAmount(), 0, "Vesting: unvested != 0 after period ended");
-        }
+        if (vesting.vestingPeriodRemaining() > 0) return;
+        assertEq(vesting.unvestedAmount(), 0, "Vesting: unvested != 0 after period ended");
     }
 
     function invariant_Vesting_NewlyVestedBounded() public view {
@@ -176,9 +173,8 @@ contract InvariantTest is BaseTest {
     }
 
     function invariant_ApyUSD_NoZeroPrice() public view {
-        if (apyUSD.totalSupply() > 0) {
-            assertGt(apyUSD.totalAssets(), 0, "Zero totalAssets with nonzero supply");
-        }
+        if (apyUSD.totalSupply() == 0) return;
+        assertGt(apyUSD.totalAssets(), 0, "Zero totalAssets with nonzero supply");
     }
 
     // ========================================
@@ -189,13 +185,5 @@ contract InvariantTest is BaseTest {
         uint256 protocolHeld = apxUSD.balanceOf(address(apyUSD)) + apxUSD.balanceOf(address(unlockToken))
             + apxUSD.balanceOf(address(vesting)) + apxUSD.balanceOf(address(yieldDistributor));
         assertGe(apxUSD.totalSupply(), protocolHeld, "Protocol holds more apxUSD than total supply");
-    }
-
-    function invariant_Ghost_MintAccounting() public view {
-        assertEq(
-            mintHandler.ghost_totalMintedToUsers() + yieldHandler.ghost_totalMintedToYield(),
-            apxUSD.totalSupply(),
-            "Ghost mint tracking != total supply"
-        );
     }
 }

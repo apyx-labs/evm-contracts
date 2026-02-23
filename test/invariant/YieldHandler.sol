@@ -62,19 +62,19 @@ contract YieldHandler is BaseHandler {
         ghost_totalMintedToYield += yieldAmount;
     }
 
-    // function changeVestingPeriod(uint256 newPeriod) public {
-    //     uint256 currentPeriod = vesting.vestingPeriod();
+    function changeVestingPeriod(uint256 newPeriod) public {
+        uint256 currentPeriod = vesting.vestingPeriod();
 
-    //     uint256 minPeriod = Math.max(currentPeriod * 80 / 100, 14 days);
-    //     uint256 maxPeriod = Math.max(Math.min(currentPeriod * 120 / 100, 90 days), minPeriod + 1);
+        uint256 minPeriod = Math.max(currentPeriod * 80 / 100, 14 days);
+        uint256 maxPeriod = Math.max(Math.min(currentPeriod * 120 / 100, 90 days), minPeriod + 1);
 
-    //     newPeriod = bound(newPeriod, minPeriod, maxPeriod);
+        newPeriod = bound(newPeriod, minPeriod, maxPeriod);
 
-    //     vm.prank(_admin);
-    //     vesting.setVestingPeriod(newPeriod);
+        vm.prank(_admin);
+        vesting.setVestingPeriod(newPeriod);
 
-    //     ghost_vestingPeriodChanges++;
-    // }
+        ghost_vestingPeriodChanges++;
+    }
 
     function warpVesting(uint256 duration) public {
         uint256 period = vesting.vestingPeriod();
