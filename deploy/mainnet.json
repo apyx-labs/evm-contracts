@@ -34,11 +34,11 @@
     },
     "apxUSDRateOracle": {
       "address": "0xa2ef2e7bF32248083E514A737259F3785EA8D37D",
-      "block": 24516824
+      "block": 24516838
     },
     "apxUSDUSDCPool": {
       "address": "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414",
-      "block": 24516824
+      "block": 24516840
     }
   }
 }
