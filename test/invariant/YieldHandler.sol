@@ -11,8 +11,7 @@ contract YieldHandler is BaseHandler {
     address internal _admin;
     address internal _yieldOperator;
 
-    uint256 public ghost_totalYieldDeposited;
-    uint256 public ghost_totalMintedToDistributor;
+    uint256 public ghost_totalMintedToYield;
     uint256 public ghost_vestingPeriodChanges;
 
     constructor(
@@ -35,7 +34,7 @@ contract YieldHandler is BaseHandler {
         amount = bound(amount, VERY_SMALL_AMOUNT, SMALL_AMOUNT);
         vm.prank(_admin);
         apxUSD.mint(address(yieldDistributor), amount, 0);
-        ghost_totalMintedToDistributor += amount;
+        ghost_totalMintedToYield += amount;
     }
 
     function depositYield(uint256 amount) public {
@@ -58,8 +57,6 @@ contract YieldHandler is BaseHandler {
 
         vm.prank(_yieldOperator);
         yieldDistributor.depositYield(amount);
-
-        ghost_totalYieldDeposited += amount;
     }
 
     function changeVestingPeriod(uint256 newPeriod) public {

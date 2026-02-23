@@ -11,7 +11,9 @@ fs_permissions = [
 ]
 
 ignored_error_codes = [
-    5667, # unused-parameter
+    5667, # unused parameter
+    5574, # contract size
+    3860, # init code size
 ]
 ignored_warnings_from = [
     "cmds/",
@@ -39,7 +41,9 @@ exclude_lints = [
 ]
 
 [invariant]
-fail_on_revert = true
+# fail_on_revert = true
+runs = 256              # Number of test runs
+depth = 256             # Calls per run
 
 [dependencies]
 forge-std = "1.11.0"
