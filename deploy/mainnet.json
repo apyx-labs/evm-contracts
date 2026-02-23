@@ -39,6 +39,14 @@
     "apxUSDUSDCPool": {
       "address": "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414",
       "block": 24516840
+    },
+    "commitToken_0x98A878b1Cd98131B271883B390f68D2c90674665": {
+      "address": "0x17122d869d981d184118B301313BCD157c79871e",
+      "block": 24517556
+    },
+    "commitToken_0xE1B96555BbecA40E583BbB41a11C68Ca4706A414": {
+      "address": "0xdfC3cF7E540628a52862907DC1AB935Cd5859375",
+      "block": 24517610
     }
   }
 }
