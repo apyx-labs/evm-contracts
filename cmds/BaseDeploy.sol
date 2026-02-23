@@ -90,6 +90,11 @@ abstract contract BaseDeploy is Script {
     function setUp() internal virtual {
         string memory network = getNetwork();
 
+        if (keccak256(bytes(network)) == keccak256(bytes("mainnet"))) {
+            string memory profile = vm.envString("FOUNDRY_PROFILE");
+            vm.assertEq(profile, "release", "Foundry profile must be release for mainnet deployment");
+        }
+
         config = loadConfig();
         deployConfig = loadDeployConfig(network);
 

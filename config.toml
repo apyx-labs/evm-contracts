@@ -104,14 +104,6 @@ apx_usd_symbol = "apxUSD"
 curve_pool_apx_usd_usdc_name = "apxUSD-USDC"
 curve_pool_apx_usd_usdc_symbol = "apxUSDUSDC"    # max 10 chars
 
-# Commit Token
-commit_token_default_unlocking_delay = "1209600" # 14 days in seconds
-
-commit_token_supply_cap_apx_usd = "100_000_000"
-commit_token_supply_cap_curve_apx_usd_usdc = "50_000_000"
-commit_token_supply_cap_curve_apy_usd_usdc = "20_000_000"
-commit_token_supply_cap_curve_apx_apy_usd = "20_000_000"
-
 [mainnet.uint]
 # ApxUSD
 apx_usd_supply_cap = 100_000_000e18 # $100M
@@ -131,3 +123,10 @@ curve_pool_apx_usd_usdc_amplification = 100
 curve_pool_apx_usd_usdc_fee = 1_000_000                         # base fee = 0.01%
 curve_pool_apx_usd_usdc_offpeg_fee_multiplier = 100_000_000_000 # max fee  = 0.10%
 curve_pool_apx_usd_usdc_ma_exp_time = 866
+
+# Commit Token
+commit_token_default_unlocking_delay = 1209600 # 14 days in seconds
+
+commit_token_supply_cap_apx_usd = 100_000_000           # $100M
+commit_token_supply_cap_curve_apx_usd_usdc = 50_000_000 #  $50M
+commit_token_supply_cap_curve_apx_apy_usd = 20_000_000  #  $20M

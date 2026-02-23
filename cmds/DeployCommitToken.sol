@@ -40,6 +40,9 @@ contract DeployCommitToken is BaseDeploy {
         address asset = vm.envAddress("ASSET");
         vm.label(asset, "asset");
 
+        string memory supplyCapSuffix = vm.envString("COMMIT_TOKEN_SUPPLY_CAP");
+        string memory supplyCapKey = string.concat("commit_token_supply_cap_", supplyCapSuffix);
+
         // Check if there is already a CommitToken deployed for this asset
         string memory ctDeployConfigKey = string.concat("commitToken_", vm.toString(asset));
         string memory ctAddressDeployConfigKey = string.concat(ctDeployConfigKey, "_address");
@@ -61,9 +64,8 @@ contract DeployCommitToken is BaseDeploy {
         vm.assertNotEq(denyList, address(0), "AddressList not found. Deploy AddressList first using DeployAccess.");
 
         // unlockingDelay and supplyCap from config
-        uint48 unlockingDelay =
-            uint48(vm.parseUint(config.get(chainId, "commit_token_default_unlocking_delay").toString()));
-        uint256 supplyCap = vm.parseUint(config.get(chainId, "commit_token_default_supply_cap").toString()) * 1 ether;
+        uint48 unlockingDelay = uint48(config.get(chainId, "commit_token_default_unlocking_delay").toUint256());
+        uint256 supplyCap = config.get(chainId, supplyCapKey).toUint256() * 1 ether;
 
         console2.log("\n=== Configuration ===");
         console2.log("Asset:          ", asset);
@@ -78,10 +80,10 @@ contract DeployCommitToken is BaseDeploy {
         vm.label(address(commitToken), "commitToken");
 
         // Configure AccessManager permissions
-        console2.log("\nConfiguring AccessManager permissions...");
-        AccessManager accessManager = AccessManager(authority);
-        accessManager.assignAdminTargetsFor(commitToken);
-        console2.log("Configured CommitToken admin functions to require ADMIN_ROLE");
+        // console2.log("\nConfiguring AccessManager permissions...");
+        // AccessManager accessManager = AccessManager(authority);
+        // accessManager.assignAdminTargetsFor(commitToken);
+        // console2.log("Configured CommitToken admin functions to require ADMIN_ROLE");
 
         vm.stopBroadcast();
 
