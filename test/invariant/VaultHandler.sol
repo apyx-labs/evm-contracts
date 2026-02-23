@@ -17,33 +17,28 @@ contract VaultHandler is BaseHandler {
         unlockToken = _unlockToken;
     }
 
-    function deposit(uint256 actorIndex, uint256 assets) public useActor(actorIndex) skipSmallBalance(address(apxUSD)) {
-        assets = bound(assets, VERY_SMALL_AMOUNT, apxUSD.balanceOf(currentActor.addr));
+    function deposit(uint256 actorIndex, uint256 assets) public useActor(actorIndex) skipZeroBalance(address(apxUSD)) {
+        assets = bound(assets, 1, apxUSD.balanceOf(currentActor.addr));
         depositApxUSD(currentActor.addr, assets);
+
         ghost_totalDeposited += assets;
     }
 
-    function withdraw(uint256 actorIndex, uint256 assets)
-        public
-        useActor(actorIndex)
-        skipSmallBalance(address(apyUSD))
-    {
+    function withdraw(uint256 actorIndex, uint256 assets) public useActor(actorIndex) skipZeroBalance(address(apyUSD)) {
         uint256 maxWithdraw = apyUSD.maxWithdraw(currentActor.addr);
-        if (maxWithdraw < VERY_SMALL_AMOUNT) vm.assume(false);
+        if (maxWithdraw == 0) vm.assume(false);
 
-        assets = bound(assets, VERY_SMALL_AMOUNT, maxWithdraw);
+        assets = bound(assets, 1, maxWithdraw);
         withdrawApxUSD(assets, currentActor.addr);
+
         ghost_totalWithdrawnToUnlock += assets;
     }
 
-    function claimUnlock(uint256 actorIndex) public useActor(actorIndex) {
-        uint256 shares = unlockToken.balanceOf(currentActor.addr);
-        if (shares == 0) vm.assume(false);
-
-        skip(UNLOCKING_DELAY + 1);
+    function claimUnlock(uint256 actorIndex) public useActor(actorIndex) skipZeroBalance(address(unlockToken)) {
+        skip(unlockToken.cooldownRemaining(0, currentActor.addr) + 1);
 
         uint256 claimable = unlockToken.claimableRedeemRequest(0, currentActor.addr);
-        if (claimable == 0) vm.assume(false);
+        if (claimable == 0) revert("No claimable redeem request"); // vm.assume(false);
 
         vm.prank(currentActor.addr);
         uint256 assets = unlockToken.redeem(claimable, currentActor.addr, currentActor.addr);
