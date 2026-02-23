@@ -40,7 +40,7 @@ contract YieldHandler is BaseHandler {
 
     function depositYield(uint256 amount) public {
         uint256 availableBalance = yieldDistributor.availableBalance();
-        if (availableBalance < VERY_SMALL_AMOUNT) return;
+        if (availableBalance < VERY_SMALL_AMOUNT) vm.assume(false);
 
         uint256 totalAssets = apyUSD.totalAssets();
         if (totalAssets == 0) return;
