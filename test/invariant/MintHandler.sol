@@ -22,7 +22,7 @@ contract MintHandler is BaseHandler {
 
     function requestMint(uint256 actorIndex, uint208 amount) public {
         Actor memory actor = getActor(actorIndex);
-        amount = uint208(bound(amount, VERY_SMALL_AMOUNT, SMALL_AMOUNT));
+        amount = uint208(bound(amount, 1, MEDIUM_AMOUNT));
 
         uint48 nonce = minterV0.nonce(actor.addr);
 
@@ -40,7 +40,7 @@ contract MintHandler is BaseHandler {
     }
 
     function executeMint(uint256 orderIndex) public {
-        if (ghost_pendingOrderIds.length == 0) return;
+        if (ghost_pendingOrderIds.length == 0) vm.assume(false);
 
         orderIndex = bound(orderIndex, 0, ghost_pendingOrderIds.length - 1);
         bytes32 operationId = ghost_pendingOrderIds[orderIndex];

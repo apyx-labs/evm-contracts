@@ -46,6 +46,12 @@ abstract contract BaseHandler is BaseTest {
         _;
     }
 
+    modifier skipZeroBalance(address token) {
+        uint256 balance = IERC20(token).balanceOf(currentActor.addr);
+        if (balance == 0) vm.assume(false);
+        _;
+    }
+
     function _signMintOrder(IMinterV0.Order memory order, uint256 privateKey) internal view returns (bytes memory) {
         bytes32 digest = minterV0.hashOrder(order);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);

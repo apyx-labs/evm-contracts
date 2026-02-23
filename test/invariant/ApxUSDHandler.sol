@@ -13,11 +13,11 @@ contract ApxUSDHandler is BaseHandler {
     function transferApxUSD(uint256 fromUserIndex, uint256 toUserIndex, uint256 amount)
         public
         useActor(fromUserIndex)
-        skipSmallBalance(address(apxUSD))
+        skipZeroBalance(address(apxUSD))
     {
         Actor memory actor = getActor(toUserIndex);
 
-        amount = bound(amount, VERY_SMALL_AMOUNT, apxUSD.balanceOf(currentActor.addr));
+        amount = bound(amount, 1, apxUSD.balanceOf(currentActor.addr));
         transferApxUSD(currentActor.addr, actor.addr, amount);
     }
 }
