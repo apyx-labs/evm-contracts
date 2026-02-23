@@ -22,7 +22,7 @@ contract MintHandler is BaseHandler {
 
     function requestMint(uint256 actorIndex, uint208 amount) public {
         Actor memory actor = getActor(actorIndex);
-        amount = uint208(bound(amount, 1, MEDIUM_AMOUNT));
+        amount = uint208(bound(amount, 1, VERY_VERY_LARGE_AMOUNT));
 
         uint48 nonce = minterV0.nonce(actor.addr);
 
