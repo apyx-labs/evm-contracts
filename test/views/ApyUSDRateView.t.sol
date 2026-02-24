@@ -40,9 +40,9 @@ contract ApyUSDRateViewTest is VestingTest {
         uint256 yieldAmount = DEPOSIT_AMOUNT;
         depositYield(yieldDistributor, yieldAmount);
 
-        uint256 periodRemaining = vesting.vestingPeriodRemaining();
-        uint256 unvested = vesting.unvestedAmount();
-        uint256 expectedRate = unvested * rateView.SECONDS_PER_YEAR() / periodRemaining;
+        uint256 period = vesting.vestingPeriod();
+        uint256 vesting = vesting.vestingAmount();
+        uint256 expectedRate = vesting * rateView.SECONDS_PER_YEAR() / period;
 
         assertEq(
             rateView.annualizedYield(),
@@ -93,14 +93,14 @@ contract ApyUSDRateViewTest is VestingTest {
         depositYield(yieldDistributor, yieldAmount);
 
         uint256 totalAssets = apyUSD.totalAssets();
-        uint256 periodRemaining = vesting.vestingPeriodRemaining();
-        uint256 unvested = vesting.unvestedAmount();
+        uint256 period = vesting.vestingPeriod();
+        uint256 vesting = vesting.vestingAmount();
 
         assertGt(totalAssets, 0, "Total assets should be positive");
-        assertGt(periodRemaining, 0, "Period remaining should be positive");
-        assertEq(unvested, yieldAmount, "Unvested should equal deposited yield initially");
+        assertGt(period, 0, "Period remaining should be positive");
+        assertEq(vesting, yieldAmount, "Vesting amount should equal deposited yield initially");
 
-        uint256 annualYield = unvested * rateView.SECONDS_PER_YEAR() / periodRemaining;
+        uint256 annualYield = vesting * rateView.SECONDS_PER_YEAR() / period;
         uint256 expectedApr = (annualYield * 1e18) / totalAssets;
 
         assertEq(rateView.apr(), expectedApr, "APR should match (annualYield * 1e18) / totalAssets");

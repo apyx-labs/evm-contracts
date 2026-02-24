@@ -4,7 +4,7 @@ pragma solidity 0.8.30;
 import {ApyUSD} from "../ApyUSD.sol";
 import {IVesting} from "../interfaces/IVesting.sol";
 import {EInvalidAddress} from "../errors/InvalidAddress.sol";
-import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 /**
  * @title ApyUSDRateView
@@ -73,7 +73,13 @@ contract ApyUSDRateView is EInvalidAddress {
 
         // base = 1e18 + annualRate/12
         uint256 base = 1e18 + annualRate / 12;
-        // rpow computes (base / 1e18)^12 * 1e18
-        annualYield = FixedPointMathLib.rpow(base, 12, 1e18) - 1e18;
+        uint256 result = 1e18;
+
+        // Compound 12 times (i.e. monthly compounding)
+        for (uint8 i = 0; i < 12; i++) {
+            // Use OpenZeppelin's Math.mulDiv for full precision multiply/divide
+            result = Math.mulDiv(result, base, 1e18);
+        }
+        annualYield = result - 1e18;
     }
 }
