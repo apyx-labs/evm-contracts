@@ -41,9 +41,9 @@ exclude_lints = [
 ]
 
 [invariant]
-# fail_on_revert = true
-runs = 256              # Number of test runs
-depth = 256             # Calls per run
+fail_on_revert = true
+runs = 256            # Number of test runs
+depth = 1024          # Calls per run
 
 [dependencies]
 forge-std = "1.11.0"
