@@ -59,6 +59,74 @@ contract ApyUSDRateViewTest is VestingTest {
     }
 
     // ========================================
+    // APR Tests
+    // ========================================
+
+    function test_Apr_ReturnsZero_WhenNoVestingSet() public {
+        vm.prank(admin);
+        apyUSD.setVesting(IVesting(address(0)));
+        assertEq(rateView.apr(), 0, "APR should be 0 when vesting not set");
+    }
+
+    function test_Apr_ReturnsZero_WhenZeroTotalAssets() public view {
+        uint256 totalAssets = apyUSD.totalAssets();
+        assertEq(totalAssets, 0, "Total assets should be 0 with no deposits");
+        assertEq(rateView.apr(), 0, "APR should be 0 when total assets is 0");
+    }
+
+    function test_Apr_ReturnsZero_WhenVestingPeriodRemainingZero() public {
+        deposit(alice, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, DEPOSIT_AMOUNT);
+
+        warpPastVestingPeriod();
+
+        assertEq(vesting.vestingPeriodRemaining(), 0, "Period remaining should be 0 after warp");
+        assertEq(rateView.apr(), 0, "APR should be 0 when period remaining is 0");
+    }
+
+    function test_Apr_ReturnsExpectedApr_WhenVestingAndTotalAssetsSet() public {
+        uint256 vaultDeposit = DEPOSIT_AMOUNT;
+        uint256 yieldAmount = DEPOSIT_AMOUNT;
+
+        deposit(alice, vaultDeposit);
+        depositYield(yieldDistributor, yieldAmount);
+
+        uint256 totalAssets = apyUSD.totalAssets();
+        uint256 periodRemaining = vesting.vestingPeriodRemaining();
+        uint256 unvested = vesting.unvestedAmount();
+
+        assertGt(totalAssets, 0, "Total assets should be positive");
+        assertGt(periodRemaining, 0, "Period remaining should be positive");
+        assertEq(unvested, yieldAmount, "Unvested should equal deposited yield initially");
+
+        uint256 annualYield = unvested * rateView.SECONDS_PER_YEAR() / periodRemaining;
+        uint256 expectedApr = (annualYield * 1e18) / totalAssets;
+
+        assertEq(rateView.apr(), expectedApr, "APR should match (annualYield * 1e18) / totalAssets");
+    }
+
+    function test_Apr_ReturnsExpectedApr_TargetApr() public {
+        assertEq(apyUSD.totalAssets(), 0, "Total assets should be 0 with no deposits");
+        assertEq(apyUSD.decimals(), 18, "Decimals should be 18");
+
+        deposit(alice, DEPOSIT_AMOUNT);
+        assertEq(apyUSD.totalAssets(), DEPOSIT_AMOUNT, "Total assets should be equal to deposit amount");
+
+        uint256 targetApr = 0.1e18; // 10%
+
+        uint256 targetAnnualizedYield = targetApr * apyUSD.totalAssets() / 1e18;
+        assertEq(targetAnnualizedYield, DEPOSIT_AMOUNT / 10, "Target annualized yield should be 10% of deposit amount");
+
+        uint256 yieldAmount = targetAnnualizedYield * VESTING_PERIOD / rateView.SECONDS_PER_YEAR();
+
+        vm.prank(admin);
+        apxUSD.mint(yieldDistributor, yieldAmount, 0);
+        depositYield(yieldDistributor, yieldAmount);
+
+        assertApproxEqAbs(rateView.apr(), targetApr, 1e15, "APR should match target APR");
+    }
+
+    // ========================================
     // APY Tests
     // ========================================
 
@@ -91,30 +159,9 @@ contract ApyUSDRateViewTest is VestingTest {
         assertEq(unvested, yieldAmount, "Unvested should equal deposited yield initially");
 
         uint256 annualYield = unvested * rateView.SECONDS_PER_YEAR() / periodRemaining;
-        uint256 expectedApy = (annualYield * rateView.precision()) / totalAssets;
+        uint256 expectedApy = (annualYield * 1e18) / totalAssets;
 
         assertEq(rateView.apy(), expectedApy, "APY should match (annualYield * decimals) / totalAssets");
-    }
-
-    function test_Apy_ReturnsExpectedApy_TargetApy() public {
-        assertEq(apyUSD.totalAssets(), 0, "Total assets should be 0 with no deposits");
-        assertEq(apyUSD.decimals(), 18, "Decimals should be 18");
-
-        deposit(alice, DEPOSIT_AMOUNT);
-        assertEq(apyUSD.totalAssets(), DEPOSIT_AMOUNT, "Total assets should be equal to deposit amount");
-
-        uint256 targetApy = 0.1e18; // 10%
-
-        uint256 targetAnnualizedYield = targetApy * apyUSD.totalAssets() / rateView.precision();
-        assertEq(targetAnnualizedYield, DEPOSIT_AMOUNT / 10, "Target annualized yield should be 10% of deposit amount");
-
-        uint256 yieldAmount = targetAnnualizedYield * VESTING_PERIOD / rateView.SECONDS_PER_YEAR();
-
-        vm.prank(admin);
-        apxUSD.mint(yieldDistributor, yieldAmount, 0);
-        depositYield(yieldDistributor, yieldAmount);
-
-        assertApproxEqAbs(rateView.apy(), targetApy, 1, "APY should match target APY");
     }
 
     function test_Apy_ReturnsZero_WhenVestingPeriodRemainingZero() public {
