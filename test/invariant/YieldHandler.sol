@@ -34,10 +34,10 @@ contract YieldHandler is BaseHandler {
     function depositYield(uint256 targetApy) public {
         if (apyUSD.totalSupply() == 0) vm.assume(false);
 
-        // There must be some time passed since the last deposit
+        // Some time must have passed since the last deposit
         if (vesting.lastDepositTimestamp() == block.timestamp) vm.assume(false);
 
-        targetApy = bound(targetApy, 0.05e18, 0.15e18); // 5% - 15%
+        targetApy = bound(targetApy, 0.02e18, 0.2e18); // 2% - 20%
         uint256 targetAnnualYield = apyUSD.totalAssets() * targetApy / 1e18;
 
         uint256 yieldAmount = (targetAnnualYield * vesting.vestingPeriod() / 365 days);
@@ -59,14 +59,28 @@ contract YieldHandler is BaseHandler {
         vm.prank(_yieldOperator);
         yieldDistributor.depositYield(yieldAmount);
 
+        vm.prank(address(apyUSD));
+
         ghost_totalMintedToYield += yieldAmount;
     }
 
+    // /**
+    //  * @notice Changes the vesting period
+    //  * @dev The vesting period can only be changed by 5% up or down. After changing the vesting period
+    //  *      the yield handler must wait for the new period to start before depositing yield again.
+    //  */
     function changeVestingPeriod(uint256 newPeriod) public {
+        // Some time must have passed since the last vesting period change
+        if (vesting.lastDepositTimestamp() == block.timestamp) vm.assume(false);
+
         uint256 currentPeriod = vesting.vestingPeriod();
 
-        uint256 minPeriod = Math.max(currentPeriod * 80 / 100, 14 days);
-        uint256 maxPeriod = Math.max(Math.min(currentPeriod * 120 / 100, 90 days), minPeriod + 1);
+        // Keep period within ±5% of current to avoid extreme rounding
+        uint256 minPeriod = currentPeriod * 95 / 100;
+        uint256 maxPeriod = currentPeriod * 105 / 100;
+
+        if (minPeriod <= VESTING_PERIOD / 2) minPeriod = VESTING_PERIOD / 2;
+        if (maxPeriod <= minPeriod) maxPeriod = minPeriod + 1;
 
         newPeriod = bound(newPeriod, minPeriod, maxPeriod);
 

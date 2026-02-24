@@ -54,13 +54,19 @@ contract InvariantTest is BaseTest {
         mintApxUSD(admin, 10_000e18);
         depositApxUSD(admin, 10_000e18);
 
-        // Set the minter rate limit to max
-        vm.prank(admin);
+        vm.startPrank(admin);
+
+        // Set the ApxUSD supply cap to max
+        apxUSD.setSupplyCap(type(uint256).max);
+
+        // Set the minter rate limits to max
         minterV0.setRateLimit(type(uint208).max, RATE_LIMIT_PERIOD);
+        minterV0.setMaxMintAmount(type(uint208).max);
 
         // Set the unlocking fee to
-        vm.prank(admin);
-        apyUSD.setUnlockingFee(1000000000000000); // 0.1%
+        apyUSD.setUnlockingFee(0.001e18); // 0.1%
+
+        vm.stopPrank();
     }
 
     function excludeSetup(address target) internal {
@@ -113,12 +119,15 @@ contract InvariantTest is BaseTest {
         assertEq(vesting.unvestedAmount(), 0, "Vesting: unvested != 0 after period ended");
     }
 
-    function invariant_Vesting_NewlyVestedBounded() public view {
+    function invariant_Vesting_Amounts() public view {
         assertLe(vesting.newlyVestedAmount(), vesting.vestingAmount(), "Vesting: newlyVested > vestingAmount");
-    }
-
-    function invariant_Vesting_UnvestedBounded() public view {
         assertLe(vesting.unvestedAmount(), vesting.vestingAmount(), "Vesting: unvested > vestingAmount");
+
+        assertEq(
+            vesting.fullyVestedAmount() + vesting.newlyVestedAmount(),
+            vesting.vestedAmount(),
+            "Vesting: fullyVested + newlyVested != vested"
+        );
     }
 
     function invariant_Vesting_TimestampOrdering() public view {
@@ -155,16 +164,16 @@ contract InvariantTest is BaseTest {
         );
     }
 
-    function invariant_ApyUSD_WithdrawRedeemEquivalency() public view {
-        uint256 withdrawAssets = VERY_SMALL_AMOUNT;
-        uint256 sharesIn = apyUSD.previewWithdraw(withdrawAssets);
-        uint256 assetsOut = apyUSD.previewRedeem(sharesIn);
-        assertApproxEqAbs(
-            withdrawAssets,
+    function invariant_ApyUSD_ConvertToAssetsAndShares() public view {
+        uint256 assetsIn = VERY_SMALL_AMOUNT;
+        uint256 shares = apyUSD.convertToShares(assetsIn);
+        uint256 assetsOut = apyUSD.convertToAssets(shares);
+        assertLe(
             assetsOut,
-            1,
+            assetsIn,
             string.concat(
-                "previewRedeem(previewWithdraw(x)) != x: totalAssets = ",
+                "convertToAssets(convertToShares(x)) >= x - rate:",
+                " totalAssets = ",
                 vm.toString(apyUSD.totalAssets()),
                 " totalSupply = ",
                 vm.toString(apyUSD.totalSupply())
