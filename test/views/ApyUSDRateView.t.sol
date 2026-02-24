@@ -3,6 +3,7 @@ pragma solidity 0.8.30;
 
 import {VestingTest} from "../contracts/Vesting/BaseTest.sol";
 import {ApyUSDRateView} from "../../src/views/ApyUSDRateView.sol";
+import {FixedPointMathLib} from "solady/src/utils/FixedPointMathLib.sol";
 import {IVesting} from "../../src/interfaces/IVesting.sol";
 import {EInvalidAddress} from "../../src/errors/InvalidAddress.sol";
 import {Errors} from "../../test/utils/Errors.sol";
@@ -146,22 +147,43 @@ contract ApyUSDRateViewTest is VestingTest {
     function test_Apy_ReturnsExpectedApy_WhenVestingAndTotalAssetsSet() public {
         uint256 vaultDeposit = DEPOSIT_AMOUNT;
         uint256 yieldAmount = DEPOSIT_AMOUNT;
-
         deposit(alice, vaultDeposit);
         depositYield(yieldDistributor, yieldAmount);
 
-        uint256 totalAssets = apyUSD.totalAssets();
-        uint256 periodRemaining = vesting.vestingPeriodRemaining();
-        uint256 unvested = vesting.unvestedAmount();
+        uint256 apr = rateView.apr();
+        assertGt(apr, 0, "APR should be positive");
 
-        assertGt(totalAssets, 0, "Total assets should be positive");
-        assertGt(periodRemaining, 0, "Period remaining should be positive");
-        assertEq(unvested, yieldAmount, "Unvested should equal deposited yield initially");
+        // Expected APY = (1 + APR/12)^12 - 1 (monthly compounding)
+        uint256 base = 1e18 + apr / 12;
+        uint256 expectedApy = FixedPointMathLib.rpow(base, 12, 1e18) - 1e18;
 
-        uint256 annualYield = unvested * rateView.SECONDS_PER_YEAR() / periodRemaining;
-        uint256 expectedApy = (annualYield * 1e18) / totalAssets;
+        assertApproxEqAbs(rateView.apy(), expectedApy, 1e15, "APY should match (1+APR/12)^12-1");
+    }
 
-        assertEq(rateView.apy(), expectedApy, "APY should match (annualYield * decimals) / totalAssets");
+    function test_Apy_ExceedsApr_WhenPositiveRate() public {
+        deposit(alice, DEPOSIT_AMOUNT);
+        depositYield(yieldDistributor, DEPOSIT_AMOUNT);
+
+        uint256 apr = rateView.apr();
+        uint256 apy = rateView.apy();
+
+        assertGt(apr, 0, "APR should be positive");
+        assertGt(apy, apr, "APY should exceed APR due to compounding");
+    }
+
+    function test_Apy_ReturnsExpectedApy_TargetApr() public {
+        deposit(alice, DEPOSIT_AMOUNT);
+
+        uint256 targetApr = 0.1e18; // 10%
+        uint256 targetAnnualizedYield = targetApr * apyUSD.totalAssets() / 1e18;
+        uint256 yieldAmount = targetAnnualizedYield * VESTING_PERIOD / rateView.SECONDS_PER_YEAR();
+
+        vm.prank(admin);
+        apxUSD.mint(yieldDistributor, yieldAmount, 0);
+        depositYield(yieldDistributor, yieldAmount);
+
+        uint256 expectedApy = 0.104713e18; // ~10.47% APY for 10% APR with monthly compounding
+        assertApproxEqAbs(rateView.apy(), expectedApy, 1e15, "10% APR should give ~10.47% APY");
     }
 
     function test_Apy_ReturnsZero_WhenVestingPeriodRemainingZero() public {
