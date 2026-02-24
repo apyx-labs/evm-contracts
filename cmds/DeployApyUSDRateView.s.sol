@@ -5,6 +5,7 @@ import {Script, console2 as console} from "forge-std/src/Script.sol";
 import {ApyUSDRateView} from "../src/views/ApyUSDRateView.sol";
 import {BaseDeploy} from "./BaseDeploy.sol";
 import {StdConfig} from "forge-std/src/StdConfig.sol";
+import {Formatter} from "../test/utils/Formatter.sol";
 
 /**
  * @title DeployApyUSDRateView
@@ -24,6 +25,8 @@ import {StdConfig} from "forge-std/src/StdConfig.sol";
  * Output: deploy/<network>.toml
  */
 contract DeployApyUSDRateView is BaseDeploy {
+    using Formatter for uint256;
+
     function run() public {
         super.setUp();
 
@@ -42,11 +45,14 @@ contract DeployApyUSDRateView is BaseDeploy {
         vm.stopBroadcast();
 
         console.log("\n=== Deployment Summary ===");
-        console.log("Network:", block.chainid);
+        console.log("Network: ", block.chainid);
         console.log("Deployer:", deployer);
         console.log("");
         console.log("ApyUSDRateView:", rateViewAddr);
-        console.log("  - Vault:", rateView.vault());
+        console.log("  - vault:", rateView.vault());
+        console.log("  - yield:", rateView.annualizedYield().formatDecimal());
+        console.log("  - apr:  ", rateView.apr().formatDecimal());
+        console.log("  - apy:  ", rateView.apy().formatDecimal());
 
         deployConfig.set(chainId, "apyUSDRateView_address", rateViewAddr);
         deployConfig.set(chainId, "apyUSDRateView_block", block.number);
