@@ -117,6 +117,9 @@ apx_usd_rate_limit_mint_period = 86400       # 24 hours in seconds
 # ApyUSD
 apy_usd_unlocking_delay = 2592000 # 30 days in seconds
 
+# Vesting
+vesting_period = 2592000 # 30 days in seconds
+
 # Curve ApxUSD Pool (Stableswap-NG)
 curve_pool_apx_usd_usdc_implementation_idx = 0
 curve_pool_apx_usd_usdc_amplification = 100

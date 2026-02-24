@@ -47,6 +47,18 @@
     "commitToken_0xE1B96555BbecA40E583BbB41a11C68Ca4706A414": {
       "address": "0xdfC3cF7E540628a52862907DC1AB935Cd5859375",
       "block": 24517610
+    },
+    "linearVestV0": {
+      "address": "0x0D62B4cC02b4B51Ed19DDF41D7a7979CF394C99f",
+      "block": 24523775
+    },
+    "yieldDistributor": {
+      "address": "0xDbCA79adc13A0FA6F921d5Cf5b3fAe2B8a739C2A",
+      "block": 24523775
+    },
+    "apyUSDRateView": {
+      "address": "0xCABa36EDE2C08e16F3602e8688a8bE94c1B4e484",
+      "block": 24524112
     }
   }
 }
