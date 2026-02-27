@@ -21,25 +21,9 @@ network_name = "arbitrum"
 apx_usd_name = "Foo USD"
 apx_usd_symbol = "fooUSD"
 
-apx_usd_supply_cap = "1_000_000_000"
-apx_usd_max_mint_size = "1_000_000"
-
-apx_usd_rate_limit_mint_size = "10_000_000"
-apx_usd_rate_limit_mint_period = "86400"    # seconds
-
 # ApyUSD
 apy_usd_name = "Bar USD"
 apy_usd_symbol = "barUSD"
-
-apx_usd_mint_delay = "5"       # seconds
-apy_usd_unlocking_delay = "60" # seconds
-
-# CommitToken
-commit_token_default_supply_cap = "10000000" # 10M ether (1e18)
-commit_token_default_unlocking_delay = "60"  # seconds
-
-# Vesting
-vesting_period = "2592000" # 30 days in seconds
 
 # Mock Tokens
 mockUSD_name = "Mock USD"
@@ -53,21 +37,29 @@ curve_pool_apx_usd_usdc_name = "fooUSD-stubUSDC"
 curve_pool_apx_usd_usdc_symbol = "fooUSDstub"             # max 10 chars
 
 # Curve ApyUSD-MockUSD Pool (Twocrypto-NG)
-# https://docs.curve.finance/cryptoswap-exchange/in-depth/
 curve_pool_apy_usd_mock_usd_name = "Curve.fi barUSD-mockUSD"
 curve_pool_apy_usd_mock_usd_symbol = "barUSDmock"                 # max 10 chars
-curve_pool_apy_usd_mock_usd_implementation_id = "0"
-curve_pool_apy_usd_mock_usd_A = "20000000"
-curve_pool_apy_usd_mock_usd_gamma = "10000000000000000"
-curve_pool_apy_usd_mock_usd_mid_fee = "3000000"
-curve_pool_apy_usd_mock_usd_out_fee = "45000000"
-curve_pool_apy_usd_mock_usd_fee_gamma = "300000000000000000"
-curve_pool_apy_usd_mock_usd_allowed_extra_profit = "10000000000"
-curve_pool_apy_usd_mock_usd_adjustment_step = "5500000000000"
-curve_pool_apy_usd_mock_usd_ma_exp_time = "600"
-curve_pool_apy_usd_mock_usd_initial_price = "1000000000000000000"
 
 [arbitrum.uint]
+# ApxUSD
+apx_usd_supply_cap = 1_000_000_000e18
+apx_usd_max_mint_size = 1_000_000e18
+apx_usd_rate_limit_mint_size = 10_000_000e18
+apx_usd_rate_limit_mint_period = 86400       # seconds
+
+# Minting
+apx_usd_mint_delay = 5                       # seconds
+
+# ApyUSD
+apy_usd_unlocking_delay = 60                 # seconds
+
+# CommitToken
+commit_token_default_supply_cap = 10_000_000e18
+commit_token_default_unlocking_delay = 60    # seconds
+
+# Vesting
+vesting_period = 2592000                     # 30 days in seconds
+
 # Mock Tokens
 mockUSD_decimals = 18
 stubUSD_decimals = 6
@@ -78,6 +70,19 @@ curve_pool_apx_usd_usdc_amplification = 100
 curve_pool_apx_usd_usdc_fee = 1_000_000                         # base fee = 0.01%
 curve_pool_apx_usd_usdc_offpeg_fee_multiplier = 100_000_000_000 # max fee  = 0.10%
 curve_pool_apx_usd_usdc_ma_exp_time = 866
+
+# Curve ApyUSD-MockUSD Pool (Twocrypto-NG)
+# https://docs.curve.finance/cryptoswap-exchange/in-depth/
+curve_pool_apy_usd_mock_usd_implementation_id = 0
+curve_pool_apy_usd_mock_usd_A = 20_000_000
+curve_pool_apy_usd_mock_usd_gamma = 10_000_000_000_000_000
+curve_pool_apy_usd_mock_usd_mid_fee = 3_000_000
+curve_pool_apy_usd_mock_usd_out_fee = 45_000_000
+curve_pool_apy_usd_mock_usd_fee_gamma = 300_000_000_000_000_000
+curve_pool_apy_usd_mock_usd_allowed_extra_profit = 10_000_000_000
+curve_pool_apy_usd_mock_usd_adjustment_step = 5_500_000_000_000
+curve_pool_apy_usd_mock_usd_ma_exp_time = 600
+curve_pool_apy_usd_mock_usd_initial_price = 1_000_000_000_000_000_000
 
 # ================================================
 # Mainnet
