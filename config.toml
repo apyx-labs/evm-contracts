@@ -135,6 +135,6 @@ curve_pool_apx_usd_usdc_ma_exp_time = 866
 # Commit Token
 commit_token_default_unlocking_delay = 1209600 # 14 days in seconds
 
-commit_token_supply_cap_apx_usd = 100_000_000           # $100M
-commit_token_supply_cap_curve_apx_usd_usdc = 50_000_000 #  $50M
-commit_token_supply_cap_curve_apx_apy_usd = 20_000_000  #  $20M
+commit_token_supply_cap_apx_usd = 100_000_000e18           # $100M
+commit_token_supply_cap_curve_apx_usd_usdc = 50_000_000e18 #  $50M
+commit_token_supply_cap_curve_apx_apy_usd = 20_000_000e18  #  $20M

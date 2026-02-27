@@ -34,13 +34,11 @@ contract CommitTokenIntegration is BaseIntegrationTest {
     }
 
     function _tryInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label) internal {
-        try deployConfig.get(chainId, underlyingDeployKey) returns (Variable memory val) {
-            address underlying = val.toAddress();
-            if (underlying == address(0)) return;
-            _testInstanceByUnderlying(underlying, supplyCapKey, label);
-        } catch {
-            // Underlying not deployed on this network, skip
-        }
+        Variable memory val = deployConfig.get(chainId, underlyingDeployKey);
+        if (val.data.length == 0) return;
+        address underlying = val.toAddress();
+        if (underlying == address(0)) return;
+        _testInstanceByUnderlying(underlying, supplyCapKey, label);
     }
 
     function _testInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label) internal {
@@ -51,12 +49,9 @@ contract CommitTokenIntegration is BaseIntegrationTest {
     function _testInstanceByUnderlying(address underlying, string memory supplyCapKey, string memory label) internal {
         string memory commitTokenKey = string.concat("commitToken_", vm.toString(underlying), "_address");
 
-        address ctAddr;
-        try deployConfig.get(chainId, commitTokenKey) returns (Variable memory val) {
-            ctAddr = val.toAddress();
-        } catch {
-            return;
-        }
+        Variable memory ctVal = deployConfig.get(chainId, commitTokenKey);
+        if (ctVal.data.length == 0) return;
+        address ctAddr = ctVal.toAddress();
         if (ctAddr == address(0)) return;
 
         CommitToken ct = CommitToken(ctAddr);
@@ -73,10 +68,9 @@ contract CommitTokenIntegration is BaseIntegrationTest {
             string.concat(label, ".unlockingDelay")
         );
 
-        try config.get(chainId, supplyCapKey) returns (Variable memory capVal) {
+        Variable memory capVal = config.get(chainId, supplyCapKey);
+        if (capVal.data.length > 0) {
             checkEq(ct.supplyCap(), capVal.toUint256(), string.concat(label, ".supplyCap"));
-        } catch {
-            // Supply cap config key not found, skip
         }
 
         // Access control: ADMIN_ROLE
