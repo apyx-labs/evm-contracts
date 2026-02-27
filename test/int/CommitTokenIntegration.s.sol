@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {StdConfig} from "forge-std/src/StdConfig.sol";
+import {Variable} from "forge-std/src/LibVariable.sol";
 import {console2 as console} from "forge-std/src/console2.sol";
 import {CommitToken} from "../../src/CommitToken.sol";
 import {Roles} from "../../src/Roles.sol";
@@ -33,7 +34,7 @@ contract CommitTokenIntegration is BaseIntegrationTest {
     }
 
     function _tryInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label) internal {
-        try deployConfig.get(chainId, underlyingDeployKey) returns (StdConfig.Value memory val) {
+        try deployConfig.get(chainId, underlyingDeployKey) returns (Variable memory val) {
             address underlying = val.toAddress();
             if (underlying == address(0)) return;
             _testInstanceByUnderlying(underlying, supplyCapKey, label);
@@ -51,7 +52,7 @@ contract CommitTokenIntegration is BaseIntegrationTest {
         string memory commitTokenKey = string.concat("commitToken_", vm.toString(underlying), "_address");
 
         address ctAddr;
-        try deployConfig.get(chainId, commitTokenKey) returns (StdConfig.Value memory val) {
+        try deployConfig.get(chainId, commitTokenKey) returns (Variable memory val) {
             ctAddr = val.toAddress();
         } catch {
             return;
@@ -72,7 +73,7 @@ contract CommitTokenIntegration is BaseIntegrationTest {
             string.concat(label, ".unlockingDelay")
         );
 
-        try config.get(chainId, supplyCapKey) returns (StdConfig.Value memory capVal) {
+        try config.get(chainId, supplyCapKey) returns (Variable memory capVal) {
             checkEq(ct.supplyCap(), capVal.toUint256(), string.concat(label, ".supplyCap"));
         } catch {
             // Supply cap config key not found, skip
