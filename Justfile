@@ -35,6 +35,11 @@ deploy-yield NETWORK="local" RPC_URL="http://localhost:8545":
 # Deploy all contracts in sequence
 deploy-all NETWORK="local" RPC_URL="http://localhost:8545": deploy-access deploy-apxusd deploy-apyusd deploy-yield
 
+# Run integration tests against a live network
+integration-test network='mainnet':
+    NETWORK={{network}} forge script test/int/Runner.s.sol \
+        --rpc-url $(if [ "{{network}}" = "mainnet" ]; then echo "$ETHEREUM_RPC_URL"; else echo "$ARBITRUM_RPC_URL"; fi)
+
 # Run all tests
 test:
     forge test
