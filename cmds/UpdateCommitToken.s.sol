@@ -30,7 +30,7 @@ contract UpdateCommitToken is BaseDeploy {
         address commitTokenAddress = vm.envAddress("COMMIT_TOKEN_ADDRESS");
         vm.assertNotEq(commitTokenAddress, address(0), "COMMIT_TOKEN_ADDRESS must be set");
 
-        uint256 supplyCap = vm.parseUint(config.get(chainId, "commit_token_default_supply_cap").toString()) * 1 ether;
+        uint256 supplyCap = vm.parseUint(config.get(chainId, "commit_token_default_supply_cap").toString());
         uint48 unlockingDelay =
             uint48(vm.parseUint(config.get(chainId, "commit_token_default_unlocking_delay").toString()));
 

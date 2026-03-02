@@ -31,12 +31,19 @@ contract YieldDistributorIntegration is BaseIntegrationTest {
 
         // Access control: ADMIN_ROLE
         checkRole(ydAddr, IYieldDistributor.setVesting.selector, Roles.ADMIN_ROLE, "setVesting -> ADMIN_ROLE");
-        checkRole(ydAddr, IYieldDistributor.setSigningDelegate.selector, Roles.ADMIN_ROLE, "setSigningDelegate -> ADMIN_ROLE");
+        checkRole(
+            ydAddr, IYieldDistributor.setSigningDelegate.selector, Roles.ADMIN_ROLE, "setSigningDelegate -> ADMIN_ROLE"
+        );
         checkRole(ydAddr, IYieldDistributor.withdraw.selector, Roles.ADMIN_ROLE, "withdraw -> ADMIN_ROLE");
         checkRole(ydAddr, IYieldDistributor.withdrawTokens.selector, Roles.ADMIN_ROLE, "withdrawTokens -> ADMIN_ROLE");
 
         // Access control: ROLE_YIELD_OPERATOR
-        checkRole(ydAddr, IYieldDistributor.depositYield.selector, Roles.ROLE_YIELD_OPERATOR, "depositYield -> ROLE_YIELD_OPERATOR");
+        checkRole(
+            ydAddr,
+            IYieldDistributor.depositYield.selector,
+            Roles.ROLE_YIELD_OPERATOR,
+            "depositYield -> ROLE_YIELD_OPERATOR"
+        );
 
         return (_passed, _failed);
     }

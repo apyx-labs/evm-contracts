@@ -18,7 +18,9 @@ contract OrderDelegate_TransferTest is OrderDelegateTestBase {
         orderDelegate.transfer(MEDIUM_AMOUNT);
 
         assertEq(apxUSD.balanceOf(bob), bobBefore + MEDIUM_AMOUNT, "bob should receive amount");
-        assertEq(apxUSD.balanceOf(address(orderDelegate)), delegateBefore - MEDIUM_AMOUNT, "delegate balance should decrease");
+        assertEq(
+            apxUSD.balanceOf(address(orderDelegate)), delegateBefore - MEDIUM_AMOUNT, "delegate balance should decrease"
+        );
     }
 
     function test_TransferToken_Success() public {
