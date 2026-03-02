@@ -36,7 +36,12 @@ contract LinearVestV0Integration is BaseIntegrationTest {
         checkRole(vestingAddr, IVesting.setBeneficiary.selector, Roles.ADMIN_ROLE, "setBeneficiary -> ADMIN_ROLE");
 
         // Access control: YIELD_DISTRIBUTOR_ROLE
-        checkRole(vestingAddr, IVesting.depositYield.selector, Roles.YIELD_DISTRIBUTOR_ROLE, "depositYield -> YIELD_DISTRIBUTOR_ROLE");
+        checkRole(
+            vestingAddr,
+            IVesting.depositYield.selector,
+            Roles.YIELD_DISTRIBUTOR_ROLE,
+            "depositYield -> YIELD_DISTRIBUTOR_ROLE"
+        );
 
         return (_passed, _failed);
     }

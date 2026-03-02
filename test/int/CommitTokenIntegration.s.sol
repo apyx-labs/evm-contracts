@@ -41,7 +41,9 @@ contract CommitTokenIntegration is BaseIntegrationTest {
         _testInstanceByUnderlying(underlying, supplyCapKey, label);
     }
 
-    function _testInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label) internal {
+    function _testInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label)
+        internal
+    {
         address underlying = deployConfig.get(chainId, underlyingDeployKey).toAddress();
         _testInstanceByUnderlying(underlying, supplyCapKey, label);
     }
@@ -74,10 +76,27 @@ contract CommitTokenIntegration is BaseIntegrationTest {
         }
 
         // Access control: ADMIN_ROLE
-        checkRole(ctAddr, CommitToken.setUnlockingDelay.selector, Roles.ADMIN_ROLE, string.concat(label, ".setUnlockingDelay -> ADMIN_ROLE"));
-        checkRole(ctAddr, CommitToken.setDenyList.selector, Roles.ADMIN_ROLE, string.concat(label, ".setDenyList -> ADMIN_ROLE"));
-        checkRole(ctAddr, CommitToken.setSupplyCap.selector, Roles.ADMIN_ROLE, string.concat(label, ".setSupplyCap -> ADMIN_ROLE"));
+        checkRole(
+            ctAddr,
+            CommitToken.setUnlockingDelay.selector,
+            Roles.ADMIN_ROLE,
+            string.concat(label, ".setUnlockingDelay -> ADMIN_ROLE")
+        );
+        checkRole(
+            ctAddr,
+            CommitToken.setDenyList.selector,
+            Roles.ADMIN_ROLE,
+            string.concat(label, ".setDenyList -> ADMIN_ROLE")
+        );
+        checkRole(
+            ctAddr,
+            CommitToken.setSupplyCap.selector,
+            Roles.ADMIN_ROLE,
+            string.concat(label, ".setSupplyCap -> ADMIN_ROLE")
+        );
         checkRole(ctAddr, CommitToken.pause.selector, Roles.ADMIN_ROLE, string.concat(label, ".pause -> ADMIN_ROLE"));
-        checkRole(ctAddr, CommitToken.unpause.selector, Roles.ADMIN_ROLE, string.concat(label, ".unpause -> ADMIN_ROLE"));
+        checkRole(
+            ctAddr, CommitToken.unpause.selector, Roles.ADMIN_ROLE, string.concat(label, ".unpause -> ADMIN_ROLE")
+        );
     }
 }
