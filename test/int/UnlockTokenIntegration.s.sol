@@ -40,7 +40,9 @@ contract UnlockTokenIntegration is BaseIntegrationTest {
         checkEq(address(unlock.denyList()), expectedDenyList, "denyList");
 
         // Access control: ADMIN_ROLE (inherited from CommitToken)
-        checkRole(unlockAddr, CommitToken.setUnlockingDelay.selector, Roles.ADMIN_ROLE, "setUnlockingDelay -> ADMIN_ROLE");
+        checkRole(
+            unlockAddr, CommitToken.setUnlockingDelay.selector, Roles.ADMIN_ROLE, "setUnlockingDelay -> ADMIN_ROLE"
+        );
         checkRole(unlockAddr, CommitToken.setDenyList.selector, Roles.ADMIN_ROLE, "setDenyList -> ADMIN_ROLE");
         checkRole(unlockAddr, CommitToken.setSupplyCap.selector, Roles.ADMIN_ROLE, "setSupplyCap -> ADMIN_ROLE");
         checkRole(unlockAddr, CommitToken.pause.selector, Roles.ADMIN_ROLE, "pause -> ADMIN_ROLE");

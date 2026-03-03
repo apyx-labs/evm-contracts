@@ -24,9 +24,17 @@ contract MinterV0Integration is BaseIntegrationTest {
         // Config checks
         address expectedApxUSD = deployConfig.get(chainId, "apxUSD_address").toAddress();
         checkEq(address(minter.apxUSD()), expectedApxUSD, "apxUSD");
-        checkEq(uint256(minter.maxMintAmount()), config.get(chainId, "apx_usd_max_mint_size").toUint256(), "maxMintAmount");
-        checkEq(minter.rateLimitAmount(), config.get(chainId, "apx_usd_rate_limit_mint_size").toUint256(), "rateLimitAmount");
-        checkEq(uint256(minter.rateLimitPeriod()), config.get(chainId, "apx_usd_rate_limit_mint_period").toUint256(), "rateLimitPeriod");
+        checkEq(
+            uint256(minter.maxMintAmount()), config.get(chainId, "apx_usd_max_mint_size").toUint256(), "maxMintAmount"
+        );
+        checkEq(
+            minter.rateLimitAmount(), config.get(chainId, "apx_usd_rate_limit_mint_size").toUint256(), "rateLimitAmount"
+        );
+        checkEq(
+            uint256(minter.rateLimitPeriod()),
+            config.get(chainId, "apx_usd_rate_limit_mint_period").toUint256(),
+            "rateLimitPeriod"
+        );
         checkEq(minter.authority(), _accessManager, "authority");
 
         // Access control: ADMIN_ROLE

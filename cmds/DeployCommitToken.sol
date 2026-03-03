@@ -65,7 +65,7 @@ contract DeployCommitToken is BaseDeploy {
 
         // unlockingDelay and supplyCap from config
         uint48 unlockingDelay = uint48(config.get(chainId, "commit_token_default_unlocking_delay").toUint256());
-        uint256 supplyCap = config.get(chainId, supplyCapKey).toUint256() * 1 ether;
+        uint256 supplyCap = config.get(chainId, supplyCapKey).toUint256();
 
         console2.log("\n=== Configuration ===");
         console2.log("Asset:          ", asset);

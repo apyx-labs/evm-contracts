@@ -15,12 +15,7 @@ abstract contract OrderDelegateTestBase is BaseTest {
     function setUp() public virtual override {
         super.setUp();
 
-        orderDelegate = new OrderDelegate(
-            address(accessManager),
-            bob,
-            alice,
-            address(apxUSD)
-        );
+        orderDelegate = new OrderDelegate(address(accessManager), bob, alice, address(apxUSD));
         vm.label(address(orderDelegate), "orderDelegate");
 
         bytes4[] memory selectors = new bytes4[](3);
