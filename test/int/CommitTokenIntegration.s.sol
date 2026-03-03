@@ -38,23 +38,44 @@ contract CommitTokenIntegration is BaseIntegrationTest {
         if (val.data.length == 0) return;
         address underlying = val.toAddress();
         if (underlying == address(0)) return;
-        _testInstanceByUnderlying(underlying, supplyCapKey, label);
+        _testInstanceByUnderlying(underlying, supplyCapKey, label, false);
     }
 
     function _testInstance(string memory underlyingDeployKey, string memory supplyCapKey, string memory label)
         internal
     {
         address underlying = deployConfig.get(chainId, underlyingDeployKey).toAddress();
-        _testInstanceByUnderlying(underlying, supplyCapKey, label);
+        _testInstanceByUnderlying(underlying, supplyCapKey, label, true);
     }
 
-    function _testInstanceByUnderlying(address underlying, string memory supplyCapKey, string memory label) internal {
+    function _testInstanceByUnderlying(
+        address underlying,
+        string memory supplyCapKey,
+        string memory label,
+        bool required
+    ) internal {
         string memory commitTokenKey = string.concat("commitToken_", vm.toString(underlying), "_address");
 
         Variable memory ctVal = deployConfig.get(chainId, commitTokenKey);
-        if (ctVal.data.length == 0) return;
+        if (ctVal.data.length == 0) {
+            if (required) {
+                _fail(
+                    string.concat(label, ".deployment"),
+                    string.concat("CommitToken key '", commitTokenKey, "' missing in deploy config")
+                );
+            }
+            return;
+        }
         address ctAddr = ctVal.toAddress();
-        if (ctAddr == address(0)) return;
+        if (ctAddr == address(0)) {
+            if (required) {
+                _fail(
+                    string.concat(label, ".deployment"),
+                    string.concat("CommitToken key '", commitTokenKey, "' resolves to address(0)")
+                );
+            }
+            return;
+        }
 
         CommitToken ct = CommitToken(ctAddr);
 
