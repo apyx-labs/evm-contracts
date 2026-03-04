@@ -598,3 +598,26 @@ forge script script/Deploy.s.sol \
 <user_prompt>
 {user_prompt}
 </user_prompt>
+
+## Cursor Cloud specific instructions
+
+### Overview
+This is a pure Foundry/Solidity project (Apyx Protocol — preferred share-backed stablecoin). No Node.js, Python, or Docker required for core dev workflows.
+
+### Dependencies
+Dependencies are managed via **Soldeer** (not git submodules). Install with `forge soldeer install`. They are placed in `/workspace/dependencies/` (gitignored).
+
+### Key commands
+See `Justfile` for the full list. Core ones:
+- **Build:** `forge build`
+- **Test (CI-matching):** `forge test --no-match-test "Report|invariant" -vvv`
+- **All tests (incl. invariant):** `forge test`
+- **Lint:** `forge lint src`
+- **Format check:** `forge fmt --check`
+- **Local node:** `anvil` (starts on port 8545, chain ID 31337)
+
+### Gotchas
+- `forge create` with `--private-key` does not work in this environment. Use `cast send --unlocked -f <addr> --rpc-url http://localhost:8545 --create <bytecode>` for local Anvil deploys, or use `forge script` with `--broadcast`.
+- The deployment scripts in `cmds/` read from `config.toml` and require a `NETWORK` env var. There is no `[local]` section in `config.toml`, so the full `just deploy-local` flow requires `scripts/deploy.sh` (which may set up local config). For quick local contract testing, the test suite (534 tests) exercises all core protocol logic.
+- Invariant tests are configured with 256 runs / 1024 depth and `fail_on_revert = true` in `foundry.toml`. They can be slow.
+- `foundry.toml` should not be modified without asking (per AGENTS.md guidelines).
