@@ -15,22 +15,16 @@ import {EInvalidAddress} from "../errors/InvalidAddress.sol";
 /// @dev Reads `convertToAssets(1e18)` from the apyUSD ERC-4626 vault and multiplies
 ///      by a configurable `adjustment`. Called by the Curve pool via staticcall to `rate()`.
 ///      The full call chain is read-only; standard ERC-4626 vaults satisfy this requirement.
-contract ApyUSDRateOracle is
-    Initializable,
-    AccessManagedUpgradeable,
-    UUPSUpgradeable,
-    EInvalidAmount,
-    EInvalidAddress
-{
+contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgradeable, EInvalidAmount, EInvalidAddress {
     // ========================================
     // Constants
     // ========================================
 
     /// @notice Minimum allowed adjustment (90% — discounts apyUSD by up to 10%)
-    uint256 public constant MIN_ADJUSTMENT = 0.90e18;
+    uint256 public constant MIN_ADJUSTMENT = 0.9e18;
 
     /// @notice Maximum allowed adjustment (110% — premiums apyUSD by up to 10%)
-    uint256 public constant MAX_ADJUSTMENT = 1.10e18;
+    uint256 public constant MAX_ADJUSTMENT = 1.1e18;
 
     // ========================================
     // Storage (ERC-7201)
