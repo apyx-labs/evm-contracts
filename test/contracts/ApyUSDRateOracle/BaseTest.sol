@@ -19,10 +19,7 @@ abstract contract BaseTest is SystemBaseTest {
         oracleImpl = new ApyUSDRateOracle();
         vm.label(address(oracleImpl), "apyUSDRateOracleImpl");
 
-        bytes memory initData = abi.encodeCall(
-            ApyUSDRateOracle.initialize,
-            (address(accessManager), address(apyUSD))
-        );
+        bytes memory initData = abi.encodeCall(ApyUSDRateOracle.initialize, (address(accessManager), address(apyUSD)));
         ERC1967Proxy proxy = new ERC1967Proxy(address(oracleImpl), initData);
         oracle = ApyUSDRateOracle(address(proxy));
         vm.label(address(oracle), "apyUSDRateOracle");

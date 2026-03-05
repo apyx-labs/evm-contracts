@@ -29,5 +29,4 @@ contract InitializationTest is BaseTest {
         vm.expectRevert();
         oracle.initialize(address(accessManager), address(apyUSD));
     }
-
 }
