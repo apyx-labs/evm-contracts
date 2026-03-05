@@ -75,6 +75,7 @@ contract ApyUSDRateOracle is
     /// @param apyUSD_ The apyUSD ERC-4626 vault address.
     function initialize(address initialAuthority, address apyUSD_) external initializer {
         if (apyUSD_ == address(0)) revert InvalidAddress("apyUSD");
+        if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
 
         __AccessManaged_init(initialAuthority);
 
@@ -96,6 +97,7 @@ contract ApyUSDRateOracle is
     }
 
     /// @notice Returns the current adjustment value.
+    /// @return The current adjustment in 1e18 precision (1e18 = neutral).
     function adjustment() external view returns (uint256) {
         return _getStorage().adjustment;
     }
