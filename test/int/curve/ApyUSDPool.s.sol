@@ -11,6 +11,7 @@ import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {ApyUSD} from "../../../src/ApyUSD.sol";
 import {ICurveStableswapFactoryNG} from "../../../src/curve/ICurveStableswapFactoryNG.sol";
 import {ICurveStableswapNG} from "../../../src/curve/ICurveStableswapNG.sol";
+import {Roles} from "../../../src/Roles.sol";
 
 /**
  * @title ApyUSDPool
@@ -28,6 +29,10 @@ import {ICurveStableswapNG} from "../../../src/curve/ICurveStableswapNG.sol";
 contract ApyUSDPool is BaseDeploy {
     uint256 constant DEPOSIT_AMOUNT = 1_000e18;
 
+    // Foundation multi-sig address that acts as the AccessManager admin
+    address constant foundation = 0xf9862EfC1704aC05e687f66E5cD8c130E5663cE2;
+    AccessManager internal accessManager;
+
     uint256 internal _passed;
     uint256 internal _failed;
 
@@ -37,6 +42,12 @@ contract ApyUSDPool is BaseDeploy {
 
     function run() public {
         super.setUp();
+
+        accessManager = AccessManager(deployConfig.get(chainId, "accessManager_address").toAddress());
+
+        // For the purpose of the test, grant the ADMIN_ROLE and MINT_STRAT_ROLE to the deployer
+        vm.startPrank(foundation);
+        accessManager.grantRole(Roles.MINT_STRAT_ROLE, foundation, 0);
 
         ApxUSD apxUSD = ApxUSD(deployConfig.get(chainId, "apxUSD_address").toAddress());
         ApyUSD apyUSD = ApyUSD(deployConfig.get(chainId, "apyUSD_address").toAddress());
@@ -52,11 +63,9 @@ contract ApyUSDPool is BaseDeploy {
         console.log("apyUSD:  ", address(apyUSD));
         console.log("Factory: ", address(factory));
 
-        vm.startBroadcast(deployer);
         _deployOracle(apyUSD);
         _deployPool(factory, apxUSD, apyUSD);
         uint256 apyUSDShares = _mintAndDeposit(apxUSD, apyUSD);
-        vm.stopBroadcast();
 
         // ── Checks (read-only from here) ─────────────────────────────────
         console.log("\n--- Oracle Rate ---");
@@ -69,9 +78,7 @@ contract ApyUSDPool is BaseDeploy {
 
         // ── Add liquidity and check pool price ───────────────────────────
         console.log("\n--- Liquidity & Price ---");
-        vm.startBroadcast(deployer);
         uint256 lpTokens = _addLiquidity(apyUSD, apxUSD, apyUSDShares);
-        vm.stopBroadcast();
 
         _checkGt("add_liquidity returns LP tokens > 0", lpTokens, 0);
         _checkGt("get_virtual_price() > 0", _pool.get_virtual_price(), 0);
@@ -94,12 +101,9 @@ contract ApyUSDPool is BaseDeploy {
     // ── Deployment helpers ───────────────────────────────────────────────
 
     function _deployOracle(ApyUSD apyUSD) internal {
-        AccessManager testAccessManager = new AccessManager(deployer);
-        vm.label(address(testAccessManager), "testAccessManager");
-
         ApyUSDRateOracle oracleImpl = new ApyUSDRateOracle();
-        bytes memory initData =
-            abi.encodeCall(ApyUSDRateOracle.initialize, (address(testAccessManager), address(apyUSD)));
+        bytes memory initData = abi.encodeCall(ApyUSDRateOracle.initialize, (address(accessManager), address(apyUSD)));
+
         ERC1967Proxy proxy = new ERC1967Proxy(address(oracleImpl), initData);
         _oracle = ApyUSDRateOracle(address(proxy));
         vm.label(address(_oracle), "apyUSDRateOracle");
@@ -107,7 +111,8 @@ contract ApyUSDPool is BaseDeploy {
         // Grant setAdjustment to ADMIN_ROLE (role 0) — deployer holds ADMIN_ROLE
         bytes4[] memory oracleSelectors = new bytes4[](1);
         oracleSelectors[0] = ApyUSDRateOracle.setAdjustment.selector;
-        testAccessManager.setTargetFunctionRole(address(_oracle), oracleSelectors, 0);
+
+        accessManager.setTargetFunctionRole(address(_oracle), oracleSelectors, 0);
     }
 
     function _deployPool(ICurveStableswapFactoryNG factory, ApxUSD apxUSD, ApyUSD apyUSD) internal {
@@ -148,9 +153,9 @@ contract ApyUSDPool is BaseDeploy {
     }
 
     function _mintAndDeposit(ApxUSD apxUSD, ApyUSD apyUSD) internal returns (uint256 apyUSDShares) {
-        apxUSD.mint(deployer, DEPOSIT_AMOUNT * 2, 0);
+        apxUSD.mint(foundation, DEPOSIT_AMOUNT * 2, 0);
         IERC20(address(apxUSD)).approve(address(apyUSD), DEPOSIT_AMOUNT);
-        apyUSDShares = apyUSD.deposit(DEPOSIT_AMOUNT, deployer);
+        apyUSDShares = apyUSD.deposit(DEPOSIT_AMOUNT, foundation);
     }
 
     function _addLiquidity(ApyUSD apyUSD, ApxUSD apxUSD, uint256 apyUSDShares) internal returns (uint256 lpTokens) {
@@ -168,9 +173,7 @@ contract ApyUSDPool is BaseDeploy {
 
         // ── Adjustment up: +10% ──────────────────────────────────────────
         console.log("\n--- Adjustment Up (+10%) ---");
-        vm.startBroadcast(deployer);
         _oracle.setAdjustment(_oracle.MAX_ADJUSTMENT());
-        vm.stopBroadcast();
 
         uint256 ratesUp0 = _pool.stored_rates()[0];
         _checkGt("stored_rates()[0] increases after setAdjustment(MAX)", ratesUp0, ratesBefore0);
@@ -179,9 +182,7 @@ contract ApyUSDPool is BaseDeploy {
 
         // ── Adjustment down: -10% ────────────────────────────────────────
         console.log("\n--- Adjustment Down (-10%) ---");
-        vm.startBroadcast(deployer);
         _oracle.setAdjustment(_oracle.MIN_ADJUSTMENT());
-        vm.stopBroadcast();
 
         uint256 ratesDown0 = _pool.stored_rates()[0];
         _checkLt("stored_rates()[0] decreases after setAdjustment(MIN)", ratesDown0, ratesBefore0);
@@ -189,9 +190,7 @@ contract ApyUSDPool is BaseDeploy {
         console.log("  After (-10%):", ratesDown0);
 
         // ── Reset to neutral ─────────────────────────────────────────────
-        vm.startBroadcast(deployer);
         _oracle.setAdjustment(1e18);
-        vm.stopBroadcast();
 
         _check(
             "stored_rates()[0] resets to neutral",
@@ -205,10 +204,10 @@ contract ApyUSDPool is BaseDeploy {
 
     function _check(string memory label, bool ok, uint256 actual, uint256 expected) internal {
         if (ok) {
-            console.log(string.concat("  [PASS] ", label));
+            console.log(string.concat("[PASS] ", label));
             _passed++;
         } else {
-            console.log(string.concat("  [FAIL] ", label));
+            console.log(string.concat("[FAIL] ", label));
             console.log("    expected:", expected, "  got:", actual);
             _failed++;
         }
@@ -216,10 +215,10 @@ contract ApyUSDPool is BaseDeploy {
 
     function _checkGt(string memory label, uint256 actual, uint256 min) internal {
         if (actual > min) {
-            console.log(string.concat("  [PASS] ", label));
+            console.log(string.concat("[PASS] ", label));
             _passed++;
         } else {
-            console.log(string.concat("  [FAIL] ", label));
+            console.log(string.concat("[FAIL] ", label));
             console.log("    expected >", min, "  got:", actual);
             _failed++;
         }
@@ -227,10 +226,10 @@ contract ApyUSDPool is BaseDeploy {
 
     function _checkLt(string memory label, uint256 actual, uint256 max) internal {
         if (actual < max) {
-            console.log(string.concat("  [PASS] ", label));
+            console.log(string.concat("[PASS] ", label));
             _passed++;
         } else {
-            console.log(string.concat("  [FAIL] ", label));
+            console.log(string.concat("[FAIL] ", label));
             console.log("    expected <", max, "  got:", actual);
             _failed++;
         }
