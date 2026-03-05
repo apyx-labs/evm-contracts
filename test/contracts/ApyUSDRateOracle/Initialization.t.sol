@@ -34,7 +34,7 @@ contract InitializationTest is BaseTest {
 
     function test_RevertWhen_InitializeWithZeroApyUSD() public {
         ApyUSDRateOracle freshImpl = new ApyUSDRateOracle();
-        vm.expectRevert(abi.encodeWithSelector(EInvalidAddress.InvalidAddress.selector, "apyUSD"));
+        vm.expectRevert(abi.encodeWithSelector(EInvalidAddress.InvalidAddress.selector, "vault"));
         new ERC1967Proxy(
             address(freshImpl), abi.encodeCall(ApyUSDRateOracle.initialize, (address(accessManager), address(0)))
         );
