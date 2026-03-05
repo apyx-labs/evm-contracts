@@ -33,7 +33,7 @@ contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
     /// @custom:storage-location erc7201:apyx.storage.ApyUSDRateOracle
     struct ApyUSDRateOracleStorage {
         uint256 adjustment;
-        address apyUSD;
+        address vault;
     }
 
     // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApyUSDRateOracle")) - 1)) & ~bytes32(uint256(0xff))
@@ -66,16 +66,18 @@ contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
 
     /// @notice Initializes the oracle with neutral adjustment (1e18) and the apyUSD vault address.
     /// @param initialAuthority The AccessManager address.
-    /// @param apyUSD_ The apyUSD ERC-4626 vault address.
-    function initialize(address initialAuthority, address apyUSD_) external initializer {
-        if (apyUSD_ == address(0)) revert InvalidAddress("apyUSD");
+    /// @param vault_ The apyUSD ERC-4626 vault address.
+    function initialize(address initialAuthority, address vault_) external initializer {
         if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
+        if (vault_ == address(0)) revert InvalidAddress("vault");
 
         __AccessManaged_init(initialAuthority);
 
         ApyUSDRateOracleStorage storage $ = _getStorage();
-        $.apyUSD = apyUSD_;
+        $.vault = vault_;
         $.adjustment = 1e18;
+
+        emit AdjustmentUpdated(0, 1e18);
     }
 
     // ========================================
@@ -86,7 +88,7 @@ contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
     /// @return The apyUSD redemption rate multiplied by adjustment, in 1e18 precision.
     function rate() external view returns (uint256) {
         ApyUSDRateOracleStorage storage $ = _getStorage();
-        uint256 vaultRate = IERC4626($.apyUSD).convertToAssets(1e18);
+        uint256 vaultRate = IERC4626($.vault).convertToAssets(1e18);
         return vaultRate * $.adjustment / 1e18;
     }
 
@@ -98,8 +100,8 @@ contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
 
     /// @notice Returns the apyUSD ERC-4626 vault address this oracle reads from.
     /// @return The apyUSD vault address.
-    function apyUSD() external view returns (address) {
-        return _getStorage().apyUSD;
+    function vault() external view returns (address) {
+        return _getStorage().vault;
     }
 
     // ========================================
