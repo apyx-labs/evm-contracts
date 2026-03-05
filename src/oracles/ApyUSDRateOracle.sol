@@ -96,6 +96,12 @@ contract ApyUSDRateOracle is Initializable, AccessManagedUpgradeable, UUPSUpgrad
         return _getStorage().adjustment;
     }
 
+    /// @notice Returns the apyUSD ERC-4626 vault address this oracle reads from.
+    /// @return The apyUSD vault address.
+    function apyUSD() external view returns (address) {
+        return _getStorage().apyUSD;
+    }
+
     // ========================================
     // Admin Functions
     // ========================================
