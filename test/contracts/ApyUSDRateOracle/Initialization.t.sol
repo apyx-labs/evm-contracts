@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {BaseTest} from "./BaseTest.sol";
 import {ApyUSDRateOracle} from "../../../src/oracles/ApyUSDRateOracle.sol";
+import {EInvalidAddress} from "../../../src/errors/InvalidAddress.sol";
 
 contract InitializationTest is BaseTest {
     function test_StorageSlot() public pure {
@@ -28,5 +30,19 @@ contract InitializationTest is BaseTest {
     function test_RevertWhen_InitializedTwice() public {
         vm.expectRevert();
         oracle.initialize(address(accessManager), address(apyUSD));
+    }
+
+    function test_RevertWhen_InitializeWithZeroApyUSD() public {
+        ApyUSDRateOracle freshImpl = new ApyUSDRateOracle();
+        vm.expectRevert(abi.encodeWithSelector(EInvalidAddress.InvalidAddress.selector, "apyUSD"));
+        new ERC1967Proxy(
+            address(freshImpl), abi.encodeCall(ApyUSDRateOracle.initialize, (address(accessManager), address(0)))
+        );
+    }
+
+    function test_RevertWhen_InitializeWithZeroAuthority() public {
+        ApyUSDRateOracle freshImpl = new ApyUSDRateOracle();
+        vm.expectRevert(abi.encodeWithSelector(EInvalidAddress.InvalidAddress.selector, "initialAuthority"));
+        new ERC1967Proxy(address(freshImpl), abi.encodeCall(ApyUSDRateOracle.initialize, (address(0), address(apyUSD))));
     }
 }

@@ -90,6 +90,7 @@ contract DeployApyUSDPool is BaseDeploy {
 
         console2.log("\n=== Deployment Summary ===");
         console2.log("Oracle proxy:", address(oracleProxy));
+        console2.log("Oracle vault (apyUSD):", oracleProxy.apyUSD());
         console2.log("rate() selector:", vm.toString(oracleProxy.rate.selector));
         console2.log("Pool deployed at:", pool);
         _logPoolInfo(pool);
