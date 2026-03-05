@@ -31,7 +31,10 @@ contract ApyUSDPool is BaseDeploy {
 
     // Foundation multi-sig address that acts as the AccessManager admin
     address constant foundation = 0xf9862EfC1704aC05e687f66E5cD8c130E5663cE2;
+
     AccessManager internal accessManager;
+    ApxUSD internal apxUSD;
+    ApyUSD internal apyUSD;
 
     uint256 internal _passed;
     uint256 internal _failed;
@@ -49,8 +52,8 @@ contract ApyUSDPool is BaseDeploy {
         vm.startPrank(foundation);
         accessManager.grantRole(Roles.MINT_STRAT_ROLE, foundation, 0);
 
-        ApxUSD apxUSD = ApxUSD(deployConfig.get(chainId, "apxUSD_address").toAddress());
-        ApyUSD apyUSD = ApyUSD(deployConfig.get(chainId, "apyUSD_address").toAddress());
+        apxUSD = ApxUSD(deployConfig.get(chainId, "apxUSD_address").toAddress());
+        apyUSD = ApyUSD(deployConfig.get(chainId, "apyUSD_address").toAddress());
         ICurveStableswapFactoryNG factory =
             ICurveStableswapFactoryNG(config.get(chainId, "curve_stableswap_ng_factory_address").toAddress());
 
@@ -63,9 +66,9 @@ contract ApyUSDPool is BaseDeploy {
         console.log("apyUSD:  ", address(apyUSD));
         console.log("Factory: ", address(factory));
 
-        _deployOracle(apyUSD);
-        _deployPool(factory, apxUSD, apyUSD);
-        uint256 apyUSDShares = _mintAndDeposit(apxUSD, apyUSD);
+        _deployOracle();
+        _deployPool(factory);
+        uint256 apyUSDShares = _mintAndDeposit();
 
         // ── Checks (read-only from here) ─────────────────────────────────
         console.log("\n--- Oracle Rate ---");
@@ -78,7 +81,7 @@ contract ApyUSDPool is BaseDeploy {
 
         // ── Add liquidity and check pool price ───────────────────────────
         console.log("\n--- Liquidity & Price ---");
-        uint256 lpTokens = _addLiquidity(apyUSD, apxUSD, apyUSDShares);
+        uint256 lpTokens = _addLiquidity(apyUSDShares / 2);
 
         _checkGt("add_liquidity returns LP tokens > 0", lpTokens, 0);
         _checkGt("get_virtual_price() > 0", _pool.get_virtual_price(), 0);
@@ -90,6 +93,7 @@ contract ApyUSDPool is BaseDeploy {
 
         // ── Adjustment checks ────────────────────────────────────────────
         _checkAdjustments();
+        vm.deleteStateSnapshots();
 
         // ── Summary ──────────────────────────────────────────────────────
         console.log("\n=== Results ===");
@@ -100,7 +104,7 @@ contract ApyUSDPool is BaseDeploy {
 
     // ── Deployment helpers ───────────────────────────────────────────────
 
-    function _deployOracle(ApyUSD apyUSD) internal {
+    function _deployOracle() internal {
         ApyUSDRateOracle oracleImpl = new ApyUSDRateOracle();
         bytes memory initData = abi.encodeCall(ApyUSDRateOracle.initialize, (address(accessManager), address(apyUSD)));
 
@@ -115,7 +119,7 @@ contract ApyUSDPool is BaseDeploy {
         accessManager.setTargetFunctionRole(address(_oracle), oracleSelectors, 0);
     }
 
-    function _deployPool(ICurveStableswapFactoryNG factory, ApxUSD apxUSD, ApyUSD apyUSD) internal {
+    function _deployPool(ICurveStableswapFactoryNG factory) internal {
         string memory poolName = config.get(chainId, "curve_pool_apy_usd_apx_usd_name").toString();
         string memory poolSymbol = config.get(chainId, "curve_pool_apy_usd_apx_usd_symbol").toString();
 
@@ -152,13 +156,13 @@ contract ApyUSDPool is BaseDeploy {
         vm.label(poolAddr, poolName);
     }
 
-    function _mintAndDeposit(ApxUSD apxUSD, ApyUSD apyUSD) internal returns (uint256 apyUSDShares) {
-        apxUSD.mint(foundation, DEPOSIT_AMOUNT * 2, 0);
-        IERC20(address(apxUSD)).approve(address(apyUSD), DEPOSIT_AMOUNT);
-        apyUSDShares = apyUSD.deposit(DEPOSIT_AMOUNT, foundation);
+    function _mintAndDeposit() internal returns (uint256 apyUSDShares) {
+        apxUSD.mint(foundation, DEPOSIT_AMOUNT * 3, 0);
+        IERC20(address(apxUSD)).approve(address(apyUSD), DEPOSIT_AMOUNT * 2);
+        apyUSDShares = apyUSD.deposit(DEPOSIT_AMOUNT * 2, foundation);
     }
 
-    function _addLiquidity(ApyUSD apyUSD, ApxUSD apxUSD, uint256 apyUSDShares) internal returns (uint256 lpTokens) {
+    function _addLiquidity(uint256 apyUSDShares) internal returns (uint256 lpTokens) {
         uint256[] memory amounts = new uint256[](2);
         amounts[0] = apyUSDShares;
         amounts[1] = DEPOSIT_AMOUNT;
@@ -168,8 +172,19 @@ contract ApyUSDPool is BaseDeploy {
         lpTokens = _pool.add_liquidity(amounts, 0);
     }
 
+    function _exchangeOneApxUSDtoApyUSD() internal returns (uint256 outputAmount) {
+        uint256 snapshot = vm.snapshotState();
+        IERC20(address(apyUSD)).approve(address(_pool), 1e18);
+        outputAmount = _pool.exchange(0, 1, 1e18, 0, foundation);
+        vm.revertToStateAndDelete(snapshot);
+    }
+
     function _checkAdjustments() internal {
         uint256 ratesBefore0 = _pool.stored_rates()[0];
+
+        uint256 outputAmount = _exchangeOneApxUSDtoApyUSD();
+        _checkGt("exchange(apxUSD->apyUSD, 1e18) > 0", outputAmount, 0);
+        console.log("  exchange(1,0,1e18):", outputAmount);
 
         // ── Adjustment up: +10% ──────────────────────────────────────────
         console.log("\n--- Adjustment Up (+10%) ---");
@@ -180,6 +195,10 @@ contract ApyUSDPool is BaseDeploy {
         console.log("  Before:", ratesBefore0);
         console.log("  After (+10%):", ratesUp0);
 
+        uint256 outputAmountUp = _exchangeOneApxUSDtoApyUSD();
+        _checkGt("exchange(apyUSD->apxUSD, 1e18) > originalOutputAmount", outputAmountUp, outputAmount);
+        console.log("  exchange(1,0,1e18):", outputAmountUp);
+
         // ── Adjustment down: -10% ────────────────────────────────────────
         console.log("\n--- Adjustment Down (-10%) ---");
         _oracle.setAdjustment(_oracle.MIN_ADJUSTMENT());
@@ -188,6 +207,10 @@ contract ApyUSDPool is BaseDeploy {
         _checkLt("stored_rates()[0] decreases after setAdjustment(MIN)", ratesDown0, ratesBefore0);
         console.log("  Before:", ratesBefore0);
         console.log("  After (-10%):", ratesDown0);
+
+        uint256 outputAmountDown = _exchangeOneApxUSDtoApyUSD();
+        _checkLt("exchange(apyUSD->apxUSD, 1e18) < originalOutputAmount", outputAmountDown, outputAmount);
+        console.log("  exchange(1,0,1e18):", outputAmountDown);
 
         // ── Reset to neutral ─────────────────────────────────────────────
         _oracle.setAdjustment(1e18);
