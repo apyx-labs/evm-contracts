@@ -7,7 +7,10 @@
 </p>
 
 <p align="center">
-  <a href="https://apyx.fi">Website</a> · <a href="https://app.apyx.fi">App</a> · <a href="https://docs.apyx.fi">Docs</a>
+  <a href="https://apyx.fi">Website</a> 
+  · <a href="https://app.apyx.fi">App</a> 
+  · <a href="https://docs.apyx.fi">Docs</a> 
+  · <a href="https://apyx-labs.github.io/evm-contracts/">Contract Natspec</a>
 </p>
 
 ---
