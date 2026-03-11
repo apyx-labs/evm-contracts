@@ -44,8 +44,8 @@ The Apyx protocol consists of multiple interconnected contracts that enable stab
 |------------------|-------------|
 | **ApxUSD**       | The base ERC-20 stablecoin with supply cap, pause, and freeze functionality. Implements EIP-2612 permit for gasless approvals and uses the UUPS upgradeable pattern. |
 | **ApyUSD**       | An ERC-4626 yield-bearing vault that wraps apxUSD, allowing deposits to accrue yield from vesting distributions. |
-| **CommitToken**    | An ERC-7540 async redeem vault with a configurable cooldown period for unlocking. Implements deny list checking and can lock arbitrary ERC-20 tokens for use in off-chain points systems. |
-| **UnlockToken**  | A CommitToken subclass that allows a vault to initiate redeem requests on behalf of users, enabling automated withdrawal flows. |
+| **CommitToken**    | An async redeem vault inspired by ERC-7540 with a configurable cooldown period for unlocking. Implements deny list checking and can lock arbitrary ERC-20 tokens for use in off-chain points systems. See [ERC-7540 note](#erc-7540-note) below. |
+| **UnlockToken**  | A CommitToken subclass that allows a vault to initiate redeem requests on behalf of users, enabling automated withdrawal flows. See [ERC-7540 note](#erc-7540-note) below. |
 | **MinterV0**     | Handles apxUSD minting via EIP-712 signed orders with rate limiting and AccessManager integration for delayed execution. |
 | **LinearVestV0** | A linear vesting contract that gradually releases yield to the vault over a configurable period. |
 | **YieldDistributor** | Receives minting fees and deposits them to the vesting contract for gradual distribution. |
@@ -72,7 +72,7 @@ flowchart TB
 
 ### Token Relationships
 
-ApyUSD is an ERC-4626 vault that wraps apxUSD for yield-bearing deposits. Withdrawing from ApyUSD transfers the ApxUSD to the UnlockToken. The UnlockToken is an ERC-7540 vault that implements asynchronous redemptions. The UnlockToken allows ApyUSD to initiate redeem requests on behalf of users to start the unlocking period.
+ApyUSD is an ERC-4626 vault that wraps apxUSD for yield-bearing deposits. Withdrawing from ApyUSD transfers the ApxUSD to the UnlockToken. The UnlockToken implements an async redemption flow inspired by ERC-7540. The UnlockToken allows ApyUSD to initiate redeem requests on behalf of users to start the unlocking period.
 
 ```mermaid
 flowchart TB
@@ -97,13 +97,14 @@ When the underlying offchain collateral (preferred shares) pay dividends the div
 flowchart TB
     MinterV0 -->|"fees on mint"| YieldDistributor
     YieldDistributor -->|"depositYield()"| LinearVestV0
-    LinearVestV0 -->|"transferVestedYield()"| ApyUSD
+    LinearVestV0 -->|"pullVestedYield()"| ApyUSD
     ApyUSD -->|"increases share value"| Depositors
 ```
 
 ### Lock Tokens for Points
 
-CommitToken is a standalone ERC-7540 vault that locks any ERC-20 token with a configurable unlocking period. Users deposit tokens to receive non-transferable lock tokens, which can be used for off-chain points systems.
+CommitToken is a standalone vault that locks any ERC-20 token with a configurable unlocking period. Users deposit tokens to receive non-transferable lock tokens, which can be used for off-chain points systems.
+
 
 ```mermaid
 flowchart TB
@@ -114,6 +115,10 @@ flowchart TB
     CooldownPeriod -->|"after delay"| User
     User -->|"redeem()"| Assets[Original Assets]
 ```
+
+#### ERC-7540 Note
+
+CommitToken and UnlockToken implement a custom async redemption flow inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540), but are **NOT compliant** with the ERC-7540 specification. They deviate from MUST requirements including: shares not removed from owner on request, preview functions not reverting, operator functionality not supported, and ERC-7575 `share()` method not implemented.
 
 ## Installation
 
