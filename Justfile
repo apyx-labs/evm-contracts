@@ -1,4 +1,3 @@
-# Justfile for prefUSD development
 
 # Default recipe - show available commands
 default:
@@ -7,10 +6,6 @@ default:
 # Run all tests
 test:
     forge test
-
-# Run integration tests against a live network
-integration-test NETWORK RPC_URL:
-    NETWORK={{NETWORK}} forge script test/int/Runner.s.sol --rpc-url {{RPC_URL}}
 
 # Run tests with gas reporting
 test-gas:
