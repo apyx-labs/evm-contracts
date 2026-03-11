@@ -162,26 +162,6 @@ Run with verbose output:
 
 ```bash
 forge test -vvv
-# or
-just test-verbose
-```
-
-### Local Deployment
-
-Start a local Anvil node:
-
-```bash
-just anvil
-```
-
-In another terminal, deploy contracts:
-
-```bash
-# Deploy to local Anvil
-just deploy-local
-
-# Deploy to devnet
-just deploy-devnet
 ```
 
 ### Code Coverage
@@ -211,37 +191,6 @@ The test suite is organized in the `test/` directory with the following structur
 - **test/reports/** - Report (csv) generation tests 
 
 Each contract subdirectory contains a `BaseTest.sol` with shared setup and individual test files for specific functionality.
-
-## Project Structure
-
-```
-├── src/
-│   ├── ApxUSD.sol           # ERC-20 stablecoin token
-│   ├── ApyUSD.sol           # ERC-4626 yield-bearing vault
-│   ├── CommitToken.sol      # ERC-7540 async redeem vault
-│   ├── UnlockToken.sol      # CommitToken for vault-initiated redeems
-│   ├── MinterV0.sol         # EIP-712 minting with AccessManager
-│   ├── LinearVestV0.sol     # Linear vesting contract
-│   ├── YieldDistributor.sol # Yield distribution contract
-│   ├── AddressList.sol      # Centralized deny list
-│   ├── interfaces/          # Contract interfaces
-│   ├── errors/              # Custom error definitions
-│   └── exts/                # Extension contracts
-├── cmds/
-│   ├── Deploy.s.sol         # Deployment scripts
-│   └── DeployApyUSD.s.sol   # ApyUSD deployment script
-├── test/
-│   ├── contracts/           # Tests organized by contract
-│   ├── exts/                # Extension tests
-│   ├── mocks/               # Mock contracts
-│   ├── utils/               # Test utilities
-│   └── reports/             # Report generation tests
-├── scripts/
-│   └── deploy.sh            # Deployment script
-├── docs/                    # Documentation
-├── Justfile                 # Development commands
-└── foundry.toml             # Foundry configuration
-```
 
 ## Dependencies
 
