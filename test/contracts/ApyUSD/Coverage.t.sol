@@ -10,6 +10,20 @@ import {IAddressList} from "../../../src/interfaces/IAddressList.sol";
 import {IUnlockToken} from "../../../src/interfaces/IUnlockToken.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {AddressList} from "../../../src/AddressList.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
+contract MockBadUnlockToken {
+    IERC20 public asset;
+
+    constructor(address asset_) {
+        asset = IERC20(asset_);
+    }
+
+    function deposit(uint256 assets, address) external returns (uint256) {
+        asset.transferFrom(msg.sender, address(this), assets);
+        return assets + 1;
+    }
+}
 
 /**
  * @title ApyUSDCoverageTest
@@ -516,5 +530,25 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         // Verify all shares were burned
         assertEq(apyUSD.balanceOf(alice), 0, "All of Alice's shares should be burned");
         assertEq(apyUSD.totalSupply(), 0, "Total supply should be 0");
+    }
+
+    // ========================================
+    // UnlockToken Error Tests
+    // ========================================
+
+    function test_RevertWhen_WithdrawAndUnlockTokenDepositFails() public {
+        uint256 amount = SMALL_AMOUNT;
+
+        uint256 shares = depositApxUSD(alice, amount);
+
+        MockBadUnlockToken mock = new MockBadUnlockToken(address(apxUSD));
+        vm.prank(admin);
+        apyUSD.setUnlockToken(IUnlockToken(address(mock)));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(IApyUSD.UnlockTokenError.selector, "assets and unlockToken shares do not match")
+        );
+        vm.prank(alice);
+        apyUSD.redeem(shares, alice, alice);
     }
 }
