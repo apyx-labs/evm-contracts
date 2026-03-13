@@ -387,7 +387,7 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         // Add yield to vesting contract using depositYield
         uint256 yieldAmount = SMALL_AMOUNT;
         vm.startPrank(admin);
-        apxUSD.mint(admin, yieldAmount);
+        apxUSD.mint(admin, yieldAmount, 0);
         apxUSD.approve(address(vesting), yieldAmount);
         vesting.depositYield(yieldAmount);
         vm.stopPrank();
