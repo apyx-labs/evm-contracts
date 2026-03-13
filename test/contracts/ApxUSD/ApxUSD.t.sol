@@ -3,6 +3,9 @@ pragma solidity 0.8.30;
 
 import {ApxUSDBaseTest} from "./BaseTest.sol";
 import {ApxUSD} from "../../../src/ApxUSD.sol";
+import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Errors} from "../../utils/Errors.sol";
 
 /**
  * @dev todo: move apxUSD minting tests into own file
@@ -20,6 +23,91 @@ contract ApxUSDTest is ApxUSDBaseTest {
         assertEq(apxUSD.totalSupply(), 0);
         assertEq(apxUSD.supplyCapRemaining(), APX_SUPPLY_CAP);
         assertEq(apxUSD.authority(), address(accessManager));
+    }
+
+    /**
+     * @notice Test that initialization reverts when supply cap is zero
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroSupplyCap() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero supply cap (should revert)
+        bytes memory initData =
+            abi.encodeCall(newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), 0));
+
+        vm.expectRevert(Errors.invalidSupplyCap());
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
+     * @notice Test that initialization reverts when authority is zero address
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroAuthority() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero authority (should revert)
+        bytes memory initData =
+            abi.encodeCall(newImpl.initialize, ("Apyx USD", "apxUSD", address(0), address(denyList), APX_SUPPLY_CAP));
+
+        vm.expectRevert(Errors.invalidAddress("initialAuthority"));
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
+     * @notice Test that initialization reverts when denyList is zero address
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeWithZeroDenyList() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Try to initialize with zero denyList (should revert)
+        bytes memory initData = abi.encodeCall(
+            newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(0), APX_SUPPLY_CAP)
+        );
+
+        vm.expectRevert(Errors.invalidAddress("initialDenyList"));
+        new ERC1967Proxy(address(newImpl), initData);
+    }
+
+    /**
+     * @notice Test that initialization reverts when called twice
+     * @dev Based on Zellic Security Assessment (Section 5.2)
+     */
+    function test_RevertWhen_InitializeTwice() public {
+        // Try to initialize the already-initialized apxUSD contract again
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        apxUSD.initialize("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP);
+    }
+
+    /**
+     * @notice Test that nested initializers work correctly with proxy
+     * @dev Verifies fix for issue where nested initializer modifier caused initialization to fail
+     *      The ERC20DenyListUpgradable uses onlyInitializing modifier instead of initializer
+     *      to allow being called from within another initializer function
+     */
+    function test_NestedInitializer_ProxyInitializationWorks() public {
+        // Deploy new implementation
+        ApxUSD newImpl = new ApxUSD();
+
+        // Initialize through proxy - this calls __ERC20DenyListedUpgradable_init internally
+        bytes memory initData = abi.encodeCall(
+            newImpl.initialize, ("Apyx USD", "apxUSD", address(accessManager), address(denyList), APX_SUPPLY_CAP)
+        );
+
+        // This should succeed - nested initializer should work
+        ERC1967Proxy proxy = new ERC1967Proxy(address(newImpl), initData);
+        ApxUSD newApxUSD = ApxUSD(address(proxy));
+
+        // Verify initialization was successful
+        assertEq(newApxUSD.name(), "Apyx USD", "Name should be set");
+        assertEq(newApxUSD.symbol(), "apxUSD", "Symbol should be set");
+        assertEq(newApxUSD.supplyCap(), APX_SUPPLY_CAP, "Supply cap should be set");
+        assertEq(newApxUSD.authority(), address(accessManager), "Authority should be set");
     }
 
     function test_Mint() public {
@@ -43,13 +131,13 @@ contract ApxUSDTest is ApxUSDBaseTest {
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(ApxUSD.SupplyCapExceeded.selector, overCapAmount, APX_SUPPLY_CAP));
-        apxUSD.mint(alice, overCapAmount);
+        apxUSD.mint(alice, overCapAmount, 0);
     }
 
     function test_RevertWhen_MintWithoutMinterRole() public {
         vm.prank(alice);
         vm.expectRevert();
-        apxUSD.mint(alice, MEDIUM_AMOUNT);
+        apxUSD.mint(alice, MEDIUM_AMOUNT, 0);
     }
 
     function test_SetSupplyCap() public {

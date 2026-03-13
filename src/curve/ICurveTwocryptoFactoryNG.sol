@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.4;
 
-interface ICurveTwocryptoFactory {
+interface ICurveTwocryptoFactoryNG {
     event LiquidityGaugeDeployed(address pool, address gauge);
     event TransferOwnership(address _old_owner, address _new_owner);
     event TwocryptoPoolDeployed(

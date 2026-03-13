@@ -64,7 +64,7 @@ contract VestingAccessControlTest is VestingTest {
 
         vm.expectRevert(IVesting.UnauthorizedTransfer.selector);
         vm.prank(alice);
-        vesting.transferVestedYield();
+        vesting.pullVestedYield();
     }
 
     function test_OnlyVault_CanTransfer() public {
@@ -73,10 +73,13 @@ contract VestingAccessControlTest is VestingTest {
 
         warpPastVestingPeriod();
 
+        uint256 balanceBefore = apxUSD.balanceOf(address(apyUSD));
+
         // Vault can transfer
         vm.prank(address(apyUSD));
-        vesting.transferVestedYield();
+        vesting.pullVestedYield();
 
-        assertEq(vesting.vestingAmount(), 0, "Vault should be able to transfer");
+        uint256 balanceAfter = apxUSD.balanceOf(address(apyUSD));
+        assertEq(balanceAfter, balanceBefore + amount, "Vault should be able to transfer");
     }
 }

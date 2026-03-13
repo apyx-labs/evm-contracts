@@ -52,6 +52,7 @@ abstract contract VestingTest is Test {
     uint256 public constant APX_SUPPLY_CAP = 10_000_000e18; // $10M
 
     // Test amounts
+    uint256 public constant VERY_VERY_SMALL_AMOUNT = 1e18;
     uint256 public constant DEPOSIT_AMOUNT = 1000e18;
     uint256 public constant LARGE_AMOUNT = 100_000e18;
     uint48 public constant UNLOCKING_DELAY = 14 days;
@@ -155,10 +156,10 @@ abstract contract VestingTest is Test {
      */
     function mintApxUSD() internal {
         vm.startPrank(admin);
-        apxUSD.mint(alice, LARGE_AMOUNT);
-        apxUSD.mint(bob, LARGE_AMOUNT);
-        apxUSD.mint(charlie, LARGE_AMOUNT);
-        apxUSD.mint(yieldDistributor, LARGE_AMOUNT);
+        apxUSD.mint(alice, LARGE_AMOUNT, 0);
+        apxUSD.mint(bob, LARGE_AMOUNT, 0);
+        apxUSD.mint(charlie, LARGE_AMOUNT, 0);
+        apxUSD.mint(yieldDistributor, LARGE_AMOUNT, 0);
         vm.stopPrank();
     }
 

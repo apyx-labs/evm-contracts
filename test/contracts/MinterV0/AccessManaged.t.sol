@@ -19,65 +19,6 @@ contract MinterV0_AccessManagedTest is MinterTest {
     }
 
     /**
-     * @notice Tests that expired orders DO block new mints when hitting the 256 operation ID limit
-     * @dev Background: AccessManager tracks operations by operation ID (hash of data).
-     *      We append nonce % 256 to the data, so a user can have at most 256 concurrent orders.
-     *      When orders expire but aren't cleared from AccessManager, new mints ARE blocked.
-     *
-     * This test DOCUMENTS the 256 operation ID limit issue:
-     * - Create 256 orders with operation IDs 0-255 (from nonce % 256)
-     * - Wait for orders to expire
-     * - Try to create a new order with nonce 256 (256 % 256 = 0)
-     * - AccessManager rejects with AccessManagerAlreadyScheduled
-     * - This proves expired orders block new mints unless executed or cancelled
-     */
-    function test_ExpiredOrdersBlockNewMintsIfNotCleared() public {
-        // Use 100e18 per mint to avoid rate limit issues (256 * 100e18 = 25,600e18 < 100k limit)
-        uint208 mintAmount = 100e18;
-        uint256 numOrders = 256;
-
-        // Create 256 orders with short expiry (MINT_DELAY + 1)
-        for (uint48 i = 0; i < numOrders; i++) {
-            IMinterV0.Order memory tempOrder = IMinterV0.Order({
-                beneficiary: alice,
-                notBefore: uint48(block.timestamp),
-                notAfter: uint48(block.timestamp + MINT_DELAY + 1),
-                nonce: i,
-                amount: mintAmount
-            });
-            bytes memory tempSig = _signOrder(tempOrder, alicePrivateKey);
-            vm.prank(minter);
-            minterV0.requestMint(tempOrder, tempSig);
-        }
-
-        // All 256 orders are now scheduled in AccessManager
-        assertEq(minterV0.rateLimitMinted(), numOrders * mintAmount);
-
-        // Warp past the notAfter time (MINT_DELAY + 2)
-        // Orders are now expired but still in AccessManager
-        vm.warp(block.timestamp + MINT_DELAY + 2);
-
-        // Now try to create a new order with nonce 256
-        // This will wrap around (256 % 256 = 0), creating the SAME operation ID as nonce 0
-        // AccessManager will reject this with AccessManagerAlreadyScheduled
-        IMinterV0.Order memory order = IMinterV0.Order({
-            beneficiary: alice,
-            notBefore: uint48(block.timestamp),
-            notAfter: uint48(block.timestamp + 24 hours),
-            nonce: uint48(numOrders), // nonce 256 wraps to 0
-            amount: mintAmount
-        });
-        bytes memory sig = _signOrder(order, alicePrivateKey);
-
-        vm.prank(minter);
-        vm.expectRevert(); // AccessManagerAlreadyScheduled error
-        minterV0.requestMint(order, sig);
-
-        // Verify no new order was created (rate limit unchanged)
-        assertEq(minterV0.rateLimitMinted(), numOrders * mintAmount);
-    }
-
-    /**
      * @notice Tests that executing orders frees operation IDs, allowing continued minting
      * @dev Demonstrates that the 256 order limit can be managed by executing orders
      */

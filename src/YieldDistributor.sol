@@ -2,6 +2,7 @@
 pragma solidity 0.8.30;
 
 import {AccessManaged} from "@openzeppelin/contracts/access/manager/AccessManaged.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IYieldDistributor} from "./interfaces/IYieldDistributor.sol";
@@ -22,7 +23,7 @@ import {ERC1271Delegated} from "./exts/ERC1271Delegated.sol";
  * - Admin-controlled vesting contract configuration
  * - Access control via AccessManager
  */
-contract YieldDistributor is AccessManaged, ERC1271Delegated, IYieldDistributor {
+contract YieldDistributor is AccessManaged, ERC1271Delegated, IYieldDistributor, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
 
     // ========================================
@@ -129,5 +130,31 @@ contract YieldDistributor is AccessManaged, ERC1271Delegated, IYieldDistributor 
         vesting.depositYield(amount);
 
         emit YieldDeposited(msg.sender, amount);
+    }
+
+    // ========================================
+    // Admin Functions
+    // ========================================
+
+    /// @inheritdoc IYieldDistributor
+    function withdraw(uint256 amount, address receiver) external override restricted {
+        withdrawTokens(address(asset), amount, receiver);
+    }
+
+    /// @inheritdoc IYieldDistributor
+    function withdrawTokens(address withdrawAsset, uint256 amount, address receiver)
+        public
+        override
+        restricted
+        nonReentrant
+    {
+        if (amount == 0) revert InvalidAmount("amount", amount);
+        if (receiver == address(0)) revert InvalidAddress("receiver");
+
+        uint256 balance = IERC20(withdrawAsset).balanceOf(address(this));
+        if (amount > balance) revert InsufficientBalance(address(this), balance, amount);
+        IERC20(withdrawAsset).safeTransfer(receiver, amount);
+
+        emit Withdraw(msg.sender, withdrawAsset, amount, receiver);
     }
 }

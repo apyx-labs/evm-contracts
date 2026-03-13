@@ -15,8 +15,10 @@ import {IRedemptionPool} from "./interfaces/IRedemptionPool.sol";
  * @title RedemptionPoolV0
  * @notice Redeems asset tokens for reserve assets at a configurable exchange rate
  * @dev Non-upgradeable. Uses AccessManager for role-based access; ROLE_REDEEMER for redeem(), ADMIN for
- *      deposit/withdraw/setExchangeRate/pause/unpause. Exchange rate is reserve asset per asset (1e18 = 1:1).
- *      The asset MUST support burnFrom(address,uint256) as defined in ERC20Burnable.
+ *      deposit/withdraw/setExchangeRate/pause/unpause. Exchange rate is reserve asset per asset (1e18 = 1:1)
+ *      in the precision of the asset token.
+ *
+ * @dev The asset MUST support burnFrom(address,uint256) as defined in ERC20Burnable.
  */
 contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, ReentrancyGuardTransient {
     using SafeERC20 for IERC20;
@@ -25,44 +27,59 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     ERC20Burnable public immutable asset;
     /// @notice Reserve asset paid out on redemption; e.g. USDC
     IERC20 public immutable reserveAsset;
+    /// @notice True if asset has more decimals than reserve, false otherwise
+    bool private immutable assetHasMoreDecimals;
+    /// @notice Scaling factor for decimal conversion: 10^abs(assetDecimals - reserveDecimals)
+    uint256 private immutable decimalScalingFactor;
     /// @notice Exchange rate: reserve asset per asset, 1e18 = 1:1 (reserveAmount = assetsAmount * exchangeRate / 1e18)
     uint256 public exchangeRate;
-
-    /// @notice Thrown when asset and reserve asset have different decimals
-    error DecimalsMismatch(uint8 assetDecimals, uint8 reserveDecimals);
 
     /**
      * @notice Initializes the redemption pool
      * @param initialAuthority Address of the AccessManager contract
      * @param asset_ Asset token (e.g. apxUSD)
-     * @param reserveAsset_ Reserve asset token (e.g. USDC); must have same decimals as asset_
+     * @param reserveAsset_ Reserve asset token (e.g. USDC)
      */
     constructor(address initialAuthority, ERC20Burnable asset_, IERC20 reserveAsset_) AccessManaged(initialAuthority) {
         if (initialAuthority == address(0)) revert InvalidAddress("initialAuthority");
         if (address(asset_) == address(0)) revert InvalidAddress("asset");
         if (address(reserveAsset_) == address(0)) revert InvalidAddress("reserveAsset");
-        if (IERC20Metadata(address(asset_)).decimals() != IERC20Metadata(address(reserveAsset_)).decimals()) {
-            revert DecimalsMismatch(
-                IERC20Metadata(address(asset_)).decimals(), IERC20Metadata(address(reserveAsset_)).decimals()
-            );
-        }
 
         asset = asset_;
         reserveAsset = reserveAsset_;
         exchangeRate = 1e18;
+
+        // Cache decimal scaling information
+        uint8 assetDecimals = IERC20Metadata(address(asset_)).decimals();
+        uint8 reserveDecimals = IERC20Metadata(address(reserveAsset_)).decimals();
+
+        if (assetDecimals >= reserveDecimals) {
+            assetHasMoreDecimals = true;
+            decimalScalingFactor = 10 ** (assetDecimals - reserveDecimals);
+        } else {
+            assetHasMoreDecimals = false;
+            decimalScalingFactor = 10 ** (reserveDecimals - assetDecimals);
+        }
     }
 
     // ============ Core Functions ============
 
     /// @inheritdoc IRedemptionPool
     /// @dev Does not consider pause state or reserve balance; callers should check paused() and reserveBalance()
-    ///      Rounding is downward in favor of the pool: reserveAmount = floor(assetsAmount * exchangeRate / 1e18)
-    function previewRedeem(uint256 assetsAmount) external view override returns (uint256 reserveAmount) {
-        return (assetsAmount * exchangeRate) / 1e18;
+    ///      Rounding is downward in favor of the pool.
+    ///      Formula: reserveAmount = (assetsAmount * exchangeRate) / (1e18 * 10^(assetDecimals - reserveDecimals))
+    function previewRedeem(uint256 assetsAmount) public view override returns (uint256 reserveAmount) {
+        if (assetHasMoreDecimals) {
+            // Scale down if asset has more decimals
+            return (assetsAmount * exchangeRate) / (1e18 * decimalScalingFactor);
+        } else {
+            // Scale up if reserve has more decimals
+            return (assetsAmount * exchangeRate * decimalScalingFactor) / 1e18;
+        }
     }
 
     /// @inheritdoc IRedemptionPool
-    function redeem(uint256 assetsAmount, address receiver)
+    function redeem(uint256 assetsAmount, address receiver, uint256 minReserveAssetOut)
         external
         override
         restricted
@@ -73,7 +90,10 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
         if (assetsAmount == 0) revert InvalidAmount("assetsAmount", assetsAmount);
         if (receiver == address(0)) revert InvalidAddress("receiver");
 
-        reserveAmount = this.previewRedeem(assetsAmount);
+        reserveAmount = previewRedeem(assetsAmount);
+        if (reserveAmount < minReserveAssetOut) {
+            revert SlippageExceeded(reserveAmount, minReserveAssetOut);
+        }
         uint256 balance = reserveBalance();
         if (reserveAmount > balance) {
             revert InsufficientBalance(address(this), balance, reserveAmount);
@@ -83,7 +103,6 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
         reserveAsset.safeTransfer(receiver, reserveAmount);
 
         emit Redeemed(msg.sender, assetsAmount, reserveAmount);
-        return reserveAmount;
     }
 
     // ============ Admin Functions ============
@@ -92,6 +111,8 @@ contract RedemptionPoolV0 is IRedemptionPool, AccessManaged, Pausable, Reentranc
     function deposit(uint256 reserveAmount) external override restricted nonReentrant {
         if (reserveAmount == 0) revert InvalidAmount("reserveAmount", reserveAmount);
         reserveAsset.safeTransferFrom(msg.sender, address(this), reserveAmount);
+
+        emit ReservesDeposited(msg.sender, reserveAmount);
     }
 
     /// @inheritdoc IRedemptionPool

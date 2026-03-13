@@ -52,6 +52,9 @@ abstract contract BaseTest is Test {
     // Mock ERC20 for CommitToken tests
     MockERC20 public mockToken;
 
+    // Mock USDC (6 decimals) for RedemptionPool tests
+    MockERC20 public usdc;
+
     // ========================================
     // Test Accounts
     // ========================================
@@ -85,8 +88,8 @@ abstract contract BaseTest is Test {
     uint32 public constant MINT_DELAY = 1 hours;
 
     // Timing
-    uint48 public constant UNLOCKING_DELAY = 14 days;
-    uint256 public constant VESTING_PERIOD = 8 hours;
+    uint48 public constant UNLOCKING_DELAY = 30 days;
+    uint256 public constant VESTING_PERIOD = 30 days;
 
     // Test amounts
     uint256 public constant VERY_SMALL_AMOUNT = 1e18;
@@ -173,8 +176,13 @@ abstract contract BaseTest is Test {
         );
         vm.label(address(lockToken), "lockToken");
 
-        // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = mockToken)
-        redemptionPool = new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), mockToken);
+        // Deploy Mock USDC (6 decimals) for RedemptionPool
+        usdc = new MockERC20("Mock USDC", "USDC");
+        usdc.setDecimals(6);
+        vm.label(address(usdc), "usdc");
+
+        // Deploy RedemptionPoolV0 (asset = apxUSD, reserveAsset = usdc)
+        redemptionPool = new RedemptionPoolV0(address(accessManager), ERC20Burnable(address(apxUSD)), usdc);
         vm.label(address(redemptionPool), "redemptionPool");
 
         // Create redeemer account
@@ -274,13 +282,22 @@ abstract contract BaseTest is Test {
     // ========================================
 
     /**
-     * @notice Mints ApxUSD tokens to test accounts for testing
+     * @notice Helper to mint ApxUSD tokens to a user
      * @param user Address to mint to
      * @param amount Amount of ApxUSD to mint
      */
     function mintApxUSD(address user, uint256 amount) internal {
+        mintApxUSD(user, amount, 0);
+    }
+
+    /**
+     * @notice Mints ApxUSD tokens to test accounts for testing
+     * @param user Address to mint to
+     * @param amount Amount of ApxUSD to mint
+     */
+    function mintApxUSD(address user, uint256 amount, uint256 nonce) internal {
         vm.prank(admin);
-        apxUSD.mint(user, amount);
+        apxUSD.mint(user, amount, nonce);
     }
 
     /**
@@ -399,13 +416,13 @@ abstract contract BaseTest is Test {
     // ========================================
 
     /**
-     * @notice Deposits reserve (mockToken) into the redemption pool
-     * @param amount Amount of mockToken to deposit (mints to admin then deposits)
+     * @notice Deposits reserve (USDC) into the redemption pool
+     * @param amount Amount of USDC to deposit (in USDC's native 6 decimals)
      */
     function depositRedemptionPoolReserve(uint256 amount) internal {
-        mockToken.mint(admin, amount);
+        usdc.mint(admin, amount);
         vm.startPrank(admin);
-        mockToken.approve(address(redemptionPool), amount);
+        usdc.approve(address(redemptionPool), amount);
         redemptionPool.deposit(amount);
         vm.stopPrank();
     }
@@ -426,7 +443,7 @@ abstract contract BaseTest is Test {
     function redeemRedemptionPool(uint256 amount) internal returns (uint256 reserveAmount) {
         vm.startPrank(redeemer);
         apxUSD.approve(address(redemptionPool), amount);
-        reserveAmount = redemptionPool.redeem(amount, redeemer);
+        reserveAmount = redemptionPool.redeem(amount, redeemer, 0);
         vm.stopPrank();
     }
 }

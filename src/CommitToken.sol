@@ -19,6 +19,10 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
  * @dev This contract is non-transferable as an implementation convenience for the current version.
  *      The non-transferability simplifies accounting and prevents transfer-related complexity
  *      in the async redeem request system. Future versions could support transferability if needed.
+ * @dev This contract implements a custom async redemption flow inspired by ERC-7540, but is NOT
+ *      compliant with the ERC-7540 specification. It deviates from MUST requirements including:
+ *      shares not removed from owner on request, preview functions not reverting, operator
+ *      functionality not supported, and ERC-7575 share() method not implemented.
  * @dev TODO: Add support for freezing
  */
 contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ERC20Pausable, ERC165 {
@@ -69,10 +73,12 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
 
     /**
      * @notice Sets the unlocking delay (redeem cooldown)
-     * @dev Only callable through AccessManager with STAKE_STRAT role
+     * @dev Only callable through AccessManager with ADMIN_ROLE
      * @param newUnlockingDelay New unlocking delay in seconds
      */
     function setUnlockingDelay(uint48 newUnlockingDelay) external restricted {
+        if (newUnlockingDelay == 0) revert InvalidAmount("unlockingDelay", newUnlockingDelay);
+
         uint48 oldUnlockingDelay = unlockingDelay;
         unlockingDelay = newUnlockingDelay;
         emit UnlockingDelayUpdated(oldUnlockingDelay, newUnlockingDelay);
@@ -124,7 +130,7 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
     }
 
     // ========================================
-    // Pause & Freeze
+    // Pause
     // ========================================
 
     /**
@@ -201,6 +207,38 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         return shares;
     }
 
+    /**
+     * @notice Returns the maximum amount of assets that can be deposited for a receiver
+     * @dev Per ERC-4626, this must not revert and must return the max amount that would be accepted
+     * @param receiver The address that would receive the shares
+     * @return maxAssets Maximum assets that can be deposited
+     */
+    function maxDeposit(address receiver) public view override returns (uint256 maxAssets) {
+        // Return 0 if paused
+        if (paused()) {
+            return 0;
+        }
+        // Return 0 if receiver is denied
+        if (denyList.contains(receiver)) {
+            return 0;
+        }
+        // Return remaining supply cap
+        uint256 supply = totalSupply();
+        return supply >= supplyCap ? 0 : supplyCap - supply;
+    }
+
+    /**
+     * @notice Returns the maximum amount of shares that can be minted for a receiver
+     * @dev Per ERC-4626, this must not revert and must return the max amount that would be accepted
+     * @dev Since conversion is 1:1, this returns the same value as maxDeposit
+     * @param receiver The address that would receive the shares
+     * @return maxShares Maximum shares that can be minted
+     */
+    function maxMint(address receiver) public view override returns (uint256 maxShares) {
+        // Since conversion is 1:1, maxMint equals maxDeposit
+        return maxDeposit(receiver);
+    }
+
     // ========================================
     // ERC4626 Deposit Functions (Synchronous)
     // ========================================
@@ -266,6 +304,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         override
         returns (uint256 requestId)
     {
+        if (shares == 0) revert InvalidAmount("shares", shares);
+
         // Calculate assets at current rate (rate locking)
         uint256 assets = previewRedeem(shares);
 
@@ -279,6 +319,8 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
      * @inheritdoc ICommitToken
      */
     function requestWithdraw(uint256 assets, address controller, address owner) external returns (uint256 requestId) {
+        if (assets == 0) revert InvalidAmount("assets", assets);
+
         // Calculate shares needed at current rate (rate locking)
         uint256 shares = previewWithdraw(assets);
 
@@ -402,9 +444,6 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
         delete redeemRequests[owner];
 
         super._withdraw(caller, receiver, owner, assets, shares);
-
-        // Emit standard ERC4626 Withdraw event
-        emit Withdraw(caller, receiver, owner, assets, shares);
     }
 
     /**
@@ -477,12 +516,12 @@ contract CommitToken is ERC4626, IERC7540Redeem, AccessManaged, ICommitToken, ER
 
     /**
      * @notice Returns true if the contract implements the interface
-     * @dev Implements ERC-165 as required by ERC-7540 specification
+     * @dev Does NOT claim ERC-7540 compliance via ERC-165. This contract implements a custom
+     *      async redemption flow inspired by ERC-7540 but deviates from the specification.
      * @param interfaceId The interface identifier to check
      * @return true if the contract implements the interface
      */
     function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
-        return interfaceId == type(IERC7540Redeem).interfaceId || interfaceId == type(IERC7540Operator).interfaceId
-            || super.supportsInterface(interfaceId);
+        return super.supportsInterface(interfaceId);
     }
 }

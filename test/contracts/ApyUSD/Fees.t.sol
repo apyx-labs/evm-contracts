@@ -219,6 +219,90 @@ contract ApyUSDFeesTest is ApyUSDTest {
         assertEq(vaultBalanceAfter, expectedVaultBalance, "Fee should remain in vault when no fee wallet set");
     }
 
+    function test_Withdraw_FeeStaysInVaultAndIncreasesSharePrice() public {
+        // This test validates that when unlockingFee > 0 but feeWallet is not configured,
+        // the fee is retained in the vault and increases the share price for remaining depositors.
+        //
+        // Scenario:
+        // 1. Alice and Bob each deposit 10,000 ApxUSD
+        // 2. Set 1% unlocking fee with no fee wallet configured
+        // 3. Alice withdraws 1,000 assets (paying 10 in fees that stay in vault)
+        // 4. Bob's shares should now be worth more due to the retained fee
+
+        // Setup: Alice and Bob each deposit
+        uint256 depositAmount = MEDIUM_AMOUNT; // 10,000e18
+        depositApxUSD(alice, depositAmount);
+        depositApxUSD(bob, depositAmount);
+
+        // Both depositors should have equal shares at 1:1 exchange rate
+        uint256 aliceSharesBefore = apyUSD.balanceOf(alice);
+        uint256 bobSharesBefore = apyUSD.balanceOf(bob);
+        assertEq(aliceSharesBefore, depositAmount, "Alice should have shares equal to deposit");
+        assertEq(bobSharesBefore, depositAmount, "Bob should have shares equal to deposit");
+
+        // Record total assets before withdrawal
+        uint256 totalAssetsBefore = apyUSD.totalAssets();
+        assertEq(totalAssetsBefore, depositAmount * 2, "Total assets should be sum of deposits");
+
+        // Set 1% fee and explicitly set fee wallet to address(0)
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0.01e18);
+        vm.prank(admin);
+        apyUSD.setFeeWallet(address(0));
+        assertEq(apyUSD.feeWallet(), address(0), "Fee wallet should be address(0)");
+
+        // Alice withdraws 1,000 assets
+        // Expected: Alice pays 1,000 + 10 (fee) = 1,010 in shares
+        // Vault receives 1,010 assets, sends 1,000 to UnlockToken, retains 10 as fee
+        uint256 assetsToReceive = 1000e18;
+        uint256 expectedFee = 10e18; // 1% of 1000
+
+        vm.prank(alice);
+        uint256 sharesBurned = apyUSD.withdraw(assetsToReceive, alice, alice);
+        assertEq(sharesBurned, assetsToReceive + expectedFee, "Alice should burn assets + fee in shares");
+
+        // Verify total assets includes the retained fee
+        // Total assets after = (depositAmount * 2) - assetsToReceive
+        // The fee stays in the vault, so it's included in totalAssets
+        uint256 totalAssetsAfter = apyUSD.totalAssets();
+        uint256 expectedTotalAssets = totalAssetsBefore - assetsToReceive;
+        assertEq(totalAssetsAfter, expectedTotalAssets, "Total assets should include retained fee");
+
+        // Verify the fee is in the vault's underlying asset balance
+        uint256 vaultAssetBalance = apxUSD.balanceOf(address(apyUSD));
+        assertEq(vaultAssetBalance, expectedTotalAssets, "Vault should hold total assets including fee");
+
+        // Verify Bob's shares are now worth more
+        // Bob still has his original shares, but total shares decreased
+        uint256 bobSharesAfter = apyUSD.balanceOf(bob);
+        assertEq(bobSharesAfter, bobSharesBefore, "Bob's share count should be unchanged");
+
+        // Calculate Bob's share value before and after
+        // Before: Bob's shares worth = bobSharesBefore * totalAssetsBefore / totalSupplyBefore
+        //        = 10,000 * 20,000 / 20,000 = 10,000
+        // After: Bob's shares worth = bobSharesAfter * totalAssetsAfter / totalSupplyAfter
+        //       = 10,000 * 19,000 / (20,000 - 1,010) = 10,000 * 19,000 / 18,990
+        uint256 aliceSharesAfter = apyUSD.balanceOf(alice);
+        uint256 totalSupplyAfter = apyUSD.totalSupply();
+        assertEq(totalSupplyAfter, aliceSharesAfter + bobSharesAfter, "Total supply should equal sum of shares");
+
+        uint256 bobValueBefore = depositAmount; // 1:1 exchange rate initially
+        uint256 bobValueAfter = apyUSD.convertToAssets(bobSharesAfter);
+
+        // Bob's shares should be worth more than his initial deposit due to retained fee
+        assertGt(bobValueAfter, bobValueBefore, "Bob's shares should be worth more after Alice's withdrawal fee");
+
+        // Calculate expected increase
+        // Fee retained = 10e18
+        // Remaining shares = 18,990e18
+        // Expected increase per share = 10e18 / 18,990e18
+        // Bob's expected gain = (10e18 * 10,000e18) / 18,990e18 ≈ 5.266e18
+        uint256 expectedBobGain = (expectedFee * bobSharesBefore) / totalSupplyAfter;
+        uint256 actualBobGain = bobValueAfter - bobValueBefore;
+
+        assertEq(actualBobGain, expectedBobGain, "Bob's gain should equal his share of the retained fee");
+    }
+
     function test_Withdraw_NoFee() public {
         // Setup
         uint256 depositAmount = MEDIUM_AMOUNT;
@@ -413,7 +497,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
 
         // Simulate yield
         vm.prank(admin);
-        apxUSD.mint(address(apyUSD), SMALL_AMOUNT);
+        apxUSD.mint(address(apyUSD), SMALL_AMOUNT, 0);
 
         // Set 1% fee and fee wallet
         vm.prank(admin);
@@ -582,7 +666,8 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 aliceShares = depositApxUSD(alice, depositAmount);
 
         // Step 1: Withdraw withdrawAssets => get burnShares
-        withdrawAssets = bound(withdrawAssets, 0, apyUSD.previewRedeem(aliceShares));
+        // Bound to minimum of 1 to avoid zero-value requests which are now properly rejected
+        withdrawAssets = bound(withdrawAssets, 1, apyUSD.previewRedeem(aliceShares));
         uint256 burnShares = withdrawApxUSD(withdrawAssets, alice, alice);
 
         // Record what Alice received in UnlockToken

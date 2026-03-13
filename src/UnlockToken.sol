@@ -16,6 +16,8 @@ import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
  * @dev Like CommitToken, this version is non-transferable for implementation simplicity.
  *      Future versions may support transferability or could be implemented as an NFT
  *      to enable transferring unlocking positions between users.
+ * @dev Inherits CommitToken's custom async redemption flow, which is inspired by but NOT
+ *      compliant with ERC-7540.
  */
 contract UnlockToken is CommitToken, IUnlockToken {
     /// @notice The vault address that can act as an operator (immutable)
@@ -44,7 +46,7 @@ contract UnlockToken is CommitToken, IUnlockToken {
     /**
      * @notice Ensures that only the vault can call the function
      */
-    // forge-lint: disable-next-line(unwrapped-modifier-logic)
+    // forge-lint: disable-next-item(unwrapped-modifier-logic)
     modifier onlyVault() {
         if (msg.sender != vault) revert InvalidCaller();
         _;

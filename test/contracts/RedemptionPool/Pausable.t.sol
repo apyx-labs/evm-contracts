@@ -24,7 +24,7 @@ contract RedemptionPool_PausableTest is BaseTest {
 
     function test_Redeem_SuccessAfterUnpause() public {
         uint256 assetsAmount = 100e18;
-        depositRedemptionPoolReserve(assetsAmount);
+        depositRedemptionPoolReserve(100e6); // 100 USDC in 6 decimals
         mintApxUSD(redeemer, assetsAmount);
         approveRedemptionPool(assetsAmount);
 
@@ -34,12 +34,12 @@ contract RedemptionPool_PausableTest is BaseTest {
         redemptionPool.unpause();
 
         uint256 expectedReserve = redemptionPool.previewRedeem(assetsAmount);
-        uint256 receiverBefore = mockToken.balanceOf(bob);
+        uint256 receiverBefore = usdc.balanceOf(bob);
 
         vm.prank(redeemer);
-        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob);
+        uint256 reserveAmount = redemptionPool.redeem(assetsAmount, bob, 0);
 
         assertEq(reserveAmount, expectedReserve, "return value should match previewRedeem");
-        assertEq(mockToken.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
+        assertEq(usdc.balanceOf(bob), receiverBefore + expectedReserve, "receiver should get reserve");
     }
 }

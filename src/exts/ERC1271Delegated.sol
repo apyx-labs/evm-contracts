@@ -38,8 +38,9 @@ abstract contract ERC1271Delegated is IERC1271, EInvalidAddress {
      * @return magicValue ERC-1271 magic value (0x1626ba7e) if valid, 0xffffffff if invalid
      */
     function isValidSignature(bytes32 hash, bytes calldata signature)
-        external
+        public
         view
+        virtual
         override
         returns (bytes4 magicValue)
     {

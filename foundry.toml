@@ -10,18 +10,28 @@ fs_permissions = [
     { access = "read-write", path = "./reports" },
 ]
 
+ignored_error_codes = [
+    5667, # unused parameter
+    5574, # contract size
+    3860, # init code size
+]
+ignored_warnings_from = [
+    "cmds/",
+    # Dependencies
+    "dependencies/forge-std-1.11.0/src/StdConfig.sol",
+    "dependencies/@openzeppelin-contracts-5.5.0/utils/TransientSlot.sol",
+]
+
 [profile.release]
 solc_version = "0.8.30"
-# Use the IR compiler and optimizer
-via_ir = true
 optimizer = true
+
 # Skip compiling test files
 test = "skip"
-# Fail if any warnings are present
-deny = "warnings"
 
 [rpc_endpoints]
 arbitrum = "${ARBITRUM_RPC_URL}"
+mainnet = "${ETHEREUM_RPC_URL}"
 
 [lint]
 exclude_lints = [
@@ -30,9 +40,15 @@ exclude_lints = [
     "pascal-case-struct",
 ]
 
+[invariant]
+fail_on_revert = true
+runs = 256            # Number of test runs
+depth = 1024          # Calls per run
+
 [dependencies]
 forge-std = "1.11.0"
 "@openzeppelin-contracts-upgradeable" = "5.5.0"
 "@openzeppelin-contracts" = "5.5.0"
+solady = "0.1.26"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

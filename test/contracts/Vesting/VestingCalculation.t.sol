@@ -150,7 +150,7 @@ contract VestingCalculationTest is VestingTest {
         timeElapsed = bound(timeElapsed, 0, VESTING_PERIOD * 2);
 
         vm.startPrank(admin);
-        apxUSD.mint(yieldDistributor, amount);
+        apxUSD.mint(yieldDistributor, amount, 0);
         vm.stopPrank();
 
         depositYield(yieldDistributor, amount);

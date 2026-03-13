@@ -129,7 +129,9 @@ contract VestingIntegrationTest is VestingTest {
         // Balance should increase by vested yield, then decrease by assets transferred to UnlockToken
         uint256 expectedBalance = apyUSDBalanceBefore + vestedYield - assetsToUnlockToken;
         assertEq(apyUSDBalanceAfter, expectedBalance, "Yield should be pulled");
-        assertEq(vesting.vestingAmount(), 0, "All vested yield should be transferred");
+        assertEq(vesting.fullyVestedAmount(), 0, "All fully vested yield should be transferred");
+        assertEq(vesting.lastTransferTimestamp(), block.timestamp, "Last transfer timestamp should be updated");
+        assertEq(vesting.vestedAmount(), 0, "All vested yield should be transferred");
     }
 
     function testFuzz_PullYield_AcrossMultipleWithdrawals(uint256 yieldAmount, uint256 depositAmount) public {
@@ -195,7 +197,7 @@ contract VestingIntegrationTest is VestingTest {
         // Mint apxUSD to alice (already done in setUp, but adding more)
         depositAmount = bound(depositAmount, 2, DEPOSIT_AMOUNT);
         vm.prank(admin);
-        apxUSD.mint(alice, depositAmount);
+        apxUSD.mint(alice, depositAmount, 0);
 
         // Deposit apxUSD to apyUSD
         deposit(alice, depositAmount);
@@ -399,15 +401,9 @@ contract VestingIntegrationTest is VestingTest {
         );
 
         vm.prank(address(apyUSD));
-        vesting.transferVestedYield();
+        vesting.pullVestedYield();
 
-        uint256 timeBetweenDepositAndTransfer = vesting.lastTransferTimestamp() - vesting.lastDepositTimestamp();
-        uint256 originalVestingAmount =
-            vesting.vestingAmount() * vestingPeriod / (vestingPeriod - timeBetweenDepositAndTransfer);
-
-        assertApproxEqAbs(
-            yieldAmount, originalVestingAmount, 1, "Vesting amount should be equal to the original vesting amount"
-        );
+        assertEq(yieldAmount, vesting.vestingAmount(), "Vesting amount should be equal to the original vesting amount");
 
         // Iterate the second half of the vesting period
         for (uint256 i = 1; i <= 5; i++) {
@@ -424,9 +420,10 @@ contract VestingIntegrationTest is VestingTest {
             1,
             "Vested amount should be equal to the yield amount / 2 at the end of the vesting period"
         );
-        assertEq(
+        assertApproxEqAbs(
             vesting.vestedAmount() + vestedAmountAfterFirstHalf,
             yieldAmount,
+            1,
             "Total vested amount should be equal to the yield amount at the end of the vesting period"
         );
     }
