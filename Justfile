@@ -3,6 +3,10 @@
 default:
     just --list
 
+# Install git hooks (run once after cloning)
+setup:
+    bash scripts/setup-git-hooks.sh
+
 # Run all tests
 test:
     forge test

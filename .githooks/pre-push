@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Pre-push hook: ensure Solidity code is formatted before pushing.
+# Install via: just setup  (or scripts/setup-git-hooks.sh)
+
+set -euo pipefail
+
+echo "Running forge fmt --check..."
+
+if ! forge fmt --check; then
+    echo ""
+    echo "❌ Formatting check failed. Run 'forge fmt' (or 'just fmt') to fix, then re-push."
+    exit 1
+fi
+
+echo "✅ Formatting check passed."
