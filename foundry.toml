@@ -40,6 +40,10 @@ exclude_lints = [
     "pascal-case-struct",
 ]
 
+[soldeer]
+remappings_generate = false
+remappings_regenerate = false
+
 [invariant]
 fail_on_revert = true
 runs = 256            # Number of test runs
