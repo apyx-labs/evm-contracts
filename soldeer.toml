@@ -1,0 +1,9 @@
+[soldeer]
+remappings_generate = false
+remappings_regenerate = false
+
+[dependencies]
+forge-std = "1.11.0"
+"@openzeppelin-contracts-upgradeable" = "5.5.0"
+"@openzeppelin-contracts" = "5.5.0"
+solady = "0.1.26"

@@ -6,6 +6,7 @@ import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {Errors} from "../../utils/Errors.sol";
+import {ESupplyCapped} from "../../../src/errors/SupplyCapped.sol";
 
 /**
  * @dev todo: move apxUSD minting tests into own file
@@ -130,7 +131,7 @@ contract ApxUSDTest is ApxUSDBaseTest {
         uint256 overCapAmount = APX_SUPPLY_CAP + 1;
 
         vm.prank(admin);
-        vm.expectRevert(abi.encodeWithSelector(ApxUSD.SupplyCapExceeded.selector, overCapAmount, APX_SUPPLY_CAP));
+        vm.expectRevert(abi.encodeWithSelector(ESupplyCapped.SupplyCapExceeded.selector, overCapAmount, APX_SUPPLY_CAP));
         apxUSD.mint(alice, overCapAmount, 0);
     }
 
@@ -159,7 +160,7 @@ contract ApxUSDTest is ApxUSDBaseTest {
         uint256 invalidCap = MEDIUM_AMOUNT - 1;
 
         vm.prank(admin);
-        vm.expectRevert(ApxUSD.InvalidSupplyCap.selector);
+        vm.expectRevert(ESupplyCapped.InvalidSupplyCap.selector);
         apxUSD.setSupplyCap(invalidCap);
     }
 

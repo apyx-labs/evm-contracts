@@ -1,0 +1,10 @@
+{
+	"packageManager": "pnpm@10.28.2",
+	"dependencies": {
+		"@chainlink/contracts": "^1.5.0",
+		"@chainlink/contracts-ccip": "1.6.1",
+		"@chainlink/local": "^0.2.7",
+		"@openzeppelin/contracts-4.8.3": "npm:@openzeppelin/contracts@4.8.3",
+		"@openzeppelin/contracts-5.0.2": "npm:@openzeppelin/contracts@5.0.2"
+	}
+}

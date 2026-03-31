@@ -23,6 +23,7 @@ import {IAddressList} from "./interfaces/IAddressList.sol";
 import {IUnlockToken} from "./interfaces/IUnlockToken.sol";
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 import {IVesting} from "./interfaces/IVesting.sol";
+import {IGetCCIPAdmin} from "@chainlink/contracts-ccip/interfaces/IGetCCIPAdmin.sol";
 import {EInvalidCaller} from "./errors/InvalidCaller.sol";
 
 /**
@@ -47,6 +48,7 @@ contract ApyUSD is
     UUPSUpgradeable,
     ERC4626Upgradeable,
     IApyUSD,
+    IGetCCIPAdmin,
     EInvalidCaller
 {
     using SafeERC20 for IERC20;
@@ -67,6 +69,10 @@ contract ApyUSD is
         uint256 unlockingFee;
         /// @notice Address to receive unlocking fees
         address feeWallet;
+        /// @notice Address authorised to register and configure the CCIP token pool.
+        /// @dev Returned by getCCIPAdmin() for Chainlink's ITokenAdminRegistry.
+        ///      Has no other special powers; rotate via setCCIPAdmin() (ADMIN_ROLE).
+        address ccipAdmin;
     }
 
     // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApyUSD")) - 1)) & ~bytes32(uint256(0xff))
@@ -140,6 +146,30 @@ contract ApyUSD is
         override(ERC20Upgradeable, ERC20PausableUpgradeable, ERC20DenyListUpgradable)
     {
         super._update(from, to, value);
+    }
+
+    // ========================================
+    // IGetCCIPAdmin
+    // ========================================
+
+    /// @notice Emitted when the CCIP admin address is updated
+    event CCIPAdminUpdated(address indexed oldAdmin, address indexed newAdmin);
+
+    /// @inheritdoc IGetCCIPAdmin
+    /// @notice Returns the address authorised to register the CCIP token pool for this token.
+    function getCCIPAdmin() external view returns (address) {
+        return _getApyUSDStorage().ccipAdmin;
+    }
+
+    /// @notice Sets a new CCIP admin address.
+    /// @dev Only callable through AccessManager with ADMIN_ROLE.
+    ///      Setting to address(0) effectively revokes the CCIP admin role.
+    /// @param newAdmin New CCIP admin address
+    function setCCIPAdmin(address newAdmin) external restricted {
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+        address oldAdmin = $.ccipAdmin;
+        $.ccipAdmin = newAdmin;
+        emit CCIPAdminUpdated(oldAdmin, newAdmin);
     }
 
     // ========================================

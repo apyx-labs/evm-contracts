@@ -70,11 +70,12 @@ library Roles {
      * @param apxUSD The ApxUSD contract
      */
     function assignAdminTargetsFor(AccessManager self, ApxUSD apxUSD) internal {
-        bytes4[] memory selectors = new bytes4[](4);
+        bytes4[] memory selectors = new bytes4[](5);
         selectors[0] = ApxUSD.pause.selector;
         selectors[1] = ApxUSD.unpause.selector;
         selectors[2] = ApxUSD.setSupplyCap.selector;
         selectors[3] = ApxUSD.setDenyList.selector;
+        selectors[4] = ApxUSD.setCCIPAdmin.selector;
         self.setTargetFunctionRole(address(apxUSD), selectors, ADMIN_ROLE);
     }
 

@@ -18,6 +18,8 @@ import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/U
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ERC20DenyListUpgradable} from "./exts/ERC20DenyListUpgradable.sol";
 import {IAddressList} from "./interfaces/IAddressList.sol";
+import {IGetCCIPAdmin} from "@chainlink/contracts-ccip/interfaces/IGetCCIPAdmin.sol";
+import {ESupplyCapped} from "./errors/SupplyCapped.sol";
 
 /**
  * @title ApxUSD
@@ -39,12 +41,18 @@ contract ApxUSD is
     ERC20DenyListUpgradable,
     ERC20BurnableUpgradeable,
     AccessManagedUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    IGetCCIPAdmin,
+    ESupplyCapped
 {
     /// @custom:storage-location erc7201:apyx.storage.ApxUSD
     struct ApxUSDStorage {
         /// @notice Maximum total supply allowed (in wei, 18 decimals)
         uint256 supplyCap;
+        /// @notice Address authorised to register and configure the CCIP token pool.
+        /// @dev Returned by getCCIPAdmin() for Chainlink's ITokenAdminRegistry.
+        ///      Has no other special powers; rotate via setCCIPAdmin() (ADMIN_ROLE).
+        address ccipAdmin;
     }
 
     // keccak256(abi.encode(uint256(keccak256("apyx.storage.ApxUSD")) - 1)) & ~bytes32(uint256(0xff))
@@ -60,12 +68,6 @@ contract ApxUSD is
 
     /// @notice Emitted when the supply cap is updated
     event SupplyCapUpdated(uint256 oldCap, uint256 newCap);
-
-    /// @notice Error thrown when minting would exceed the supply cap
-    error SupplyCapExceeded(uint256 requestedAmount, uint256 availableCapacity);
-
-    /// @notice Error thrown when setting an invalid supply cap
-    error InvalidSupplyCap();
 
     // ----------------------------------------
     // UUPSUpgradeable
@@ -185,6 +187,30 @@ contract ApxUSD is
         ApxUSDStorage storage $ = _getApxUSDStorage();
         uint256 supply = totalSupply();
         return supply >= $.supplyCap ? 0 : $.supplyCap - supply;
+    }
+
+    // ----------------------------------------
+    // IGetCCIPAdmin
+    // ----------------------------------------
+
+    /// @notice Emitted when the CCIP admin address is updated
+    event CCIPAdminUpdated(address indexed oldAdmin, address indexed newAdmin);
+
+    /// @inheritdoc IGetCCIPAdmin
+    /// @notice Returns the address authorised to register the CCIP token pool for this token.
+    function getCCIPAdmin() external view returns (address) {
+        return _getApxUSDStorage().ccipAdmin;
+    }
+
+    /// @notice Sets a new CCIP admin address.
+    /// @dev Only callable through AccessManager with ADMIN_ROLE.
+    ///      Setting to address(0) effectively revokes the CCIP admin role.
+    /// @param newAdmin New CCIP admin address
+    function setCCIPAdmin(address newAdmin) external restricted {
+        ApxUSDStorage storage $ = _getApxUSDStorage();
+        address oldAdmin = $.ccipAdmin;
+        $.ccipAdmin = newAdmin;
+        emit CCIPAdminUpdated(oldAdmin, newAdmin);
     }
 
     // ----------------------------------------

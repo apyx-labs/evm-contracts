@@ -11,14 +11,16 @@ abis/
 .env
 .envrc.local*
 
-# Soldeer
+# Dependencies
 /dependencies
+/node_modules
 
 # LLM backup files
 *.bak
 
-# Generated docs
-docs
+# Generated docs (natspec etc.) — but not audit reports
+docs/*
+!docs/audit
 book
 
 # Local deployment files
