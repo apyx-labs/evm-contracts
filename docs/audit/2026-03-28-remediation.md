@@ -1,7 +1,7 @@
 # Remediation Notes — Internal Audit 2026-03-28
 
-**Audit report:** `docs/audit/2026-03-28-internal-bridging.md`  
-**Fix branch:** `fix/h1-bridged-apyx-token` → [PR #4](https://github.com/apyx-labs/evm-contracts-private/pull/4)
+**Audit report:** `docs/audit/2026-03-28-bridging-preliminary-review.md`  
+**Fix branch:** `fix/h1-bridged-apyx-token` — merged in `2e9ce1956b467d326b64ea0a7fd46af194b41d93`
 
 ---
 
@@ -9,29 +9,29 @@
 
 | ID | Severity | Title | Status |
 |----|----------|-------|--------|
-| H-1 | High | Wrong ERC7201 storage slot constant | ✅ Fixed (PR #4) |
+| H-1 | High | Wrong ERC7201 storage slot constant | ✅ Fixed (`2e9ce1956b467d326b64ea0a7fd46af194b41d93`) |
 | H-2 | High | Supply cap revert blocks CCIP lane for 8 hours | ✅ Mitigated by design |
-| M-1 | Medium | AccessManaged overhead near 90K pool gas limit | ✅ Fixed — `onlyCCIPPool` replaces `restricted` on hot path (PR #13) |
-| M-2 | Medium | `ccipAdmin` not set in `initialize()` | ✅ Fixed (PR #8) |
-| M-3 | Medium | `setCCIPAdmin(address(0))` unguarded | ✅ Fixed (PR #8) |
-| M-4 | Medium | UUPS upgrade invalidates CCIP pool selector config | ✅ Fixed (PR #9) |
+| M-1 | Medium | AccessManaged overhead near 90K pool gas limit | ✅ Fixed — `onlyCCIPPool` replaces `restricted` on hot path (`7c38ae4a459a7fc0ed312a8b6103fe2d78eca615`) |
+| M-2 | Medium | `ccipAdmin` not set in `initialize()` | ✅ Fixed (`4702cadab2324a98572ca33d478157f0858eac4a`) |
+| M-3 | Medium | `setCCIPAdmin(address(0))` unguarded | ✅ Fixed (`4702cadab2324a98572ca33d478157f0858eac4a`) |
+| M-4 | Medium | UUPS upgrade invalidates CCIP pool selector config | ✅ Fixed (`a5f8a0602d309b5dc3773a7828a494bdbb94019e`) |
 | M-5 | Medium | No denyList — compliance asymmetry with mainnet ApxUSD | 🟡 Acknowledged — future upgrade |
 | L-1 | Low | No upper bound on `setSupplyCap` | 🟡 Acknowledged |
 | L-2 | Low | `setSupplyCap(totalSupply())` halts inbound bridging | 🟡 Acknowledged |
-| L-3 | Low | `burn()` restricted to pool — user self-burn undocumented | ✅ Documented (PR #12) |
-| L-4 | Low | `IBurnMintERC20.burn(address,uint256)` overload missing | ✅ Fixed (PR #9) |
-| L-5 | Low | `setSupplyCap(0)` accepted when `totalSupply == 0` | ✅ Fixed (PR #11) |
-| L-6 | Low | Double `totalSupply()` read in `mint()` revert path | ✅ Fixed (PR #4) |
+| L-3 | Low | `burn()` restricted to pool — user self-burn undocumented | ✅ Documented (`a1377cb73fa988dfc8506619425862bee79aa08d`) |
+| L-4 | Low | `IBurnMintERC20.burn(address,uint256)` overload missing | ✅ Fixed (`a5f8a0602d309b5dc3773a7828a494bdbb94019e`) |
+| L-5 | Low | `setSupplyCap(0)` accepted when `totalSupply == 0` | ✅ Fixed (`83f8593106dfccd66f024a011b20febe4cb6486b`) |
+| L-6 | Low | Double `totalSupply()` read in `mint()` revert path | ✅ Fixed (`2e9ce1956b467d326b64ea0a7fd46af194b41d93`) |
 | I-1 | Info | No ERC165 `supportsInterface` | 🟡 Acknowledged — future upgrade |
 | I-2 | Info | `upgradeToAndCall` not explicit in `Roles.assignAdminTargetsFor(ApxUSD)` | 🟡 Acknowledged — no change required |
-| I-3 | Info | `ROLE_CCIP_POOL` zero-delay requirement undocumented | ✅ Resolved — superseded by `onlyCCIPPool` (PR #13) |
+| I-3 | Info | `ROLE_CCIP_POOL` zero-delay requirement undocumented | ✅ Resolved — superseded by `onlyCCIPPool` (`7c38ae4a459a7fc0ed312a8b6103fe2d78eca615`) |
 
 ---
 
 ## Completed Remediations
 
 ### H-1 — Wrong ERC7201 storage slot constant
-**Fixed in:** [PR #4](https://github.com/apyx-labs/evm-contracts-private/pull/4) (`fix/h1-bridged-apyx-token`)  
+**Fixed in:** merge commit `2e9ce1956b467d326b64ea0a7fd46af194b41d93` (`fix/h1-bridged-apyx-token`)  
 **Merged into:** `feat/ccip-bridging`
 
 **Changes made:**
@@ -42,7 +42,7 @@
 - `test_storageSlot_matchesERC7201Namespace()` added to `BridgedApyxToken.t.sol` — computes the slot on-chain and asserts it matches the constant; will catch any future namespace/constant divergence at test time
 
 ### L-6 — Double `totalSupply()` read in `mint()` revert path
-**Fixed in:** [PR #4](https://github.com/apyx-labs/evm-contracts-private/pull/4) (`fix/h1-bridged-apyx-token`)
+**Fixed in:** merge commit `2e9ce1956b467d326b64ea0a7fd46af194b41d93` (`fix/h1-bridged-apyx-token`)
 
 **Changes made:**
 - `mint()` now caches `currentSupply = totalSupply()` before the cap check and reuses it in the `SupplyCapExceeded` revert, eliminating the redundant SLOAD and ensuring the reported available capacity is accurate
@@ -64,10 +64,10 @@ If `supplyCap(destination) == supplyCap(mainnet)`, the destination cap can only 
 ---
 
 ### M-1 — AccessManaged overhead near 90K pool gas limit
-**Fully fixed in:** [PR #13](https://github.com/apyx-labs/evm-contracts-private/pull/13) (`fix/i3-ccip-pool-modifier`)  
-**Previously mitigated in:** [PR #7](https://github.com/apyx-labs/evm-contracts-private/pull/7) — gas benchmarks and NatSpec documentation
+**Fully fixed in:** merge commit `7c38ae4a459a7fc0ed312a8b6103fe2d78eca615` (`fix/i3-ccip-pool-modifier`)  
+**Previously mitigated in:** merge commit `362db558b755f89c00067fb0b82b34c5a9b09ca6` — gas benchmarks and NatSpec documentation
 
-**Finding re-assessed (PR #7):**
+**Finding re-assessed (`362db558b755f89c00067fb0b82b34c5a9b09ca6`):**
 The original audit finding incorrectly attributed a hard 90K gas cap to `releaseOrMint`. Investigation of the CCIP OffRamp source confirmed the 90K figure refers to ERC-165 interface detection overhead (3 × 30K), not a cap on the token pool's mint/burn logic. The actual gas budget for `releaseOrMint` is determined by the CCIP message's `ccipReceiveGasLimit` in `extraArgs`.
 
 **Benchmarks (cold storage, measured via `test/bridge/GasBenchmark.t.sol`):**
@@ -80,18 +80,18 @@ The original audit finding incorrectly attributed a hard 90K gas cap to `release
 **Why first mint is more expensive:**
 `_totalSupply` and the receiver's `_balances` slot are both zero on the first-ever mint. Writing zero → nonzero costs 22,100 gas per slot (EIP-2929 SSTORE_SET). All subsequent mints benefit from `_totalSupply` being non-zero (2,900 gas) and warm contract/pool storage slots, cutting gas by ~61K.
 
-**Mitigation documented in PR #7:**
+**Mitigation documented in `362db558b755f89c00067fb0b82b34c5a9b09ca6`:**
 - `IBridgedToken.mint()` NatSpec updated to document the two gas tiers and the required `extraArgs.gasLimit` values (120K for first mint, 90K for subsequent).
 - Deployment runbook requirement added to NatSpec: send one initial bridge message with `gasLimit = 120,000` to warm the chain before opening to general users.
 - Gas regression tests added to `test/bridge/GasBenchmark.t.sol` to catch any future regressions.
 
-**Full fix in PR #13:**
+**Full fix in `7c38ae4a459a7fc0ed312a8b6103fe2d78eca615`:**
 After benchmarking revealed that even the "mitigated" path approached gas budget limits on first-ever mint scenarios, `mint()`, `burn(uint256)`, and `burnFrom(address,uint256)` were refactored to use the `onlyCCIPPool` modifier in place of the `restricted` AccessManager modifier. This eliminates the external call and multiple SLOADs associated with `AccessManager.canCall()`, reducing hot-path gas by ~8,000–15,000 gas on cold storage paths. See I-3 for the full description of this change.
 
 ---
 
 ### M-2 — `ccipAdmin` not set in `initialize()`
-**Fixed in:** [PR #8](https://github.com/apyx-labs/evm-contracts-private/pull/8) (`fix/m2-m3-ccip-admin`)
+**Fixed in:** merge commit `4702cadab2324a98572ca33d478157f0858eac4a` (`fix/m2-m3-ccip-admin`)
 
 **Changes made:**
 - `BridgedApyxToken.initialize()` now accepts `initialCCIPAdmin` as a required fifth parameter
@@ -102,7 +102,7 @@ After benchmarking revealed that even the "mitigated" path approached gas budget
 ---
 
 ### M-3 — `setCCIPAdmin(address(0))` unguarded
-**Fixed in:** [PR #8](https://github.com/apyx-labs/evm-contracts-private/pull/8) (`fix/m2-m3-ccip-admin`)
+**Fixed in:** merge commit `4702cadab2324a98572ca33d478157f0858eac4a` (`fix/m2-m3-ccip-admin`)
 
 **Changes made:**
 - `setCCIPAdmin()` now reverts with `InvalidAddress("newAdmin")` if `address(0)` is passed
@@ -113,7 +113,7 @@ After benchmarking revealed that even the "mitigated" path approached gas budget
 
 ### M-4 — UUPS upgrade invalidates CCIP pool selector config
 ### L-4 — `IBurnMintERC20.burn(address,uint256)` overload missing
-**Fixed together in:** [PR #9](https://github.com/apyx-labs/evm-contracts-private/pull/9) (`fix/m4-l4-iburnminterc20`)
+**Fixed together in:** merge commit `a5f8a0602d309b5dc3773a7828a494bdbb94019e` (`fix/m4-l4-iburnminterc20`)
 
 **Changes made:**
 
@@ -142,7 +142,7 @@ Setting the cap equal to `totalSupply()` is an accepted operational pattern for 
 ---
 
 ### L-5 — `setSupplyCap(0)` accepted when `totalSupply == 0`
-**Fixed in:** [PR #11](https://github.com/apyx-labs/evm-contracts-private/pull/11) (`fix/l1-l2-l5-supply-cap`)
+**Fixed in:** merge commit `83f8593106dfccd66f024a011b20febe4cb6486b` (`fix/l1-l2-l5-supply-cap`)
 
 **Changes made:**
 - Added `if (newCap == 0) revert InvalidSupplyCap();` to `setSupplyCap()`, consistent with `initialize()` which already rejects a zero supply cap.
@@ -151,7 +151,7 @@ Setting the cap equal to `totalSupply()` is an accepted operational pattern for 
 ---
 
 ### L-3 — `burn()` restricted to pool — user self-burn undocumented
-**Documented in:** [PR #12](https://github.com/apyx-labs/evm-contracts-private/pull/12) (`fix/l3-burn-natspec`)
+**Documented in:** merge commit `a1377cb73fa988dfc8506619425862bee79aa08d` (`fix/l3-burn-natspec`)
 
 **Finding clarified:** User self-burns are intentionally and correctly restricted. A direct call to `burn()` by a user produces no CCIP message — Chainlink's DON watches for messages emitted by the CCIP router, not arbitrary burn events. A bare user burn would destroy bridged supply with no corresponding mainnet unlock, permanently locking the collateral backing those tokens.
 
@@ -163,7 +163,7 @@ Setting the cap equal to `totalSupply()` is an accepted operational pattern for 
 ---
 
 ### I-3 — `ROLE_CCIP_POOL` zero-delay requirement undocumented
-**Resolved in:** [PR #13](https://github.com/apyx-labs/evm-contracts-private/pull/13) (`fix/i3-ccip-pool-modifier`)
+**Resolved in:** merge commit `7c38ae4a459a7fc0ed312a8b6103fe2d78eca615` (`fix/i3-ccip-pool-modifier`)
 
 **Finding superseded:**
 The original finding flagged that `ROLE_CCIP_POOL` must be granted with an execution delay of zero, and that this constraint was undocumented in `BridgeRoles`. The underlying concern was that a non-zero delay on `ROLE_CCIP_POOL` would cause all inbound `mint()` calls to fail with `AccessManagerNotReady`.

@@ -1,10 +1,10 @@
-# Internal Security Audit — CCIP Bridging Layer
+# Preliminary security review — CCIP bridging layer
 **Date:** 2026-03-28  
 **Branch:** `feat/ccip-bridging`  
-**Auditor:** Rook (internal, apyx-labs/agents)  
+**Review:** Internal security review (Apyx)  
 **Scope:** `src/bridge/IBridgedToken.sol`, `src/bridge/BridgeRoles.sol`, `src/bridge/BridgedApyxToken.sol`, and the CCIP additions to `src/ApxUSD.sol` (`IGetCCIPAdmin`, `getCCIPAdmin`, `setCCIPAdmin`, `ccipAdmin` storage field)  
 **Test scope:** `test/bridge/BaseTest.sol`, `test/bridge/BridgedApyxToken.t.sol`, `test/bridge/CCIPBridge.t.sol`, `test/contracts/ApxUSD/CCIPAdmin.t.sol`  
-**Methodology:** Parallel sub-agent analysis across 4 specialized skill tracks (CCIP/bridge, access control & proxy, general EVM & ERC20, test coverage) + direct on-chain verification of ERC7201 storage slots.
+**Methodology:** Structured technical review across multiple focus areas (CCIP/bridge, access control and proxies, general EVM and ERC-20, test coverage), plus direct on-chain verification of ERC-7201 storage slots.
 
 ---
 
@@ -30,7 +30,7 @@ No critical vulnerabilities exist in the token contract's runtime logic. The mos
 
 ---
 
-#### [H-1] `APYX_STORAGE_LOC` constant did not match the ERC7201 formula for its declared namespace — **FIXED in this PR**
+#### [H-1] `APYX_STORAGE_LOC` constant did not match the ERC7201 formula for its declared namespace — **FIXED** (merge `2e9ce1956b467d326b64ea0a7fd46af194b41d93`)
 
 **Severity:** High  
 **Category:** Proxy / ERC7201  
