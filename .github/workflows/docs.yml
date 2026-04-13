@@ -24,8 +24,19 @@ jobs:
       - name: Install Soldeer deps
         run: forge soldeer install
 
+      - name: Generate docs
+        run: forge doc
+
+      - name: Install mdbook-mermaid
+        run: |
+          curl -sSL https://github.com/badboy/mdbook-mermaid/releases/download/v0.17.0/mdbook-mermaid-v0.17.0-x86_64-unknown-linux-gnu.tar.gz \
+            | tar -xz -C /usr/local/bin
+
+      - name: Enable mermaid in book.toml
+        run: mdbook-mermaid install docs/
+
       - name: Build docs
-        run: forge doc --build
+        run: mdbook build docs/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
