@@ -50,5 +50,6 @@ forge-std = "1.11.0"
 "@openzeppelin-contracts-upgradeable" = "5.5.0"
 "@openzeppelin-contracts" = "5.5.0"
 solady = "0.1.26"
+"morpho-blue" = { version = "1.0.0", git = "https://github.com/morpho-org/morpho-blue.git", tag = "v1.0.0" }
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
