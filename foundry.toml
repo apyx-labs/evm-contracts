@@ -2,6 +2,7 @@
 src = "src"
 out = "out"
 libs = ["lib", "dependencies"]
+via_ir = true
 
 fs_permissions = [
     { access = "read-write", path = "./config.toml" },

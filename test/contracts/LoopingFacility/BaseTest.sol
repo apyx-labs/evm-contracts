@@ -4,86 +4,83 @@ pragma solidity 0.8.30;
 import {Test} from "forge-std/src/Test.sol";
 import {AccessManager} from "@openzeppelin/contracts/access/manager/AccessManager.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
-import {MarketParams} from "morpho-blue/src/interfaces/IMorpho.sol";
+import {MarketParams, Id} from "morpho-blue/src/interfaces/IMorpho.sol";
+import {MarketParamsLib} from "morpho-blue/src/libraries/MarketParamsLib.sol";
 
 import {LoopingFacility} from "../../../src/LoopingFacility.sol";
-import {ICurveStableswapNG} from "../../../src/curve/ICurveStableswapNG.sol";
 import {MockERC20} from "../../mocks/MockERC20.sol";
-import {MockApyUSD} from "../../mocks/MockApyUSD.sol";
 import {MockMorpho} from "../../mocks/MockMorpho.sol";
-import {MockCurvePool} from "../../mocks/MockCurvePool.sol";
 import {MockAddressList} from "../../mocks/MockAddressList.sol";
+import {MockSwapAdapter} from "../../mocks/MockSwapAdapter.sol";
 
 abstract contract LoopingFacilityBaseTest is Test {
-    // LLTV = 86% → maxLeverage = 1 / (1 - 0.84) = 6.25x
+    using MarketParamsLib for MarketParams;
+
     uint256 internal constant LLTV = 0.86e18;
-    uint256 internal constant INITIAL_SLIPPAGE_BPS = 50; // 0.5%
-    uint256 internal constant FLASH_LOAN_LIQUIDITY = 100_000_000e18;
-    uint256 internal constant CURVE_LIQUIDITY = 10_000_000e18;
+    uint256 internal constant INITIAL_SLIPPAGE_BPS = 50;
+    uint256 internal constant MORPHO_LIQUIDITY = 100_000_000e18;
+    uint256 internal constant ADAPTER_LIQUIDITY = 10_000_000e18;
 
     AccessManager public accessManager;
-    MockERC20 public apxUSD;
-    MockApyUSD public apyUSD;
+    MockERC20 public loanToken;
+    MockERC20 public collateralToken;
     MockMorpho public morpho;
-    MockCurvePool public curvePool;
     MockAddressList public denyList;
+    MockSwapAdapter public toCollateral;    // loanToken → collateralToken
+    MockSwapAdapter public fromCollateral;  // collateralToken → loanToken
     LoopingFacility public loopingFacility;
 
     MarketParams public marketParams;
+    Id public marketId;
 
     address public admin;
     address public alice;
     address public bob;
-    address public attacker;
 
     function setUp() public virtual {
         admin = makeAddr("admin");
         alice = makeAddr("alice");
         bob = makeAddr("bob");
-        attacker = makeAddr("attacker");
 
         vm.startPrank(admin);
 
         accessManager = new AccessManager(admin);
-        apxUSD = new MockERC20("Apyx USD", "apxUSD");
-        apyUSD = new MockApyUSD(IERC20(address(apxUSD)));
-        morpho = new MockMorpho(IERC20(address(apxUSD)), IERC20(address(apyUSD)));
-        curvePool = new MockCurvePool(IERC20(address(apyUSD)), IERC20(address(apxUSD)));
+        loanToken = new MockERC20("Loan Token", "LOAN");
+        collateralToken = new MockERC20("Collateral Token", "COLL");
+        morpho = new MockMorpho(IERC20(address(loanToken)), IERC20(address(collateralToken)));
         denyList = new MockAddressList();
 
+        toCollateral = new MockSwapAdapter(IERC20(address(loanToken)), IERC20(address(collateralToken)));
+        fromCollateral = new MockSwapAdapter(IERC20(address(collateralToken)), IERC20(address(loanToken)));
+
         marketParams = MarketParams({
-            loanToken: address(apxUSD),
-            collateralToken: address(apyUSD),
+            loanToken: address(loanToken),
+            collateralToken: address(collateralToken),
             oracle: address(0),
             irm: address(0),
             lltv: LLTV
         });
+        marketId = marketParams.id();
 
-        loopingFacility = new LoopingFacility(
-            address(accessManager),
-            morpho,
-            IERC4626(address(apyUSD)),
-            IERC20(address(apxUSD)),
-            ICurveStableswapNG(address(curvePool)),
-            marketParams,
-            denyList,
-            INITIAL_SLIPPAGE_BPS
-        );
+        loopingFacility = new LoopingFacility(address(accessManager), morpho, denyList);
 
-        // Fund MockMorpho with apxUSD for flash loans
-        apxUSD.mint(admin, FLASH_LOAN_LIQUIDITY);
-        apxUSD.approve(address(morpho), FLASH_LOAN_LIQUIDITY);
-        morpho.seedLiquidity(FLASH_LOAN_LIQUIDITY);
+        // Register the market on LoopingFacility
+        loopingFacility.addMarket(marketParams, toCollateral, fromCollateral, INITIAL_SLIPPAGE_BPS);
 
-        // Fund MockCurvePool with both tokens so exchange() can pay out
-        apxUSD.mint(admin, CURVE_LIQUIDITY);
-        apxUSD.approve(address(curvePool), CURVE_LIQUIDITY);
-        apyUSD.approve(address(curvePool), CURVE_LIQUIDITY); // admin won't have apyUSD but seedLiquidity handles apyUSD separately
+        // Seed MockMorpho with loan tokens for flash loans
+        loanToken.mint(admin, MORPHO_LIQUIDITY);
+        loanToken.approve(address(morpho), MORPHO_LIQUIDITY);
+        morpho.seedLiquidity(MORPHO_LIQUIDITY);
 
-        // Seed only apxUSD side of the pool (unwind swaps apyUSD → apxUSD, pool needs apxUSD)
-        apxUSD.approve(address(curvePool), type(uint256).max);
-        curvePool.seedLiquidity(0, CURVE_LIQUIDITY);
+        // Seed fromCollateral adapter with loan tokens (pays out during unwind)
+        loanToken.mint(admin, ADAPTER_LIQUIDITY);
+        loanToken.approve(address(fromCollateral), ADAPTER_LIQUIDITY);
+        fromCollateral.seed(ADAPTER_LIQUIDITY);
+
+        // Seed toCollateral adapter with collateral tokens (pays out during loop-up)
+        collateralToken.mint(admin, ADAPTER_LIQUIDITY);
+        collateralToken.approve(address(toCollateral), ADAPTER_LIQUIDITY);
+        toCollateral.seed(ADAPTER_LIQUIDITY);
 
         vm.stopPrank();
     }
@@ -92,16 +89,11 @@ abstract contract LoopingFacilityBaseTest is Test {
     // Helpers
     // -------------------------------------------------------------------------
 
-    /// @dev Give a user apyUSD collateral and wire up all authorizations.
-    function _setupUser(address user, uint256 apyUSDAmount) internal {
-        // Mint apxUSD to the user so they can deposit into MockApyUSD to get apyUSD
-        apxUSD.mint(user, apyUSDAmount);
+    /// @dev Give a user collateral and wire up all authorizations.
+    function _setupUser(address user, uint256 collateralAmount) internal {
+        collateralToken.mint(user, collateralAmount);
         vm.startPrank(user);
-        apxUSD.approve(address(apyUSD), apyUSDAmount);
-        apyUSD.deposit(apyUSDAmount, user);
-        // Approve LoopingFacility to pull their apyUSD for additionalCollateral
-        apyUSD.approve(address(loopingFacility), type(uint256).max);
-        // Authorize LoopingFacility to borrow and withdraw on their behalf
+        collateralToken.approve(address(loopingFacility), type(uint256).max);
         morpho.setAuthorization(address(loopingFacility), true);
         vm.stopPrank();
     }
@@ -110,17 +102,16 @@ abstract contract LoopingFacilityBaseTest is Test {
     function _openPosition(address user, uint256 collateral, uint256 targetLeverage) internal {
         _setupUser(user, collateral);
         vm.prank(user);
-        loopingFacility.loop(collateral, targetLeverage);
+        loopingFacility.loop(marketId, collateral, targetLeverage);
     }
 
     function _currentLeverage(address user) internal view returns (uint256) {
         (,, uint128 collateral) = _positionRaw(user);
-        uint256 debt = _debtAssets(user);
         if (collateral == 0) return 0;
-        uint256 rate = apyUSD.convertToAssets(1e18);
-        uint256 collateralApxUSD = uint256(collateral) * rate / 1e18;
-        uint256 equity = collateralApxUSD - debt;
-        return collateralApxUSD * 1e18 / equity;
+        uint256 debt = _debtAssets(user);
+        uint256 collateralInLoanTerms = fromCollateral.quoteOut(collateral);
+        uint256 equity = collateralInLoanTerms - debt;
+        return collateralInLoanTerms * 1e18 / equity;
     }
 
     function _debtAssets(address user) internal view virtual returns (uint256) {
@@ -129,10 +120,8 @@ abstract contract LoopingFacilityBaseTest is Test {
     }
 
     function _positionRaw(address user) internal view virtual returns (uint256 supplyShares, uint128 borrowShares, uint128 collateral) {
-        (supplyShares, borrowShares, collateral) = (
-            morpho.position(loopingFacility.marketId(), user).supplyShares,
-            morpho.position(loopingFacility.marketId(), user).borrowShares,
-            morpho.position(loopingFacility.marketId(), user).collateral
-        );
+        supplyShares = morpho.position(marketId, user).supplyShares;
+        borrowShares = morpho.position(marketId, user).borrowShares;
+        collateral = morpho.position(marketId, user).collateral;
     }
 }
