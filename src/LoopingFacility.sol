@@ -75,7 +75,6 @@ contract LoopingFacility is AccessManaged, ReentrancyGuardTransient, IMorphoFlas
         address user;
     }
 
-    /// @dev Packed into flash loan calldata to keep unwind()'s stack under the 16-slot limit.
     struct UnwindCallbackData {
         Id marketId;
         address user;
@@ -193,10 +192,9 @@ contract LoopingFacility is AccessManaged, ReentrancyGuardTransient, IMorphoFlas
      * @notice Increase leverage on a market to targetLeverage in a single transaction.
      *
      * @dev Leverage math (all in loan token terms):
-     *        rate            = toCollateral.quoteOut(WAD) / WAD   [collateral per loan token]
-     *        totalCollateral = (existingCollateral + additionalCollateral) / rate
-     *        netEquity       = totalCollateral - existingDebt
-     *        flashAmount     = netEquity * targetLeverage / WAD - totalCollateral
+     *        collateralValue = fromCollateral.quoteOut(totalCollateral)
+     *        netEquity       = collateralValue - existingDebt
+     *        flashAmount     = netEquity * targetLeverage / WAD - collateralValue
      *
      * @param marketId            The market to loop on.
      * @param additionalCollateral Collateral tokens to pull from the caller and add. Can be 0.
@@ -222,8 +220,6 @@ contract LoopingFacility is AccessManaged, ReentrancyGuardTransient, IMorphoFlas
         uint256 totalCollateral = pos.collateral + additionalCollateral;
         if (totalCollateral == 0) revert NoCollateral();
 
-        // Convert collateral to loan token terms using the adapter's live quote.
-        // quoteOut(WAD) gives loan tokens per 1e18 collateral, so we invert.
         uint256 collateralInLoanTerms = _collateralToLoanTerms(market, totalCollateral);
         uint256 netEquity = collateralInLoanTerms - existingDebt;
         uint256 currentLeverage = collateralInLoanTerms.mulDiv(WAD, netEquity);
@@ -280,7 +276,6 @@ contract LoopingFacility is AccessManaged, ReentrancyGuardTransient, IMorphoFlas
         emit Unwound(marketId, msg.sender, cb.remainingCollateral, cb.remainingDebt, targetLeverage);
     }
 
-    /// @dev Pure computation — separated from unwind() to avoid a stack-too-deep error.
     function _buildUnwindData(Id marketId, address user, uint256 targetLeverage)
         private
         view
