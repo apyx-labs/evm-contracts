@@ -21,6 +21,7 @@ abis/
 # Generated docs (natspec etc.) — but not audit reports
 docs/*
 !docs/audit
+!docs/runbooks
 book
 
 # Local deployment files

@@ -382,6 +382,11 @@ contract ApyUSD is
      * @notice Sets the Vesting contract
      * @dev Only callable through AccessManager with ADMIN_ROLE
      * @dev Setting to address(0) removes the vesting contract
+     * @dev Vesting rotations must preserve outstanding yield. If the old vesting contract
+     *      still holds vested or unvested yield, the new vesting contract should compose
+     *      the old vesting contract and pull from it until it is fully vested. Perform the
+     *      rotation atomically with the beneficiary updates described in the vesting
+     *      rotation runbook to avoid a temporary totalAssets() discontinuity.
      * @param newVesting The new Vesting contract (can be address(0) to remove)
      */
     function setVesting(IVesting newVesting) external restricted {

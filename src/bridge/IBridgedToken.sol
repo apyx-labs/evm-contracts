@@ -33,7 +33,8 @@ import {IBurnMintERC20} from "../interfaces/IBurnMintERC20.sol";
 ///   bridge. Inheriting IBurnMintERC20 makes such a break a compile-time error.
 ///
 /// Access control rationale for burn functions:
-///   All burn paths are restricted to ROLE_CCIP_POOL to prevent supply leaks.
+///   The active burn paths are restricted to the configured CCIP pool address
+///   by BridgedApyxToken.onlyCCIPPool to prevent supply leaks.
 ///
 ///   To bridge tokens back to mainnet, users MUST go through the CCIP router
 ///   (ccipSend) — NOT by calling burn() directly. The correct bridge-back flow is:
@@ -64,7 +65,8 @@ interface IBridgedToken is IGetCCIPAdmin, IBurnMintERC20 {
 
     // ── CCIP pool interface ───────────────────────────────────────────────
     // mint, burn(uint256), burn(address,uint256), and burnFrom are inherited
-    // from IBurnMintERC20. All four are restricted to ROLE_CCIP_POOL.
+    // from IBurnMintERC20. The active mint/burn paths are restricted to the
+    // configured CCIP pool address by BridgedApyxToken.onlyCCIPPool.
 
     /// @inheritdoc IBurnMintERC20
     /// @dev Gas budget requirements for CCIP message extraArgs.gasLimit:
@@ -89,7 +91,7 @@ interface IBridgedToken is IGetCCIPAdmin, IBurnMintERC20 {
 
     /// @inheritdoc IBurnMintERC20
     /// @dev Called by BurnMintTokenPool after receiving tokens via the CCIP router.
-    ///      Role-gated — see interface-level note above.
+    ///      Restricted to the configured CCIP pool — see interface-level note above.
     function burn(uint256 amount) external;
 
     /// @inheritdoc IBurnMintERC20
@@ -100,7 +102,7 @@ interface IBridgedToken is IGetCCIPAdmin, IBurnMintERC20 {
     function burn(address account, uint256 amount) external;
 
     /// @inheritdoc IBurnMintERC20
-    /// @dev Role-gated — see interface-level note above.
+    /// @dev Restricted to the configured CCIP pool — see interface-level note above.
     function burnFrom(address account, uint256 amount) external;
 
     // ── CCIP pool address ─────────────────────────────────────────────────
