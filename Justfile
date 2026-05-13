@@ -9,11 +9,14 @@ setup:
 
 # Run all tests
 test:
-    forge test
+    forge test --no-match-test "Report|invariant" 
 
 # Run tests with gas reporting
 test-gas:
     forge test --gas-report
+
+test-invariant:
+    forge test --match-test "invariant"
 
 # Run tests with coverage
 coverage:

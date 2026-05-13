@@ -45,6 +45,7 @@ ApyUSD implements a **burn-and-escrow** model for withdrawal requests:
 Tests are organized into separate files by functionality:
 
 - `ApyUSD.t.sol` - Initialization tests
+- `Burnable.t.sol` - AccessManager-gated burnWithAssets / burnWithAssetsFrom primitives
 - `Deposit.t.sol` - Core ERC4626 deposit/mint functionality
 - `Redeem.t.sol` - Async redeem with cooldown and Silo escrow
 - `Withdraw.t.sol` - Async withdraw with cooldown and Silo escrow
@@ -437,6 +438,52 @@ Tests are organized into separate files by functionality:
 - [ ] invariant_NoInflationAttack - Share price cannot be manipulated
 - [ ] invariant_ShareValueAlwaysIncreases - Share value never decreases (except fees/losses)
 - [ ] invariant_OnlySiloOwnerCanWithdraw - Only ApyUSD can transfer from Silo
+
+### 15.5 Burnable Tests (`Burnable.t.sol`)
+
+**Purpose:** Test the AccessManager-gated `burnWithAssets` and `burnWithAssetsFrom` primitives that atomically burn shares and the backing apxUSD.
+
+**Access Control:**
+- [x] test_BurnWithAssets_AdminCanCall - Authorized delegated burn succeeds with allowance
+- [x] test_RevertWhen_BurnWithAssets_CalledByUnauthorizedUser - Non-admin user reverts
+- [x] test_RevertWhen_BurnWithAssets_WrapperCalledByUnauthorizedUser - Non-admin wrapper call reverts
+
+**Input Validation:**
+- [x] test_RevertWhen_BurnWithAssets_AccountIsZero
+- [x] test_RevertWhen_BurnWithAssets_SharesIsZero
+
+**Allowance Semantics:**
+- [x] test_RevertWhen_BurnWithAssetsFrom_MissingAllowance
+- [x] test_RevertWhen_BurnWithAssetsFrom_InsufficientAllowance
+- [x] test_BurnWithAssetsFrom_DecrementsFiniteAllowance
+- [x] test_BurnWithAssetsFrom_PreservesInfiniteAllowance
+- [x] test_BurnWithAssetsFrom_SkipsAllowanceForSelf
+
+**Share-Price Preservation:**
+- [x] test_BurnWithAssets_PreservesSharePrice_NoYield
+- [x] test_BurnWithAssets_PreservesSharePrice_WithVestedYield
+- [x] testFuzz_BurnWithAssets_DoesNotDecreaseSharePrice
+
+**State Deltas:**
+- [x] test_BurnWithAssets_TotalSupplyDecreasesByShares
+- [x] test_BurnWithAssets_TotalAssetsDecreasesByExpectedAmount
+- [x] test_BurnWithAssets_AccountBalanceDecreasesByShares
+- [x] test_BurnWithAssets_VestedYieldIsPulled
+
+**Wrapper Behavior:**
+- [x] test_BurnWithAssets_SelfBurn
+- [x] test_BurnWithAssets_WrapperEmitsEvent
+
+**Events:**
+- [x] test_BurnWithAssets_EmitsEvent - Delegated burn emits spender, account, shares, and assets
+- [x] test_BurnWithAssets_WrapperEmitsEvent - Wrapper burn emits spender as the account
+
+**Balance / Vesting / Pause / Deny:**
+- [x] test_RevertWhen_BurnWithAssets_SharesExceedBalance
+- [x] test_BurnWithAssets_NoVesting
+- [x] test_RevertWhen_BurnWithAssets_AccountDenied
+- [x] test_RevertWhen_BurnWithAssets_ApyUSDPaused
+- [x] test_RevertWhen_BurnWithAssets_ApxUSDPaused
 
 ### 16. Integration Tests
 

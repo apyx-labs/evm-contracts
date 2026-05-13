@@ -10,11 +10,14 @@ contract VaultHandler is BaseHandler {
     uint256 public ghost_totalDeposited;
     uint256 public ghost_totalWithdrawnToUnlock;
     uint256 public ghost_totalClaimed;
+    uint256 public ghost_totalBurnedShares;
+    uint256 public ghost_totalBurnedAssets;
 
     constructor(ApxUSD _apxUSD, ApyUSD _apyUSD, UnlockToken _unlockToken) {
         apxUSD = _apxUSD;
         apyUSD = _apyUSD;
         unlockToken = _unlockToken;
+        admin = makeAddr("admin");
     }
 
     function deposit(uint256 actorIndex, uint256 assets) public useActor(actorIndex) skipZeroBalance(address(apxUSD)) {
@@ -44,5 +47,21 @@ contract VaultHandler is BaseHandler {
         uint256 assets = unlockToken.redeem(claimable, currentActor.addr, currentActor.addr);
 
         ghost_totalClaimed += assets;
+    }
+
+    function burnWithAssets(uint256 actorIndex) public useActor(actorIndex) skipSmallBalance(address(apyUSD)) {
+        uint256 balance = apyUSD.balanceOf(currentActor.addr);
+        uint256 shares = balance / 10;
+
+        uint256 expectedAssets = apyUSD.convertToAssets(shares);
+
+        vm.prank(currentActor.addr);
+        apyUSD.approve(admin, shares);
+
+        vm.prank(admin);
+        apyUSD.burnWithAssetsFrom(currentActor.addr, shares);
+
+        ghost_totalBurnedShares += shares;
+        ghost_totalBurnedAssets += expectedAssets;
     }
 }

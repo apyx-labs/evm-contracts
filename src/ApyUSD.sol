@@ -8,6 +8,9 @@ import {
 import {
     ERC20PausableUpgradeable
 } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20PausableUpgradeable.sol";
+import {
+    ERC20BurnableUpgradeable
+} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import {ERC4626Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC4626Upgradeable.sol";
 import {
     AccessManagedUpgradeable
@@ -599,5 +602,47 @@ contract ApyUSD is
      */
     function unpause() external restricted {
         _unpause();
+    }
+
+    // ========================================
+    // Burn
+    // ========================================
+
+    /// @inheritdoc IApyUSD
+    function burnWithAssets(uint256 shares) external restricted {
+        _burnWithAssets(_msgSender(), _msgSender(), shares);
+    }
+
+    /// @inheritdoc IApyUSD
+    function burnWithAssetsFrom(address account, uint256 shares) external restricted {
+        _burnWithAssets(account, _msgSender(), shares);
+    }
+
+    function _burnWithAssets(address account, address spender, uint256 shares) internal {
+        // Validate before spending allowance or changing state.
+        if (account == address(0)) revert InvalidAddress("account");
+        if (shares == 0) revert InvalidAmount("shares", 0);
+
+        // Delegated burns require standard ERC20 allowance.
+        if (account != spender) {
+            _spendAllowance(account, spender, shares);
+        }
+        ApyUSDStorage storage $ = _getApyUSDStorage();
+
+        // Pull vested yield so liquid assets match totalAssets().
+        if (address($.vesting) != address(0)) {
+            $.vesting.pullVestedYield();
+        }
+        // Compute assets before burning shares to preserve share price.
+        uint256 assets = convertToAssets(shares);
+
+        // Burn shares through ApyUSD pause and deny-list hooks.
+        super._burn(account, shares);
+
+        // Burn backing apxUSD through asset token hooks.
+        ERC20BurnableUpgradeable(asset()).burn(assets);
+
+        // Log the spender, burned account, shares, and backing assets.
+        emit BurnWithAssets(spender, account, shares, assets);
     }
 }
