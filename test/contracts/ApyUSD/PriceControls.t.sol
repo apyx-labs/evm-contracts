@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {console2 as console} from "forge-std/src/console2.sol";
-
 import {Formatter} from "../../utils/Formatter.sol";
 import {ApyUSDTest} from "./BaseTest.sol";
 import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
@@ -12,6 +10,16 @@ import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
  * @notice Tests for ApyUSD price control functions
  */
 contract ApyUSDPriceControlsTest is ApyUSDTest {
+    function setUp() public override {
+        super.setUp();
+        // Reset the prod-target unlockingFee so the slippage assertions in
+        // this file can use 1:1 share/asset math (e.g. `maxShares ==
+        // withdrawAmount`). Fee mechanics are covered separately in
+        // `Fees.t.sol`.
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0);
+    }
+
     using Formatter for uint256;
 
     // ========================================
@@ -165,6 +173,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         uint256 withdrawAmount = MEDIUM_AMOUNT / 2;
         uint256 maxShares = withdrawAmount; // Expect 1:1
+        uint256 expectedTokenId = _peekNextReceiptId() + 1;
 
         // Perform withdrawal with price control
         vm.startPrank(alice);
@@ -175,8 +184,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         assertLe(shares, maxShares, "Shares burned should not exceed maxShares");
         // Alice should have remaining shares
         assertEq(apyUSD.balanceOf(alice), depositAmount - shares, "Alice should have remaining shares");
-        // Alice should have UnlockToken shares
-        assertEq(unlockToken.balanceOf(alice), withdrawAmount, "Alice should have UnlockToken shares");
+        _assertReceipt(expectedTokenId, alice, withdrawAmount);
     }
 
     function test_RevertWhen_WithdrawForMaxShares_WithDifferentReceiver() public {
@@ -187,8 +195,9 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         uint256 withdrawAmount = MEDIUM_AMOUNT / 2;
         uint256 maxShares = withdrawAmount;
 
-        // Alice tries to withdraw but have Bob receive the UnlockToken shares
-        // This should revert because receiver != owner
+        // Alice tries to withdraw with Bob as receiver. This should revert because
+        // ApyUSD enforces `receiver == owner` to prevent third parties from
+        // siphoning UnlockReceipts to themselves.
         vm.startPrank(alice);
         vm.expectRevert();
         apyUSD.withdrawForMaxShares(withdrawAmount, maxShares, bob);
@@ -224,13 +233,14 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         depositApxUSD(alice, depositAmount);
 
         uint256 maxShares = apyUSD.previewWithdraw(withdrawAmount) + 1e18; // Add buffer
+        uint256 expectedTokenId = _peekNextReceiptId() + 1;
 
         vm.startPrank(alice);
         uint256 shares = apyUSD.withdrawForMaxShares(withdrawAmount, maxShares, alice);
         vm.stopPrank();
 
         assertLe(shares, maxShares, "Shares burned should not exceed maxShares");
-        assertEq(unlockToken.balanceOf(alice), withdrawAmount, "Alice should have UnlockToken shares");
+        _assertReceipt(expectedTokenId, alice, withdrawAmount);
     }
 
     // ========================================
@@ -244,6 +254,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         uint256 sharesToRedeem = MEDIUM_AMOUNT / 2;
         uint256 minAssets = sharesToRedeem; // Expect 1:1
+        uint256 expectedTokenId = _peekNextReceiptId() + 1;
 
         // Perform redemption with price control
         vm.startPrank(alice);
@@ -254,8 +265,7 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         assertGe(assets, minAssets, "Assets received should be at least minAssets");
         // Alice should have remaining shares
         assertEq(apyUSD.balanceOf(alice), depositAmount - sharesToRedeem, "Alice should have remaining shares");
-        // Alice should have UnlockToken shares
-        assertEq(unlockToken.balanceOf(alice), assets, "Alice should have UnlockToken shares");
+        _assertReceipt(expectedTokenId, alice, assets);
     }
 
     function test_RevertWhen_RedeemForMinAssets_WithDifferentReceiver() public {
@@ -266,8 +276,9 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
         uint256 sharesToRedeem = MEDIUM_AMOUNT / 2;
         uint256 minAssets = sharesToRedeem;
 
-        // Alice tries to redeem but have Bob receive the UnlockToken shares
-        // This should revert because receiver != owner
+        // Alice tries to redeem with Bob as receiver. This should revert because
+        // ApyUSD enforces `receiver == owner` to prevent third parties from
+        // siphoning UnlockReceipts to themselves.
         vm.startPrank(alice);
         vm.expectRevert();
         apyUSD.redeemForMinAssets(sharesToRedeem, minAssets, bob);
@@ -303,13 +314,14 @@ contract ApyUSDPriceControlsTest is ApyUSDTest {
 
         uint256 expectedAssets = apyUSD.previewRedeem(sharesToRedeem);
         uint256 minAssets = expectedAssets > 1e18 ? expectedAssets - 1e18 : 0; // Subtract buffer
+        uint256 expectedTokenId = _peekNextReceiptId() + 1;
 
         vm.startPrank(alice);
         uint256 assets = apyUSD.redeemForMinAssets(sharesToRedeem, minAssets, alice);
         vm.stopPrank();
 
         assertGe(assets, minAssets, "Assets received should be at least minAssets");
-        assertEq(unlockToken.balanceOf(alice), assets, "Alice should have UnlockToken shares");
+        _assertReceipt(expectedTokenId, alice, assets);
     }
 
     // ========================================

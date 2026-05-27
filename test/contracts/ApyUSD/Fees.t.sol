@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {console2 as console} from "forge-std/src/console2.sol";
-
 import {Formatter} from "../../utils/Formatter.sol";
 import {ApyUSDTest} from "./BaseTest.sol";
 import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
@@ -19,6 +17,12 @@ contract ApyUSDFeesTest is ApyUSDTest {
 
     function setUp() public override {
         super.setUp();
+        // Reset the unlockingFee BaseTest seeds with the prod target (10 bps) -
+        // every test in this file owns its own fee configuration, asserts
+        // event-emit `oldFee` values starting from zero, and the `_NoFee` tests
+        // would otherwise fail.
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0);
     }
 
     // ========================================
@@ -172,12 +176,11 @@ contract ApyUSDFeesTest is ApyUSDTest {
         vm.prank(admin);
         apyUSD.setFeeWallet(feeRecipient);
 
-        // Alice withdraws 1000 assets (what she'll receive in UnlockToken)
+        // Alice withdraws 1000 assets (what she'll receive in the UnlockReceipt)
         uint256 assetsToReceive = 1000e18;
         uint256 feeRecipientBalanceBefore = apxUSD.balanceOf(feeRecipient);
 
-        vm.prank(alice);
-        uint256 shares = apyUSD.withdraw(assetsToReceive, alice, alice);
+        (uint256 shares, uint256 tokenId) = _withdrawForReceipt(assetsToReceive, alice);
 
         // Check fee was transferred to fee wallet
         // Fee = 1000 * 0.01 = 10
@@ -190,8 +193,10 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // Check Alice's shares were burned (1000 + 10 = 1010)
         assertEq(shares, 1010e18, "Correct shares should be burned");
 
-        // Check UnlockToken received exactly assetsToReceive
-        assertEq(unlockToken.balanceOf(alice), assetsToReceive, "Alice should receive correct assets in UnlockToken");
+        // Check the UnlockReceipt escrowed exactly assetsToReceive (the post-vault-fee net)
+        (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+        assertEq(escrowed, assetsToReceive, "Receipt should escrow the post-vault-fee net");
+        assertEq(unlockReceipt.ownerOf(tokenId), alice, "Alice should own the receipt");
     }
 
     function test_Withdraw_WithFee_NoFeeWalletSet() public {
@@ -210,9 +215,9 @@ contract ApyUSDFeesTest is ApyUSDTest {
         vm.prank(alice);
         apyUSD.withdraw(assetsToReceive, alice, alice);
 
-        // Fee should remain in vault since fee wallet is not set
-        // Vault started with depositAmount, sends out assetsToReceive to UnlockToken
-        // Fee (10e18) should stay in the vault
+        // Fee should remain in vault since fee wallet is not set.
+        // Vault started with depositAmount, sends `assetsToReceive` to UnlockReceipt
+        // for escrow; the 10e18 fee stays in the vault.
         // Expected vault balance = depositAmount - assetsToReceive
         uint256 vaultBalanceAfter = apxUSD.balanceOf(address(apyUSD));
         uint256 expectedVaultBalance = depositAmount - assetsToReceive;
@@ -253,7 +258,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
 
         // Alice withdraws 1,000 assets
         // Expected: Alice pays 1,000 + 10 (fee) = 1,010 in shares
-        // Vault receives 1,010 assets, sends 1,000 to UnlockToken, retains 10 as fee
+        // Vault receives 1,010 assets, escrows 1,000 in UnlockReceipt, retains 10 as fee
         uint256 assetsToReceive = 1000e18;
         uint256 expectedFee = 10e18; // 1% of 1000
 
@@ -344,8 +349,7 @@ contract ApyUSDFeesTest is ApyUSDTest {
         uint256 sharesToRedeem = 1010e18;
         uint256 feeRecipientBalanceBefore = apxUSD.balanceOf(feeRecipient);
 
-        vm.prank(alice);
-        uint256 assets = apyUSD.redeem(sharesToRedeem, alice, alice);
+        (uint256 assets, uint256 tokenId) = _redeemForReceipt(sharesToRedeem, alice);
 
         // At 1:1 rate: 1010 shares = 1010 assets before fee
         // Fee on total = 1010 * 0.01 / 1.01 ≈ 10
@@ -364,13 +368,10 @@ contract ApyUSDFeesTest is ApyUSDTest {
             "Fee should be transferred to fee wallet"
         );
 
-        // Check UnlockToken received the correct amount
-        assertApproxEqRel(
-            unlockToken.balanceOf(alice),
-            expectedAssets,
-            0.0001e18,
-            "Alice should receive correct assets in UnlockToken"
-        );
+        // Check the UnlockReceipt escrowed the correct post-vault-fee net
+        (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+        assertApproxEqRel(escrowed, expectedAssets, 0.0001e18, "Receipt should escrow the post-vault-fee net");
+        assertEq(unlockReceipt.ownerOf(tokenId), alice, "Alice should own the receipt");
     }
 
     function test_Redeem_NoFee() public {
@@ -573,12 +574,12 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // Withdraw very small amount
         uint256 assetsToReceive = 1; // 1 wei
 
-        vm.prank(alice);
-        uint256 shares = apyUSD.withdraw(assetsToReceive, alice, alice);
+        (uint256 shares, uint256 tokenId) = _withdrawForReceipt(assetsToReceive, alice);
 
         // Even with very small amounts, should work correctly
         assertGt(shares, 0, "Should burn some shares");
-        assertEq(unlockToken.balanceOf(alice), assetsToReceive, "Should receive correct amount in UnlockToken");
+        (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+        assertEq(escrowed, assetsToReceive, "Receipt should escrow the requested amount");
     }
 
     function test_Redeem_AllShares_WithFee() public {
@@ -592,8 +593,13 @@ contract ApyUSDFeesTest is ApyUSDTest {
         vm.prank(admin);
         apyUSD.setFeeWallet(feeRecipient);
 
-        // Redeem all shares
+        // Redeem all shares using the canonical pattern: redeem(previewRedeem-derived
+        // userShares, alice, alice). The escrow must land on the UnlockReceipt
+        // contract — this is the per-call delta assertion the invariants only
+        // cover in aggregate.
         uint256 allShares = apyUSD.balanceOf(alice);
+        uint256 previewed = apyUSD.previewRedeem(allShares);
+        uint256 receiptBalanceBefore = apxUSD.balanceOf(address(unlockReceipt));
 
         vm.prank(alice);
         uint256 assets = apyUSD.redeem(allShares, alice, alice);
@@ -601,7 +607,17 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // All shares should be burned
         assertEq(apyUSD.balanceOf(alice), 0, "All shares should be burned");
 
-        // Assets should be received (minus fee)
+        // Round-trip: redeem return value matches the upstream `previewRedeem` quote.
+        assertEq(assets, previewed, "redeem return value matches previewRedeem");
+
+        // UnlockReceipt's apxUSD balance grew by exactly the redeemed assets.
+        assertEq(
+            apxUSD.balanceOf(address(unlockReceipt)) - receiptBalanceBefore,
+            assets,
+            "redeemed apxUSD lands on UnlockReceipt"
+        );
+
+        // Existing weak invariants kept for readability.
         assertGt(assets, 0, "Should receive some assets");
         assertLt(assets, allShares, "Assets should be less than shares due to fee");
     }
@@ -627,9 +643,9 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // The fee stays in the vault naturally
         uint256 vaultBalanceAfter = apxUSD.balanceOf(address(apyUSD));
 
-        // The vault balance change should reflect assets sent to UnlockToken
-        // but the fee logic should prevent a self-transfer
-        assertGt(vaultBalanceBefore, vaultBalanceAfter, "Vault should have sent assets to UnlockToken");
+        // The vault balance change should reflect assets escrowed in UnlockReceipt;
+        // the fee logic should prevent a self-transfer to the vault.
+        assertGt(vaultBalanceBefore, vaultBalanceAfter, "Vault should have sent assets to UnlockReceipt");
     }
 
     // ========================================
@@ -668,17 +684,21 @@ contract ApyUSDFeesTest is ApyUSDTest {
         // Step 1: Withdraw withdrawAssets => get burnShares
         // Bound to minimum of 1 to avoid zero-value requests which are now properly rejected
         withdrawAssets = bound(withdrawAssets, 1, apyUSD.previewRedeem(aliceShares));
-        uint256 burnShares = withdrawApxUSD(withdrawAssets, alice, alice);
+        (uint256 burnShares, uint256 aliceTokenId) = _withdrawForReceipt(withdrawAssets, alice);
 
-        // Record what Alice received in UnlockToken
-        uint256 aliceUnlockTokenBalance = unlockToken.balanceOf(alice);
-        assertEq(aliceUnlockTokenBalance, withdrawAssets, "Alice should have received withdrawAssets in UnlockToken");
+        // Record what Alice received in the UnlockReceipt
+        (uint208 aliceEscrowed,,,) = unlockReceipt.getReceipt(aliceTokenId);
+        assertEq(
+            aliceEscrowed,
+            withdrawAssets,
+            "Receipt should escrow withdrawAssets (the post-vault-fee net Alice requested)"
+        );
 
         // Step 2: Bob deposits the same amount as Alice originally did
         depositApxUSD(bob, depositAmount);
 
         // Step 3: Bob redeems the same number of shares that were burned from Alice
-        uint256 bobAssetsOut = redeemApyUSD(burnShares, bob, bob);
+        (uint256 bobAssetsOut,) = _redeemForReceipt(burnShares, bob);
 
         // The assets Bob receives should equal the assets Alice withdrew
         assertEq(withdrawAssets, bobAssetsOut, "Redeeming the burned shares should yield the same assets");

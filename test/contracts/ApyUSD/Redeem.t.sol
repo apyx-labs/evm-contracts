@@ -1,30 +1,39 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {console2 as console} from "forge-std/src/console2.sol";
-
 import {Formatter} from "../../utils/Formatter.sol";
 import {ApyUSDTest} from "./BaseTest.sol";
 
 /**
  * @title ApyUSDRedeemTest
- * @notice Tests for ApyUSD redeem and withdraw functionality with UnlockToken
- * @dev Tests the flow: ApyUSD.withdraw() -> UnlockToken.requestRedeem() -> UnlockToken.redeem()
+ * @notice Multi-user withdraw / redeem regression coverage for ApyUSD's UnlockReceipt flow.
+ * @dev    Each user gets their own UnlockReceipt NFT — no shared accounting state can
+ *         cross-contaminate between users. This file pins down that invariant and
+ *         is named after the original issue (apyx-labs/evm-contracts#11) which surfaced
+ *         the bug in the legacy UnlockToken integration.
  */
 contract ApyUSDRedeemTest is ApyUSDTest {
     using Formatter for uint256;
+
+    function setUp() public override {
+        super.setUp();
+        // Reset the prod-target unlockingFee so the per-user share/asset math
+        // is 1:1; this file's purpose is to verify multi-user isolation, not
+        // fee semantics.
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0);
+    }
 
     // ========================================
     // Multi-User Withdrawal Tests
     // ========================================
 
     /**
-     * @notice Test demonstrating the issue where first user can withdraw
-     * but second and third users fail due to incorrect address accounting
-     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
+     * @notice Three users withdraw concurrently; each must mint their own UnlockReceipt
+     *         with the requested escrowed amount and exclusive ownership.
+     * @dev    https://github.com/apyx-labs/evm-contracts/issues/11
      */
     function test_issue_0011_MultiUserWithdrawal() public {
-        // Setup: Three users deposit apxUSD into apyUSD
         uint256 aliceDepositAmount = MEDIUM_AMOUNT;
         uint256 bobDepositAmount = MEDIUM_AMOUNT;
         uint256 charlieDepositAmount = MEDIUM_AMOUNT;
@@ -33,40 +42,32 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 bobShares = depositApxUSD(bob, bobDepositAmount);
         uint256 charlieShares = depositApxUSD(charlie, charlieDepositAmount);
 
-        // Alice wants to withdraw - this should work
-        uint256 aliceWithdrawAmount = aliceDepositAmount;
-        uint256 aliceSharesRedeemed = withdrawApxUSD(aliceWithdrawAmount, alice, alice);
-
-        // Verify Alice received unlockToken shares
-        assertEq(unlockToken.balanceOf(alice), aliceWithdrawAmount, "Alice should receive unlockToken shares");
-        assertEq(aliceShares, aliceSharesRedeemed, "Alice should receive the same number of shares as they minted");
+        (uint256 aliceSharesRedeemed, uint256 aliceTokenId) = _withdrawForReceipt(aliceDepositAmount, alice);
+        _assertReceipt(aliceTokenId, alice, aliceDepositAmount);
+        assertEq(aliceShares, aliceSharesRedeemed, "Alice should burn the same shares she minted");
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
 
-        // Bob wants to withdraw - this should succeed when bug is fixed
-        uint256 bobWithdrawAmount = bobDepositAmount;
-        uint256 bobSharesRedeemed = withdrawApxUSD(bobWithdrawAmount, bob, bob);
-
-        assertEq(unlockToken.balanceOf(bob), bobWithdrawAmount, "Bob should receive unlockToken shares");
-        assertEq(bobShares, bobSharesRedeemed, "Bob should receive the same number of shares as they minted");
+        (uint256 bobSharesRedeemed, uint256 bobTokenId) = _withdrawForReceipt(bobDepositAmount, bob);
+        _assertReceipt(bobTokenId, bob, bobDepositAmount);
+        assertEq(bobShares, bobSharesRedeemed, "Bob should burn the same shares he minted");
         assertEq(apyUSD.balanceOf(bob), 0, "Bob apyUSD shares should be burned");
 
-        // Charlie wants to withdraw - this should also succeed when bug is fixed
-        uint256 charlieWithdrawAmount = charlieDepositAmount;
-        uint256 charlieSharesRedeemed = withdrawApxUSD(charlieWithdrawAmount, charlie, charlie);
-
-        assertEq(unlockToken.balanceOf(charlie), charlieWithdrawAmount, "Charlie should receive unlockToken shares");
-        assertEq(
-            charlieShares, charlieSharesRedeemed, "Charlie should receive the same number of shares as they minted"
-        );
+        (uint256 charlieSharesRedeemed, uint256 charlieTokenId) = _withdrawForReceipt(charlieDepositAmount, charlie);
+        _assertReceipt(charlieTokenId, charlie, charlieDepositAmount);
+        assertEq(charlieShares, charlieSharesRedeemed, "Charlie should burn the same shares he minted");
         assertEq(apyUSD.balanceOf(charlie), 0, "Charlie apyUSD shares should be burned");
+
+        // Cross-user isolation: each receipt is distinct and each user owns
+        // exactly their own.
+        assertTrue(aliceTokenId != bobTokenId, "Alice and Bob should hold distinct receipts");
+        assertTrue(bobTokenId != charlieTokenId, "Bob and Charlie should hold distinct receipts");
     }
 
     /**
-     * @notice Test demonstrating the issue with redeem() function as well
-     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
+     * @notice Same multi-user invariant via the redeem() entrypoint instead of withdraw().
+     * @dev    https://github.com/apyx-labs/evm-contracts/issues/11
      */
     function test_issue_0011_MultiUserRedeem() public {
-        // Setup: Three users deposit apxUSD into apyUSD
         uint256 aliceDepositAmount = MEDIUM_AMOUNT;
         uint256 bobDepositAmount = MEDIUM_AMOUNT;
         uint256 charlieDepositAmount = MEDIUM_AMOUNT;
@@ -75,54 +76,41 @@ contract ApyUSDRedeemTest is ApyUSDTest {
         uint256 bobShares = depositApxUSD(bob, bobDepositAmount);
         uint256 charlieShares = depositApxUSD(charlie, charlieDepositAmount);
 
-        // Alice wants to redeem - this should work
-        uint256 aliceAssetsReceived = redeemApyUSD(aliceShares, alice, alice);
-
-        // Verify Alice received unlockToken shares
-        assertEq(unlockToken.balanceOf(alice), aliceAssetsReceived, "Alice should receive unlockToken shares");
-        assertEq(
-            aliceAssetsReceived, aliceDepositAmount, "Alice should receive the same number of assets as they deposited"
-        );
+        (uint256 aliceAssetsReceived, uint256 aliceTokenId) = _redeemForReceipt(aliceShares, alice);
+        _assertReceipt(aliceTokenId, alice, aliceAssetsReceived);
+        assertEq(aliceAssetsReceived, aliceDepositAmount, "Alice's redeem should yield her full deposit (no fee)");
         assertEq(apyUSD.balanceOf(alice), 0, "Alice apyUSD shares should be burned");
 
-        // Bob wants to redeem - this should succeed when bug is fixed
-        uint256 bobAssetsReceived = redeemApyUSD(bobShares, bob, bob);
-
-        assertEq(unlockToken.balanceOf(bob), bobDepositAmount, "Bob should receive unlockToken shares");
-        assertEq(bobAssetsReceived, bobDepositAmount, "Bob should receive the same number of assets as they deposited");
+        (uint256 bobAssetsReceived, uint256 bobTokenId) = _redeemForReceipt(bobShares, bob);
+        _assertReceipt(bobTokenId, bob, bobDepositAmount);
+        assertEq(bobAssetsReceived, bobDepositAmount, "Bob's redeem should yield his full deposit");
         assertEq(apyUSD.balanceOf(bob), 0, "Bob apyUSD shares should be burned");
 
-        // Charlie wants to redeem - this should also succeed when bug is fixed
-        uint256 charlieAssetsReceived = redeemApyUSD(charlieShares, charlie, charlie);
-
-        assertEq(unlockToken.balanceOf(charlie), charlieDepositAmount, "Charlie should receive unlockToken shares");
-        assertEq(
-            charlieAssetsReceived,
-            charlieDepositAmount,
-            "Charlie should receive the same number of assets as they deposited"
-        );
+        (uint256 charlieAssetsReceived, uint256 charlieTokenId) = _redeemForReceipt(charlieShares, charlie);
+        _assertReceipt(charlieTokenId, charlie, charlieDepositAmount);
+        assertEq(charlieAssetsReceived, charlieDepositAmount, "Charlie's redeem should yield his full deposit");
         assertEq(apyUSD.balanceOf(charlie), 0, "Charlie apyUSD shares should be burned");
+
+        assertTrue(aliceTokenId != bobTokenId, "Alice and Bob should hold distinct receipts");
+        assertTrue(bobTokenId != charlieTokenId, "Bob and Charlie should hold distinct receipts");
     }
 
     /**
-     * @notice Test showing the accounting issue with pendingRedeemRequest in CommitToken
-     * @dev https://github.com/apyx-labs/evm-contracts/issues/11
+     * @notice Receipt is owned by the withdrawing user, never by ApyUSD itself.
+     * @dev    Replaces the legacy `pendingRedeemRequest` accounting check from
+     *         apyx-labs/evm-contracts#11. The receipt-flow makes this property
+     *         structural — `_withdraw` mints to `receiver` (== `owner`) — so the
+     *         test is now a one-line assertion plus an additional zero-balance
+     *         check that ApyUSD itself never holds receipts.
      */
-    function test_issue_0011_PendingRedeemRequest() public {
-        // Setup
+    function test_issue_0011_ReceiptOwnedByWithdrawer() public {
         uint256 depositAmount = MEDIUM_AMOUNT;
-
         depositApxUSD(alice, depositAmount);
 
-        // Alice withdraws
-        uint256 aliceAssetsReceived = withdrawApxUSD(depositAmount, alice, alice);
+        (, uint256 aliceTokenId) = _withdrawForReceipt(depositAmount, alice);
 
-        // Check the pending redeem request - should be under alice, not apyUSD
-        uint256 alicePendingRequest = unlockToken.pendingRedeemRequest(0, alice);
-        uint256 apyUSDPendingRequest = unlockToken.pendingRedeemRequest(0, address(apyUSD));
-
-        // Test should FAIL until bug is fixed - request should be under alice, not apyUSD
-        assertEq(alicePendingRequest, aliceAssetsReceived, "Alice should have a pending redeem request");
-        assertEq(apyUSDPendingRequest, 0, "ApyUSD contract should not have a pending request");
+        _assertReceipt(aliceTokenId, alice, depositAmount);
+        assertEq(unlockReceipt.balanceOf(alice), 1, "Alice should hold exactly one receipt");
+        assertEq(unlockReceipt.balanceOf(address(apyUSD)), 0, "ApyUSD must never hold receipts");
     }
 }

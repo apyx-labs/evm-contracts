@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.30;
 
-import {console2 as console} from "forge-std/src/console2.sol";
 import {BaseTest} from "../../BaseTest.sol";
 import {Errors} from "../../utils/Errors.sol";
 
@@ -209,40 +208,6 @@ contract UnlockTokenAccessControlTest is BaseTest {
         // Verify redemption succeeded
         assertEq(assets, depositAmount, "Assets should match deposit amount");
         assertEq(apxUSD.balanceOf(alice), aliceBalanceBefore + depositAmount, "Alice should have received ApxUSD");
-        assertEq(unlockToken.balanceOf(alice), 0, "Alice should have no UnlockToken shares");
-    }
-
-    // ========================================
-    // End-to-End Test with ApyUSD
-    // ========================================
-
-    function test_EndToEnd_ApyUSDRedemption() public {
-        uint256 depositAmount = MEDIUM_AMOUNT;
-
-        // Mint ApxUSD to alice
-        mintApxUSD(alice, depositAmount);
-
-        // Step 1: Alice deposits ApxUSD into ApyUSD
-        uint256 apyShares = depositApxUSD(alice, depositAmount);
-        assertEq(apyUSD.balanceOf(alice), apyShares, "Alice should have apyUSD shares");
-
-        // Step 2: Alice redeems from ApyUSD (this should deposit to UnlockToken)
-        vm.prank(alice);
-        uint256 assetsRedeemed = apyUSD.redeem(apyShares, alice, alice);
-
-        // Verify UnlockToken shares were created
-        assertEq(unlockToken.balanceOf(alice), assetsRedeemed, "Alice should have UnlockToken shares");
-        assertEq(apyUSD.balanceOf(alice), 0, "Alice should have no apyUSD shares");
-
-        // Step 3: Fast forward past the unlocking delay
-        vm.warp(block.timestamp + UNLOCKING_DELAY + 1);
-
-        // Step 4: Alice claims from UnlockToken
-        vm.prank(alice);
-        unlockToken.redeem(assetsRedeemed, alice, alice);
-
-        // Verify final state
-        assertEq(apxUSD.balanceOf(alice), assetsRedeemed, "Alice should have received ApxUSD back");
         assertEq(unlockToken.balanceOf(alice), 0, "Alice should have no UnlockToken shares");
     }
 }

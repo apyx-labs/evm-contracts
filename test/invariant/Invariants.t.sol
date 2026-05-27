@@ -4,7 +4,6 @@ pragma solidity 0.8.30;
 import {StdInvariant} from "forge-std/src/StdInvariant.sol";
 
 import {BaseTest} from "../BaseTest.sol";
-import {BaseHandler} from "./BaseHandler.sol";
 import {MintHandler} from "./MintHandler.sol";
 import {ApxUSDHandler} from "./ApxUSDHandler.sol";
 import {VaultHandler} from "./VaultHandler.sol";
@@ -27,6 +26,7 @@ contract InvariantTest is BaseTest {
         excludeContract(address(vesting));
         excludeContract(address(yieldDistributor));
         excludeContract(address(unlockToken));
+        excludeContract(address(unlockReceipt));
         excludeContract(address(lockToken));
         excludeContract(address(denyList));
         excludeContract(address(mockToken));
@@ -42,7 +42,7 @@ contract InvariantTest is BaseTest {
         excludeSetup(address(apxUSDHandler));
         targetContract(address(apxUSDHandler));
 
-        vaultHandler = new VaultHandler(apxUSD, apyUSD, unlockToken);
+        vaultHandler = new VaultHandler(apxUSD, apyUSD, unlockReceipt);
         excludeSetup(address(vaultHandler));
         targetContract(address(vaultHandler));
 
@@ -62,9 +62,6 @@ contract InvariantTest is BaseTest {
         // Set the minter rate limits to max
         minterV0.setRateLimit(type(uint208).max, RATE_LIMIT_PERIOD);
         minterV0.setMaxMintAmount(type(uint208).max);
-
-        // Set the unlocking fee to
-        apyUSD.setUnlockingFee(0.001e18); // 0.1%
 
         vm.stopPrank();
     }
@@ -92,13 +89,69 @@ contract InvariantTest is BaseTest {
         );
     }
 
-    function invariant_UnlockToken_OneToOne() public view {
-        assertEq(unlockToken.convertToAssets(1e18), 1e18, "UnlockToken not 1:1");
+    /// @notice The UnlockReceipt holds at least the sum of escrowed assets it
+    ///         owes its holders. (It may also hold fees in transit en route to
+    ///         the receipt-side feeWallet during a claim, which net out at
+    ///         claim time. We assert the minimum: backing >= sum-of-receipts.)
+    function invariant_UnlockReceipt_BackedByAssets() public view {
+        uint256 outstanding = vaultHandler.ghost_outstandingReceiptCount();
+        uint256 receiptOwed;
+        for (uint256 i; i < outstanding; ++i) {
+            uint256 tokenId = vaultHandler.ghost_outstandingReceiptIds(i);
+            try unlockReceipt.ownerOf(tokenId) returns (address) {
+                (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+                receiptOwed += uint256(escrowed);
+            } catch {
+                // Burned receipt; ignore.
+            }
+        }
+        assertGe(apxUSD.balanceOf(address(unlockReceipt)), receiptOwed, "UnlockReceipt under-collateralized");
     }
 
-    function invariant_UnlockToken_BackedByAssets() public view {
+    /// @notice The number of receipts the handler believes are outstanding equals
+    ///         the live NFT count on the receipt contract.
+    /// @dev    Stricter than {invariant_UnlockReceipt_BackedByAssets} on the
+    ///         counting axis: catches off-by-one ghost-tracking bugs. We compare
+    ///         the handler's `ghost_liveReceiptCount` (which itself filters out
+    ///         burned tokenIds) against the per-actor sum of `balanceOf`, which
+    ///         is the contract's authoritative view of outstanding NFTs.
+    function invariant_UnlockReceipt_OutstandingNFTCountMatchesGhost() public view {
+        uint256 contractCount = 0;
+        // Sum live receipts across the handler's actor set. The vault handler
+        // is the only path that mints, so this covers every outstanding receipt.
+        address[] memory actors = vaultHandler.allActors();
+        for (uint256 i; i < actors.length; ++i) {
+            contractCount += unlockReceipt.balanceOf(actors[i]);
+        }
+        assertEq(contractCount, vaultHandler.ghost_liveReceiptCount(), "live NFT count drifted from ghost list");
+    }
+
+    /// @notice Once every outstanding receipt is claimed, the receipt contract
+    ///         should hold zero apxUSD.
+    /// @dev    Stricter than {invariant_UnlockReceipt_BackedByAssets}: when there
+    ///         are no live receipts left, the receipt contract owes no assets, so
+    ///         any residual apxUSD balance would indicate a fee-routing or
+    ///         accounting bug. (`feeWallet` is enforced non-self in the receipt's
+    ///         init/setter, so claim fees don't loop back to the receipt itself.)
+    function invariant_UnlockReceipt_NoStuckAssetsWhenAllClaimed() public view {
+        if (vaultHandler.ghost_liveReceiptCount() != 0) return;
         assertEq(
-            unlockToken.totalSupply(), apxUSD.balanceOf(address(unlockToken)), "UnlockToken supply != apxUSD balance"
+            apxUSD.balanceOf(address(unlockReceipt)), 0, "UnlockReceipt holds apxUSD with zero outstanding receipts"
+        );
+    }
+
+    /// @notice ApyUSD has no residual apxUSD allowance to UnlockReceipt between
+    ///         transactions.
+    /// @dev    `_withdraw` does `approve(unlockReceipt, assets)` immediately
+    ///         followed by `mint`, which `transferFrom`s exactly `assets`. The
+    ///         allowance must end at 0 every time control returns to the test
+    ///         harness — any residual would be a footgun if `mint` ever pulled
+    ///         less than approved.
+    function invariant_ApyUSD_NoResidualAllowanceToReceipt() public view {
+        assertEq(
+            apxUSD.allowance(address(apyUSD), address(unlockReceipt)),
+            0,
+            "vault holds residual apxUSD allowance to receipt"
         );
     }
 
@@ -191,8 +244,13 @@ contract InvariantTest is BaseTest {
     // ========================================
 
     function invariant_Protocol_ApxUSDConservation() public view {
+        // `unlockToken` stays in the conservation sum because the contract
+        // is still deployed by BaseTest for the standalone unit tests and
+        // could in theory hold a non-zero balance from legacy paths.
+        // Including it is conservative and safe.
         uint256 protocolHeld = apxUSD.balanceOf(address(apyUSD)) + apxUSD.balanceOf(address(unlockToken))
-            + apxUSD.balanceOf(address(vesting)) + apxUSD.balanceOf(address(yieldDistributor));
+            + apxUSD.balanceOf(address(unlockReceipt)) + apxUSD.balanceOf(address(vesting))
+            + apxUSD.balanceOf(address(yieldDistributor));
         assertGe(apxUSD.totalSupply(), protocolHeld, "Protocol holds more apxUSD than total supply");
     }
 }

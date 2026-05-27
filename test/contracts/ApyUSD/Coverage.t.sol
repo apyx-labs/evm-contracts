@@ -7,23 +7,8 @@ import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 import {Errors} from "../../utils/Errors.sol";
 import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
 import {IAddressList} from "../../../src/interfaces/IAddressList.sol";
-import {IUnlockToken} from "../../../src/interfaces/IUnlockToken.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {AddressList} from "../../../src/AddressList.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-contract MockBadUnlockToken {
-    IERC20 public asset;
-
-    constructor(address asset_) {
-        asset = IERC20(asset_);
-    }
-
-    function deposit(uint256 assets, address) external returns (uint256) {
-        asset.transferFrom(msg.sender, address(this), assets);
-        return assets + 1;
-    }
-}
 
 /**
  * @title ApyUSDCoverageTest
@@ -60,20 +45,19 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         // Test that we can set and retrieve values from storage
         // This validates the storage pointer is working correctly
 
-        // Set unlock token
-        address testUnlockToken = address(unlockToken);
-        assertEq(apyUSD.unlockToken(), testUnlockToken, "unlockToken should be set in storage");
+        // unlock receipt (set in BaseTest.setUp). Reads via the IERC4626Receipt
+        // `receipt()` accessor — the getter alias for `unlockReceipt`.
+        assertEq(apyUSD.receipt(), address(unlockReceipt), "unlockReceipt should be set in storage");
 
-        // Set vesting
-        address testVesting = address(vesting);
-        assertEq(apyUSD.vesting(), testVesting, "vesting should be set in storage");
+        // vesting (set in BaseTest.setUp)
+        assertEq(apyUSD.vesting(), address(vesting), "vesting should be set in storage");
 
-        // Set fee wallet
+        // fee wallet
         vm.prank(admin);
         apyUSD.setFeeWallet(feeRecipient);
         assertEq(apyUSD.feeWallet(), feeRecipient, "feeWallet should be set in storage");
 
-        // Set unlocking fee
+        // unlocking fee
         vm.prank(admin);
         apyUSD.setUnlockingFee(0.01e18);
         assertEq(apyUSD.unlockingFee(), 0.01e18, "unlockingFee should be set in storage");
@@ -153,9 +137,12 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         vm.prank(admin);
         apyUSD.unpause();
 
-        // Withdraw should work now
+        // Withdraw should work now. Use half the deposit so the request stays
+        // within `maxWithdraw(alice)` after the prod-target 10-bps vault fee
+        // (a full-deposit withdrawal would burn `MEDIUM_AMOUNT * 1.001` shares
+        // which alice does not hold).
         vm.prank(alice);
-        uint256 shares = apyUSD.withdraw(MEDIUM_AMOUNT, alice, alice);
+        uint256 shares = apyUSD.withdraw(MEDIUM_AMOUNT / 2, alice, alice);
         assertGt(shares, 0, "Withdraw should succeed after unpause");
     }
 
@@ -262,65 +249,6 @@ contract ApyUSDCoverageTest is ApyUSDTest {
     }
 
     // ========================================
-    // setUnlockToken Tests
-    // ========================================
-
-    /**
-     * @notice Test that setUnlockToken updates the unlockToken address and emits event
-     */
-    function test_SetUnlockToken_UpdatesAddressAndEmitsEvent() public {
-        // Create a mock address for new unlock token
-        address newUnlockTokenAddr = makeAddr("newUnlockToken");
-
-        // Set unlock token and check event
-        vm.prank(admin);
-        vm.expectEmit(true, true, true, true);
-        emit IApyUSD.UnlockTokenUpdated(address(unlockToken), newUnlockTokenAddr);
-        apyUSD.setUnlockToken(IUnlockToken(newUnlockTokenAddr));
-
-        // Verify the unlock token was updated
-        assertEq(apyUSD.unlockToken(), newUnlockTokenAddr, "unlockToken should be updated");
-    }
-
-    /**
-     * @notice Test that setUnlockToken validates address(0)
-     * @dev We verify the validation exists by checking the code rejects address(0)
-     */
-    function test_RevertWhen_SetUnlockTokenToAddressZero() public {
-        // Deploy a new ApyUSD implementation to test directly
-        ApyUSD testImpl = new ApyUSD();
-        bytes memory initData = abi.encodeCall(
-            testImpl.initialize, ("Test ApyUSD", "testAPY", address(accessManager), address(apxUSD), address(denyList))
-        );
-        ERC1967Proxy testProxy = new ERC1967Proxy(address(testImpl), initData);
-        ApyUSD testApyUSD = ApyUSD(address(testProxy));
-
-        // Grant admin role to this test contract for the test ApyUSD
-        vm.startPrank(admin);
-        bytes4[] memory selectors = new bytes4[](1);
-        selectors[0] = testApyUSD.setUnlockToken.selector;
-        accessManager.setTargetFunctionRole(address(testApyUSD), selectors, 0); // ADMIN_ROLE = 0
-        // Grant ADMIN_ROLE to this test contract
-        accessManager.grantRole(0, address(this), 0); // role 0, account this, executionDelay 0
-        vm.stopPrank();
-
-        // Now test should be able to call setUnlockToken and hit the validation
-        vm.expectRevert(Errors.invalidAddress("newUnlockToken"));
-        testApyUSD.setUnlockToken(IUnlockToken(address(0)));
-    }
-
-    /**
-     * @notice Test that only admin can set unlock token
-     */
-    function test_RevertWhen_SetUnlockTokenNotAdmin() public {
-        address newUnlockTokenAddr = makeAddr("newUnlockToken");
-
-        vm.prank(alice);
-        vm.expectRevert();
-        apyUSD.setUnlockToken(IUnlockToken(newUnlockTokenAddr));
-    }
-
-    // ========================================
     // setVesting Tests
     // ========================================
 
@@ -371,15 +299,11 @@ contract ApyUSDCoverageTest is ApyUSDTest {
     // ========================================
 
     /**
-     * @notice Test that unlockToken() returns the correct address
-     */
-    function test_UnlockToken_ReturnsAddress() public view {
-        address returnedAddress = apyUSD.unlockToken();
-        assertEq(returnedAddress, address(unlockToken), "unlockToken() should return the correct address");
-    }
-
-    /**
      * @notice Test that vesting() returns the correct address
+     * @dev    The `unlockReceipt()` getter is exercised via `setUnlockReceipt`'s
+     *         dedicated test suite (`SetUnlockReceipt.t.sol`); the legacy
+     *         `unlockToken()` getter still exists for upgrade-storage compatibility
+     *         but is not exercised here.
      */
     function test_Vesting_ReturnsAddress() public view {
         address returnedAddress = apyUSD.vesting();
@@ -448,53 +372,32 @@ contract ApyUSDCoverageTest is ApyUSDTest {
     }
 
     /**
-     * @notice Test that withdraw deposits to unlocking token
+     * @notice Test that withdraw mints an UnlockReceipt to the user
+     * @dev    Receipt-flow analogue of the old `_DepositsToUnlockToken` /
+     *         `_RequestsRedeemOnUnlock` pair: in the new model a single NFT
+     *         mint replaces the legacy "transfer + requestRedeem" sequence.
      */
-    function test_Withdraw_DepositsToUnlockToken() public {
+    function test_Withdraw_MintsReceiptToUser() public {
         // Setup: Alice deposits
         uint256 depositAmount = MEDIUM_AMOUNT;
         depositApxUSD(alice, depositAmount);
 
-        // Record unlockToken balance before
-        uint256 unlockTokenBalanceBefore = unlockToken.balanceOf(alice);
-
-        // Alice withdraws
+        // Alice withdraws via the receipt-flow helper to capture the tokenId
         uint256 withdrawAmount = depositAmount / 2;
-        vm.prank(alice);
-        apyUSD.withdraw(withdrawAmount, alice, alice);
+        (, uint256 tokenId) = _withdrawForReceipt(withdrawAmount, alice);
 
-        // Verify UnlockToken received the deposit
-        uint256 unlockTokenBalanceAfter = unlockToken.balanceOf(alice);
-        assertEq(
-            unlockTokenBalanceAfter - unlockTokenBalanceBefore,
-            withdrawAmount,
-            "UnlockToken should receive the withdrawal amount"
-        );
+        // Verify the freshly-minted receipt is owned by Alice and escrows the
+        // requested post-vault-fee net.
+        assertEq(unlockReceipt.ownerOf(tokenId), alice, "Alice should own the receipt");
+        (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+        assertEq(escrowed, withdrawAmount, "Receipt should escrow the withdrawal amount");
     }
 
     /**
-     * @notice Test that withdraw requests redeem on unlock token
+     * @notice Test that withdraw reverts if the UnlockReceipt is not wired
      */
-    function test_Withdraw_RequestsRedeemOnUnlock() public {
-        // Setup: Alice deposits
-        uint256 depositAmount = MEDIUM_AMOUNT;
-        depositApxUSD(alice, depositAmount);
-
-        // Alice withdraws
-        uint256 withdrawAmount = depositAmount / 2;
-        vm.prank(alice);
-        apyUSD.withdraw(withdrawAmount, alice, alice);
-
-        // Verify redeem request was created on UnlockToken
-        uint256 pendingRequest = unlockToken.pendingRedeemRequest(0, alice);
-        assertEq(pendingRequest, withdrawAmount, "UnlockToken should have a pending redeem request");
-    }
-
-    /**
-     * @notice Test that withdraw reverts if unlockToken is not set
-     */
-    function test_RevertWhen_WithdrawWithoutUnlockTokenSet() public {
-        // Deploy a new ApyUSD without unlockToken set
+    function test_RevertWhen_WithdrawWithoutUnlockReceiptSet() public {
+        // Deploy a new ApyUSD without unlockReceipt set
         ApyUSD newApyUSDImpl = new ApyUSD();
         bytes memory initData = abi.encodeCall(
             newApyUSDImpl.initialize,
@@ -509,8 +412,8 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         apxUSD.approve(address(newApyUSD), MEDIUM_AMOUNT);
         newApyUSD.deposit(MEDIUM_AMOUNT, alice);
 
-        // Try to withdraw without unlockToken set (should revert)
-        vm.expectRevert(Errors.addressNotSet("unlockToken"));
+        // Try to withdraw without unlockReceipt set (should revert)
+        vm.expectRevert(Errors.addressNotSet("unlockReceipt"));
         newApyUSD.withdraw(MEDIUM_AMOUNT, alice, alice);
         vm.stopPrank();
     }
@@ -530,25 +433,5 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         // Verify all shares were burned
         assertEq(apyUSD.balanceOf(alice), 0, "All of Alice's shares should be burned");
         assertEq(apyUSD.totalSupply(), 0, "Total supply should be 0");
-    }
-
-    // ========================================
-    // UnlockToken Error Tests
-    // ========================================
-
-    function test_RevertWhen_WithdrawAndUnlockTokenDepositFails() public {
-        uint256 amount = SMALL_AMOUNT;
-
-        uint256 shares = depositApxUSD(alice, amount);
-
-        MockBadUnlockToken mock = new MockBadUnlockToken(address(apxUSD));
-        vm.prank(admin);
-        apyUSD.setUnlockToken(IUnlockToken(address(mock)));
-
-        vm.expectRevert(
-            abi.encodeWithSelector(IApyUSD.UnlockTokenError.selector, "assets and unlockToken shares do not match")
-        );
-        vm.prank(alice);
-        apyUSD.redeem(shares, alice, alice);
     }
 }

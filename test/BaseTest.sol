@@ -17,9 +17,12 @@ import {CommitToken} from "../src/CommitToken.sol";
 import {AddressList} from "../src/AddressList.sol";
 import {RedemptionPoolV0} from "../src/RedemptionPoolV0.sol";
 import {Roles} from "../src/Roles.sol";
-import {IUnlockToken} from "../src/interfaces/IUnlockToken.sol";
 import {IRedemptionPool} from "../src/interfaces/IRedemptionPool.sol";
 import {IVesting} from "../src/interfaces/IVesting.sol";
+import {UnlockReceipt} from "../src/UnlockReceipt.sol";
+import {IUnlockReceipt} from "../src/interfaces/IUnlockReceipt.sol";
+import {FeeCurve} from "../src/FeeCurve.sol";
+import {FeeCurves} from "./utils/FeeCurves.sol";
 
 /**
  * @title BaseTest
@@ -45,6 +48,8 @@ abstract contract BaseTest is Test {
     LinearVestV0 public vesting;
     YieldDistributor public yieldDistributor;
     UnlockToken public unlockToken;
+    UnlockReceipt public unlockReceipt;
+    UnlockReceipt public unlockReceiptImpl;
     CommitToken public lockToken;
     AddressList public denyList;
     RedemptionPoolV0 public redemptionPool;
@@ -168,6 +173,19 @@ abstract contract BaseTest is Test {
         );
         vm.label(address(unlockToken), "unlockToken");
 
+        // Deploy UnlockReceipt proxy with apyUSD as the issuing vault and feeRecipient
+        // as the initial fee wallet. Fee curve matches the production target:
+        // minFee = 0 (no fee at full maturity), maxFee = 350 bps, 3–20 day window,
+        // concave (curvature = 0.25).
+        unlockReceiptImpl = new UnlockReceipt();
+        bytes memory unlockReceiptInit = abi.encodeCall(
+            unlockReceiptImpl.initialize, (address(accessManager), address(apyUSD), defaultFeeCurve(), feeRecipient)
+        );
+        ERC1967Proxy unlockReceiptProxy = new ERC1967Proxy(address(unlockReceiptImpl), unlockReceiptInit);
+        unlockReceipt = UnlockReceipt(address(unlockReceiptProxy));
+        vm.label(address(unlockReceiptImpl), "unlockReceiptImpl");
+        vm.label(address(unlockReceipt), "unlockReceipt");
+
         // Deploy CommitToken (for CommitToken-specific tests)
         mockToken = new MockERC20("Mock Token", "MOCK");
         vm.label(address(mockToken), "mockToken");
@@ -191,13 +209,16 @@ abstract contract BaseTest is Test {
         // Configure roles for entire system
         setUpRoles();
 
-        // Configure ApyUSD with UnlockToken and Vesting
-        vm.prank(admin);
-        apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
-        vm.prank(admin);
+        // Configure ApyUSD with UnlockReceipt, Vesting, and the production-target
+        // vault-side `unlockingFee` (10 bps). The receipt-side `feeCurve.minFee = 0`
+        // is set via `defaultFeeCurve()` in the proxy init above; together they form
+        // the prod two-layer fee model (`previewRedeem` == receipt-escrowed `net`).
+        vm.startPrank(admin);
+        apyUSD.setUnlockReceipt(IUnlockReceipt(address(unlockReceipt)));
         apyUSD.setVesting(IVesting(address(vesting)));
-        vm.prank(admin);
         apyUSD.setFeeWallet(feeRecipient);
+        apyUSD.setUnlockingFee(0.001e18); // 10 bps
+        vm.stopPrank();
     }
 
     /**
@@ -350,11 +371,11 @@ abstract contract BaseTest is Test {
     }
 
     /**
-     * @notice Helper to withdraw apyUSD shares by depositing ApxUSD
-     * @param assets Amount of ApxUSD to withdraw
-     * @param receiver Address to receive the UnlockToken shares
-     * @param owner Address that owns the shares
-     * @return shares Amount of apyUSD shares withdrawn
+     * @notice Helper to withdraw apyUSD shares; mints an UnlockReceipt to `receiver`.
+     * @param assets Amount of ApxUSD that the receipt will escrow (post-vault-fee net).
+     * @param receiver Address that will own the freshly-minted receipt (must equal `owner`).
+     * @param owner Address that owns the burned shares.
+     * @return shares Amount of apyUSD shares withdrawn (covers `assets + vaultFee`).
      */
     function withdrawApxUSD(uint256 assets, address receiver, address owner) internal returns (uint256 shares) {
         vm.startPrank(owner);
@@ -389,12 +410,11 @@ abstract contract BaseTest is Test {
     }
 
     /**
-     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
-     * @param shares Amount of shares to redeem
-     * @param receiver Address to receive UnlockToken shares
-     * @param owner Address that owns the shares
-     * @return assets Amount of assets redeemed
-     * @dev Note: This is now synchronous and deposits assets to UnlockToken
+     * @notice Helper to redeem apyUSD shares; escrows assets in an UnlockReceipt minted to `receiver`.
+     * @param shares Amount of shares to redeem.
+     * @param receiver Address that will own the freshly-minted receipt (must equal `owner`).
+     * @param owner Address that owns the redeemed shares.
+     * @return assets Amount of assets escrowed in the receipt (post-vault-fee net).
      */
     function redeemApyUSD(uint256 shares, address receiver, address owner) internal returns (uint256 assets) {
         vm.prank(owner);
@@ -402,10 +422,10 @@ abstract contract BaseTest is Test {
     }
 
     /**
-     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
-     * @param shares Amount of shares to redeem
-     * @param owner Address that owns the shares
-     * @return assets Amount of assets redeemed
+     * @notice Helper to redeem apyUSD shares; escrows assets in an UnlockReceipt minted to `owner`.
+     * @param shares Amount of shares to redeem.
+     * @param owner Address that owns the redeemed shares (also the receipt holder).
+     * @return assets Amount of assets escrowed in the receipt (post-vault-fee net).
      */
     function redeemApyUSD(uint256 shares, address owner) internal returns (uint256 assets) {
         return redeemApyUSD(shares, owner, owner);
@@ -445,5 +465,67 @@ abstract contract BaseTest is Test {
         apxUSD.approve(address(redemptionPool), amount);
         reserveAmount = redemptionPool.redeem(amount, redeemer, 0);
         vm.stopPrank();
+    }
+
+    // ========================================
+    // UnlockReceipt Helpers
+    // ========================================
+
+    /// @notice Default fee curve for the receipt — production target.
+    /// @dev    Delegates to {FeeCurves.prodTarget} (single source of truth across all
+    ///         test bases). Marked `virtual` so per-suite BaseTests (e.g. the
+    ///         UnlockReceipt unit suite) can override with a richer curve via
+    ///         Solidity's virtual dispatch — which propagates back through
+    ///         `super.setUp()`'s deployment.
+    function defaultFeeCurve() internal pure virtual returns (FeeCurve memory curve) {
+        curve = FeeCurves.prodTarget();
+    }
+
+    /// @notice Withdraw via `withdrawForReceipt`, returning both `shares` burned and the freshly-minted `tokenId`.
+    function _withdrawForReceipt(uint256 assets, address owner) internal returns (uint256 shares, uint256 tokenId) {
+        vm.prank(owner);
+        (shares, tokenId) = apyUSD.withdrawForReceipt(assets, owner, owner);
+    }
+
+    /// @notice Redeem via `redeemForReceipt`, returning both `assets` escrowed and the freshly-minted `tokenId`.
+    function _redeemForReceipt(uint256 shares, address owner) internal returns (uint256 assets, uint256 tokenId) {
+        vm.prank(owner);
+        (assets, tokenId) = apyUSD.redeemForReceipt(shares, owner, owner);
+    }
+
+    /// @notice Warp to the receipt's earliest claim time and `claim` to `holder`.
+    function _claimReceiptAtMaturity(uint256 tokenId, address holder) internal returns (uint256 amount) {
+        vm.warp(unlockReceipt.claimableAfter(tokenId));
+        vm.prank(holder);
+        amount = unlockReceipt.claim(tokenId, holder);
+    }
+
+    /// @notice Warp past `maxDuration` (so the fee equals `minFee`) and `claim` to `holder`.
+    function _claimReceiptFullyDecayed(uint256 tokenId, address holder) internal returns (uint256 amount) {
+        (,, uint48 createdAt,) = unlockReceipt.getReceipt(tokenId);
+        FeeCurve memory curve = unlockReceipt.feeCurve();
+        vm.warp(uint256(createdAt) + uint256(curve.maxDuration) + 1);
+        vm.prank(holder);
+        amount = unlockReceipt.claim(tokenId, holder);
+    }
+
+    /// @notice Asserts that `expectedOwner` owns receipt `tokenId` and that it escrows `expectedEscrowed`.
+    /// @dev    Shared assertion used across ApyUSD ↔ UnlockReceipt integration suites.
+    function _assertReceipt(uint256 tokenId, address expectedOwner, uint256 expectedEscrowed) internal view {
+        assertEq(unlockReceipt.ownerOf(tokenId), expectedOwner, "Receipt owner mismatch");
+        (uint208 escrowed,,,) = unlockReceipt.getReceipt(tokenId);
+        assertEq(uint256(escrowed), expectedEscrowed, "Receipt escrowed amount mismatch");
+    }
+
+    /// @notice Returns the tokenId that the next `UnlockReceipt.mint` will assign.
+    /// @dev    Reads `nextTokenId` from the receipt's ERC-7201 storage slot. `nextTokenId`
+    ///         is the second field of `UnlockReceiptStorage` (offset 1; the `positions`
+    ///         mapping is at offset 0). `mint` pre-increments, so the next receipt
+    ///         minted will have `tokenId == _peekNextReceiptId() + 1`. Useful when the
+    ///         contract entry point under test (e.g. `withdrawForMaxShares`) does not
+    ///         return the freshly-minted tokenId.
+    function _peekNextReceiptId() internal view returns (uint256) {
+        bytes32 base = unlockReceipt.STORAGE_LOCATION();
+        return uint256(vm.load(address(unlockReceipt), bytes32(uint256(base) + 1)));
     }
 }

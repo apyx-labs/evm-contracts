@@ -40,6 +40,17 @@ abstract contract BaseHandler is BaseTest {
         return actors[bound(index, 0, actors.length - 1)];
     }
 
+    /// @notice Returns the addresses of every fuzz actor.
+    /// @dev    Used by invariant assertions that need to sum a per-address
+    ///         quantity (e.g. `unlockReceipt.balanceOf`) across the full set.
+    function allActors() external view returns (address[] memory addrs) {
+        uint256 n = actors.length;
+        addrs = new address[](n);
+        for (uint256 i; i < n; ++i) {
+            addrs[i] = actors[i].addr;
+        }
+    }
+
     modifier skipSmallBalance(address token) {
         uint256 balance = IERC20(token).balanceOf(currentActor.addr);
         if (balance < VERY_SMALL_AMOUNT) vm.assume(false);

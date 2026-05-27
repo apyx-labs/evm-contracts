@@ -104,8 +104,8 @@ library Roles {
         selectors[1] = ApyUSD.unpause.selector;
 
         selectors[2] = ApyUSD.setDenyList.selector;
-        selectors[3] = ApyUSD.setUnlockToken.selector;
-        selectors[4] = ApyUSD.setVesting.selector;
+        selectors[3] = ApyUSD.setVesting.selector;
+        selectors[4] = ApyUSD.setUnlockReceipt.selector;
         selectors[5] = ApyUSD.setUnlockingFee.selector;
         selectors[6] = ApyUSD.setFeeWallet.selector;
         self.setTargetFunctionRole(address(apyUSD), selectors, ADMIN_ROLE);

@@ -9,6 +9,17 @@ import {Errors} from "../../utils/Errors.sol";
  * @notice Tests that addresses on the deny list cannot transfer, deposit, mint, withdraw, or redeem ApyUSD
  */
 contract ApyUSDDeniedTest is BaseTest {
+    function setUp() public override {
+        super.setUp();
+        // Reset the prod-target unlockingFee so the deny-list assertions can
+        // attempt a full-deposit withdraw. With the prod-target 10 bps fee, a
+        // full withdraw exceeds `maxWithdraw(alice)` and reverts with
+        // `ERC4626ExceededMaxWithdraw` BEFORE the deny-list check fires -
+        // masking the property under test.
+        vm.prank(admin);
+        apyUSD.setUnlockingFee(0);
+    }
+
     // ========================================
     // Transfer ApyUSD
     // ========================================

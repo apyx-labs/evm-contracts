@@ -58,14 +58,14 @@ contract VestingIntegrationTest is VestingTest {
 
         // Redeem withdrawal - should pull yield
         uint256 shares = apyUSD.balanceOf(alice);
-        uint256 assetsToUnlockToken = apyUSD.previewRedeem(shares / 2);
-        redeem(alice, shares / 2, alice);
+        uint256 assetsToReceipt = apyUSD.previewRedeem(shares / 2);
+        redeem(alice, shares / 2);
 
         uint256 apyUSDBalanceAfter = apxUSD.balanceOf(address(apyUSD));
 
-        // Balance should increase by vested yield, then decrease by assets transferred to UnlockToken
-        // Net change: +vestedYield - assetsToUnlockToken
-        uint256 expectedBalance = apyUSDBalanceBefore + vestedYield - assetsToUnlockToken;
+        // Balance should increase by vested yield, then decrease by assets escrowed by UnlockReceipt
+        // Net change: +vestedYield - assetsToReceipt
+        uint256 expectedBalance = apyUSDBalanceBefore + vestedYield - assetsToReceipt;
         assertEq(apyUSDBalanceAfter, expectedBalance, "Yield should be pulled during withdrawal request");
     }
 
@@ -78,16 +78,16 @@ contract VestingIntegrationTest is VestingTest {
 
         // Redeem withdrawal - should not revert even with no vested yield
         uint256 shares = apyUSD.balanceOf(alice);
-        uint256 assetsToUnlockToken = apyUSD.previewRedeem(shares / 2);
-        redeem(alice, shares / 2, alice);
+        uint256 assetsToReceipt = apyUSD.previewRedeem(shares / 2);
+        redeem(alice, shares / 2);
 
         uint256 apyUSDBalanceAfter = apxUSD.balanceOf(address(apyUSD));
 
-        // Balance should decrease by assets transferred to UnlockToken (no yield to pull)
+        // Balance should decrease by assets escrowed by UnlockReceipt (no yield to pull)
         assertEq(
             apyUSDBalanceAfter,
-            apyUSDBalanceBefore - assetsToUnlockToken,
-            "Balance should decrease by assets transferred to UnlockToken"
+            apyUSDBalanceBefore - assetsToReceipt,
+            "Balance should decrease by assets escrowed by UnlockReceipt"
         );
     }
 
@@ -121,13 +121,13 @@ contract VestingIntegrationTest is VestingTest {
 
         // User redeems withdrawal - yield should be pulled
         uint256 shares = apyUSD.balanceOf(alice);
-        uint256 assetsToUnlockToken = apyUSD.previewRedeem(shares);
-        redeem(alice, shares, alice);
+        uint256 assetsToReceipt = apyUSD.previewRedeem(shares);
+        redeem(alice, shares);
 
         uint256 apyUSDBalanceAfter = apxUSD.balanceOf(address(apyUSD));
 
-        // Balance should increase by vested yield, then decrease by assets transferred to UnlockToken
-        uint256 expectedBalance = apyUSDBalanceBefore + vestedYield - assetsToUnlockToken;
+        // Balance should increase by vested yield, then decrease by assets escrowed by UnlockReceipt
+        uint256 expectedBalance = apyUSDBalanceBefore + vestedYield - assetsToReceipt;
         assertEq(apyUSDBalanceAfter, expectedBalance, "Yield should be pulled");
         assertEq(vesting.fullyVestedAmount(), 0, "All fully vested yield should be transferred");
         assertEq(vesting.lastTransferTimestamp(), block.timestamp, "Last transfer timestamp should be updated");

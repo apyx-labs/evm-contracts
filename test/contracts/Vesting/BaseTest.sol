@@ -10,8 +10,10 @@ import {ApxUSD} from "../../../src/ApxUSD.sol";
 import {ApyUSD} from "../../../src/ApyUSD.sol";
 import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
-import {UnlockToken} from "../../../src/UnlockToken.sol";
-import {IUnlockToken} from "../../../src/interfaces/IUnlockToken.sol";
+import {UnlockReceipt} from "../../../src/UnlockReceipt.sol";
+import {IUnlockReceipt} from "../../../src/interfaces/IUnlockReceipt.sol";
+import {FeeCurve} from "../../../src/FeeCurve.sol";
+import {FeeCurves} from "../../utils/FeeCurves.sol";
 import {AddressList} from "../../../src/AddressList.sol";
 import {Roles} from "../../../src/Roles.sol";
 
@@ -31,12 +33,14 @@ abstract contract VestingTest is Test {
     ApxUSD public apxUSD;
     ApyUSD public apyUSD;
     LinearVestV0 public vesting;
-    UnlockToken public unlockToken;
+    UnlockReceipt public unlockReceipt;
+    UnlockReceipt public unlockReceiptImpl;
     AddressList public denyList;
     AccessManager public accessManager;
 
     address public admin = address(0x1);
     address public yieldDistributor = address(0x2);
+    address public feeRecipient = address(0x3);
 
     address public alice;
     address public bob;
@@ -55,7 +59,6 @@ abstract contract VestingTest is Test {
     uint256 public constant VERY_VERY_SMALL_AMOUNT = 1e18;
     uint256 public constant DEPOSIT_AMOUNT = 1000e18;
     uint256 public constant LARGE_AMOUNT = 100_000e18;
-    uint48 public constant UNLOCKING_DELAY = 14 days;
 
     function setUp() public virtual {
         // Set block timestamp to avoid underflow
@@ -101,26 +104,42 @@ abstract contract VestingTest is Test {
 
         vm.label(address(vesting), "vesting");
 
-        // Deploy UnlockToken contract
-        unlockToken = new UnlockToken(
-            address(accessManager), address(apxUSD), address(apyUSD), UNLOCKING_DELAY, address(denyList)
+        // Deploy UnlockReceipt proxy with apyUSD as the issuing vault and
+        // feeRecipient as the initial fee wallet. Fee curve mirrors the prod
+        // target used by the system BaseTest (minFee=0, maxFee=350 bps,
+        // 3-20 day window, concave with curvature=0.25).
+        unlockReceiptImpl = new UnlockReceipt();
+        bytes memory unlockReceiptInit = abi.encodeCall(
+            unlockReceiptImpl.initialize, (address(accessManager), address(apyUSD), defaultFeeCurve(), feeRecipient)
         );
-
-        vm.label(address(unlockToken), "unlockToken");
+        ERC1967Proxy unlockReceiptProxy = new ERC1967Proxy(address(unlockReceiptImpl), unlockReceiptInit);
+        unlockReceipt = UnlockReceipt(address(unlockReceiptProxy));
+        vm.label(address(unlockReceiptImpl), "unlockReceiptImpl");
+        vm.label(address(unlockReceipt), "unlockReceipt");
 
         // Configure roles
         setUpRoles();
 
-        // Set UnlockToken on ApyUSD
-        vm.prank(admin);
-        apyUSD.setUnlockToken(IUnlockToken(address(unlockToken)));
-
-        // Set Vesting on ApyUSD
-        vm.prank(admin);
+        // Configure ApyUSD with UnlockReceipt + Vesting. The Vesting integration
+        // tests assert vault-balance accounting using exact `previewRedeem` deltas,
+        // so we deliberately leave `unlockingFee = 0` (the contract default after
+        // initialization) for this suite - vault-fee mechanics are exercised
+        // separately in `Fees.t.sol`.
+        vm.startPrank(admin);
+        apyUSD.setUnlockReceipt(IUnlockReceipt(address(unlockReceipt)));
         apyUSD.setVesting(IVesting(address(vesting)));
+        apyUSD.setFeeWallet(feeRecipient);
+        vm.stopPrank();
 
         // Mint ApxUSD to test accounts
         mintApxUSD();
+    }
+
+    /// @notice Default fee curve for the receipt — production target.
+    /// @dev    Delegates to {FeeCurves.prodTarget} so Vesting integration tests
+    ///         exercise the same curve the system BaseTest assumes.
+    function defaultFeeCurve() internal pure returns (FeeCurve memory curve) {
+        curve = FeeCurves.prodTarget();
     }
 
     /**
@@ -196,15 +215,16 @@ abstract contract VestingTest is Test {
     }
 
     /**
-     * @notice Helper to redeem apyUSD shares (synchronous - deposits to UnlockToken)
-     * @param user User redeeming shares
+     * @notice Helper to redeem apyUSD shares (synchronous - escrows assets in UnlockReceipt)
+     * @param user User redeeming shares (also the receiver, since ApyUSD enforces receiver == owner)
      * @param shares Amount of shares to redeem
-     * @param receiver Address to receive UnlockToken shares
-     * @return assets Amount of assets redeemed
-     * @dev Note: This is now synchronous and deposits assets to UnlockToken
+     * @return assets Amount of assets escrowed in the UnlockReceipt
+     * @dev `_withdraw` reverts with `InvalidCaller` when receiver != owner, so this
+     *      helper passes `user` as both. Use `apyUSD.redeemForReceipt(...)` directly
+     *      if the test needs the freshly-minted `tokenId`.
      */
-    function redeem(address user, uint256 shares, address receiver) internal returns (uint256 assets) {
+    function redeem(address user, uint256 shares) internal returns (uint256 assets) {
         vm.prank(user);
-        assets = apyUSD.redeem(shares, receiver, user);
+        assets = apyUSD.redeem(shares, user, user);
     }
 }
