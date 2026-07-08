@@ -20,6 +20,9 @@ import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/Reentrancy
 import {IERC4626} from "forge-std/src/interfaces/IERC4626.sol";
 
 import {IUnlockReceipt} from "./interfaces/IUnlockReceipt.sol";
+import {IDenyListed} from "./interfaces/IDenyListed.sol";
+import {IAddressList} from "./interfaces/IAddressList.sol";
+import {EDenied} from "./errors/Denied.sol";
 import {IReceipt, IReceiptClaimableAfter, IReceiptWithFee} from "./interfaces/IReceipt.sol";
 import {IERC5192} from "./interfaces/standards/IERC5192.sol";
 import {IERC7572} from "./interfaces/standards/IERC7572.sol";
@@ -59,7 +62,8 @@ contract UnlockReceipt is
     IUnlockReceipt,
     IERC5192,
     IERC4906,
-    IERC7572
+    IERC7572,
+    EDenied
 {
     using SafeERC20 for IERC20;
     using FeeCurveLib for FeeCurve;
@@ -243,14 +247,17 @@ contract UnlockReceipt is
 
     /**
      * @inheritdoc IReceipt
-     * @dev   **Compliance (audit H-2 cross-reference).** Compliance is enforced
-     *        at the underlying asset (apxUSD) layer; this contract has no
-     *        deny-list state by design. See `ApyUSD` H-2 documentation.
+     * @dev   **Compliance.** Reverts when the receipt owner is on the escrowed asset's
+     *        deny-list (read-through apxUSD). The payout `receiver` is not checked here;
+     *        `apxUSD.safeTransfer(receiver, …)` enforces the deny-list at the ERC-20 layer.
+     *        Cancel-to-shares remains gated by the vault's `_deposit` deny-list check.
      */
     function claim(uint256 tokenId, address receiver) external whenNotPaused nonReentrant returns (uint256 amount) {
         address owner_ = ownerOf(tokenId);
         if (msg.sender != owner_) revert InvalidCaller();
         if (receiver == address(0)) revert InvalidAddress("receiver");
+
+        _revertIfAssetDenied(msg.sender);
 
         UnlockReceiptStorage storage $ = _getUnlockReceiptStorage();
         Position memory pos = $.positions[tokenId];
@@ -410,5 +417,11 @@ contract UnlockReceipt is
     /// @dev    Exposed for the storage-layout CI test in `Storage.t.sol`; not part of the public API.
     function STORAGE_LOCATION() external pure returns (bytes32) {
         return UNLOCK_RECEIPT_STORAGE_LOC;
+    }
+
+    function _revertIfAssetDenied(address user) internal view {
+        if (IDenyListed(address(_getUnlockReceiptStorage().asset)).denyList().contains(user)) {
+            revert Denied(user);
+        }
     }
 }

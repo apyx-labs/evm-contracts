@@ -63,4 +63,24 @@ library Errors {
     {
         return abi.encodeWithSignature("ERC4626ExceededMaxDeposit(address,uint256,uint256)", receiver, assets, max);
     }
+
+    function erc4626ExceededMaxMint(address receiver, uint256 shares, uint256 max)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("ERC4626ExceededMaxMint(address,uint256,uint256)", receiver, shares, max);
+    }
+
+    function erc4626ExceededMaxWithdraw(address owner, uint256 assets, uint256 max)
+        external
+        pure
+        returns (bytes memory)
+    {
+        return abi.encodeWithSignature("ERC4626ExceededMaxWithdraw(address,uint256,uint256)", owner, assets, max);
+    }
+
+    function erc4626ExceededMaxRedeem(address owner, uint256 shares, uint256 max) external pure returns (bytes memory) {
+        return abi.encodeWithSignature("ERC4626ExceededMaxRedeem(address,uint256,uint256)", owner, shares, max);
+    }
 }

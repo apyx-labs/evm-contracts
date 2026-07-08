@@ -9,6 +9,7 @@ import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
 import {IAddressList} from "../../../src/interfaces/IAddressList.sol";
 import {IVesting} from "../../../src/interfaces/IVesting.sol";
 import {AddressList} from "../../../src/AddressList.sol";
+import {LinearVestV0} from "../../../src/LinearVestV0.sol";
 
 /**
  * @title ApyUSDCoverageTest
@@ -226,11 +227,11 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         vm.prank(admin);
         newDenyList.add(alice);
 
-        // Alice should not be able to deposit (proves new deny list is active)
+        // Alice should not be able to deposit (proves new deny list is active; maxDeposit guard).
         mintApxUSD(alice, MEDIUM_AMOUNT);
         vm.startPrank(alice);
         apxUSD.approve(address(apyUSD), MEDIUM_AMOUNT);
-        vm.expectRevert(Errors.denied(alice));
+        vm.expectRevert(Errors.erc4626ExceededMaxDeposit(alice, MEDIUM_AMOUNT, 0));
         apyUSD.deposit(MEDIUM_AMOUNT, alice);
         vm.stopPrank();
     }
@@ -256,17 +257,17 @@ contract ApyUSDCoverageTest is ApyUSDTest {
      * @notice Test that setVesting updates the vesting address and emits event
      */
     function test_SetVesting_UpdatesAddressAndEmitsEvent() public {
-        // Create a mock address for new vesting
-        address newVestingAddr = makeAddr("newVesting");
+        LinearVestV0 newVesting =
+            new LinearVestV0(address(apxUSD), address(accessManager), address(apyUSD), VESTING_PERIOD);
 
         // Set vesting and check event
         vm.prank(admin);
         vm.expectEmit(true, true, true, true);
-        emit IApyUSD.VestingUpdated(address(vesting), newVestingAddr);
-        apyUSD.setVesting(IVesting(newVestingAddr));
+        emit IApyUSD.VestingUpdated(address(vesting), address(newVesting));
+        apyUSD.setVesting(IVesting(address(newVesting)));
 
         // Verify the vesting was updated
-        assertEq(apyUSD.vesting(), newVestingAddr, "vesting should be updated");
+        assertEq(apyUSD.vesting(), address(newVesting), "vesting should be updated");
     }
 
     /**
@@ -412,8 +413,8 @@ contract ApyUSDCoverageTest is ApyUSDTest {
         apxUSD.approve(address(newApyUSD), MEDIUM_AMOUNT);
         newApyUSD.deposit(MEDIUM_AMOUNT, alice);
 
-        // Try to withdraw without unlockReceipt set (should revert)
-        vm.expectRevert(Errors.addressNotSet("unlockReceipt"));
+        // Try to withdraw without unlockReceipt set — maxWithdraw returns 0.
+        vm.expectRevert(Errors.erc4626ExceededMaxWithdraw(alice, MEDIUM_AMOUNT, 0));
         newApyUSD.withdraw(MEDIUM_AMOUNT, alice, alice);
         vm.stopPrank();
     }

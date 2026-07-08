@@ -52,6 +52,7 @@ contract UnlockReceiptCancellation is UnlockReceipt, IReceiptCancellable, IUnloc
     ///      the holder's behalf. Charging `minFee` (not the full elapsed-time fee) keeps cancel
     ///      cheap as a "rescue back to vault shares" path while still making `minFee` enforceable
     ///      on every exit (claim or cancel) — see audit finding [H-3] for the rationale.
+    ///      **Halborn FIND-006:** never deny-list `feeWallet` or fee-charging cancel reverts.
     function _cancel(uint256 tokenId, uint256 minShares) internal returns (uint256 sharesMinted) {
         address owner_ = ownerOf(tokenId);
         if (msg.sender != owner_) revert InvalidCaller();

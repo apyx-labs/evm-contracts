@@ -72,7 +72,7 @@ import {EInvalidCaller} from "./errors/InvalidCaller.sol";
  *         - The receipt-mint flow enforces `receiver == owner`: third parties with an
  *           ERC-20 allowance can still trigger a redeem, but the resulting receipt is
  *           always minted to the share owner.
- *         - Pausable, freezeable for compliance, UUPS upgradeable.
+ *         - Pausable for compliance, UUPS upgradeable.
  *
  *         Trust assumptions documented for the security audit:
  *           - **Pause coupling (audit H-1).** `ApyUSD.pause()` and
@@ -80,13 +80,11 @@ import {EInvalidCaller} from "./errors/InvalidCaller.sol";
  *             pause roles. An indefinite pause on either contract traps
  *             escrow flow; holders implicitly trust the AccessManager's role
  *             / delay configuration to keep any pause time-bounded.
- *           - **Compliance (audit H-2).** Deny-list state lives at the
- *             `apxUSD` ERC-20 layer and on this vault; `UnlockReceipt`
- *             intentionally has no deny-list integration. A holder added to
- *             the deny-list between `withdraw` and `claim` will succeed at
- *             the receipt layer, but the apxUSD `safeTransfer` to the holder
- *             reverts under the apxUSD-layer guard, leaving funds in the
- *             receipt's custody until governance unwinds the deny-list state.
+ *           - **Compliance (Halborn FIND-005).** Deny-list state lives at the
+ *             `apxUSD` ERC-20 layer and on this vault. `UnlockReceipt.claim`
+ *             reads the apxUSD deny-list and reverts when the receipt owner is
+ *             deny-listed; the payout `receiver` is enforced by apxUSD on transfer.
+ *             Cancel-to-shares is gated by `ApyUSD._deposit` → `checkNotDenied(owner)`.
  *           - **ERC-4626 SC-56 deviation (audit L-1).** `_withdraw` enforces
  *             both `checkNotDenied(owner)` and `receiver == owner`. A clean
  *             spender therefore cannot redeem on behalf of a sanctioned
@@ -220,7 +218,7 @@ contract ApyUSD is
 
     /**
      * @notice Hook that is called before any token transfer.
-     * @dev Enforces pause, freeze, and deny-list functionality.
+     * @dev Enforces pause and deny-list functionality.
      */
     function _update(address from, address to, uint256 value)
         internal
@@ -274,12 +272,18 @@ contract ApyUSD is
 
     /**
      * @notice Returns the total amount of assets managed by the vault.
-     * @dev    Overrides ERC4626 to include vested yield from the vesting contract.
-     * @return Total assets including vault balance and vested yield.
+     * @dev    Overrides ERC4626 to include vested yield from the vesting contract when
+     *         shares are outstanding. When `totalSupply == 0`, vested yield is excluded
+     *         is excluded so orphaned yield cannot inflate the share denominator.
+     * @return Total assets including vault balance and (when supply > 0) vested yield.
      */
     function totalAssets() public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
         ApyUSDStorage storage $ = _getApyUSDStorage();
         uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
+
+        if (totalSupply() == 0) {
+            return vaultBalance;
+        }
 
         uint256 vestedYield = 0;
         if (address($.vesting) != address(0)) {
@@ -287,6 +291,48 @@ contract ApyUSD is
         }
 
         return vaultBalance + vestedYield;
+    }
+
+    /**
+     * @notice Returns the maximum amount of the underlying asset that can be deposited for `receiver`.
+     * @dev    Returns 0 when paused or when `receiver` is deny-listed.
+     */
+    function maxDeposit(address receiver) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        if (paused() || _isDenied(receiver)) return 0;
+        return super.maxDeposit(receiver);
+    }
+
+    /**
+     * @notice Returns the maximum amount of shares that can be minted for `receiver`.
+     * @dev    Returns 0 when paused or when `receiver` is deny-listed.
+     */
+    function maxMint(address receiver) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        if (paused() || _isDenied(receiver)) return 0;
+        return super.maxMint(receiver);
+    }
+
+    /**
+     * @notice Returns the maximum amount of assets `owner` can withdraw.
+     * @dev    Returns 0 when paused, when `owner` is deny-listed, or when
+     *         `unlockReceipt` is unset.
+     */
+    function maxWithdraw(address owner) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        if (paused() || _isDenied(owner) || address(_getApyUSDStorage().unlockReceipt) == address(0)) {
+            return 0;
+        }
+        return super.maxWithdraw(owner);
+    }
+
+    /**
+     * @notice Returns the maximum amount of shares `owner` can redeem.
+     * @dev    Returns 0 when paused, when `owner` is deny-listed, or when
+     *         `unlockReceipt` is unset.
+     */
+    function maxRedeem(address owner) public view override(ERC4626Upgradeable, IERC4626) returns (uint256) {
+        if (paused() || _isDenied(owner) || address(_getApyUSDStorage().unlockReceipt) == address(0)) {
+            return 0;
+        }
+        return super.maxRedeem(owner);
     }
 
     /**
@@ -362,7 +408,8 @@ contract ApyUSD is
      *               both legs land in the vault first.
      *            7. Forward `fee` to `feeWallet` if non-zero and `feeWallet ∉ {0, self}`;
      *               otherwise the fee accrues to share price (legacy null-tolerant
-     *               behavior, intentional).
+     *               behavior, intentional). **Halborn FIND-006:** never deny-list `feeWallet`
+     *               or this push reverts every exit while `unlockingFee > 0`.
      *            8. Approve `UnlockReceipt` and call `mint(receiver, uint208(assets))`.
      *            9. Stash the freshly-minted tokenId in transient storage so the
      *               `*ForReceipt` external entry points can return it.
@@ -502,6 +549,11 @@ contract ApyUSD is
      * @param newVesting The new Vesting contract (can be address(0) to remove).
      */
     function setVesting(IVesting newVesting) external restricted {
+        if (address(newVesting) != address(0)) {
+            if (address(newVesting.asset()) != asset()) revert InvalidAddress("vesting.asset");
+            if (newVesting.beneficiary() != address(this)) revert InvalidAddress("vesting.beneficiary");
+        }
+
         ApyUSDStorage storage $ = _getApyUSDStorage();
         IVesting oldVesting = $.vesting;
         $.vesting = newVesting;
@@ -529,6 +581,8 @@ contract ApyUSD is
      */
     function setUnlockReceipt(IUnlockReceipt newUnlockReceipt) external restricted {
         if (address(newUnlockReceipt) == address(0)) revert InvalidAddress("newUnlockReceipt");
+        if (newUnlockReceipt.vault() != address(this)) revert InvalidAddress("unlockReceipt.vault");
+        if (address(newUnlockReceipt.asset()) != asset()) revert InvalidAddress("unlockReceipt.asset");
 
         ApyUSDStorage storage $ = _getApyUSDStorage();
         address oldUnlockReceipt = address($.unlockReceipt);
@@ -589,6 +643,10 @@ contract ApyUSD is
      *      asymmetry vs. `UnlockReceipt.setFeeWallet` (which reverts on the same inputs
      *      per audit M-2) is intentional: vault-side null-tolerance is a deliberate
      *      "yield boost when fees off" pattern.
+     *      **Halborn FIND-007:** null `feeWallet` retains fees as unbacked vault assets at
+     *      zero supply; use a real third-party address in production.
+     *      **Halborn FIND-006:** never add `feeWallet` to the apxUSD deny-list or fee-charging
+     *      exits revert for all holders.
      * @param wallet Address to receive the upfront unlocking fee, or `address(0)` /
      *               `address(this)` to keep fees in the vault.
      */
@@ -684,7 +742,8 @@ contract ApyUSD is
 
     /**
      * @notice Withdraws exact assets for shares or reverts if more than max shares will be burned.
-     * @dev Provides slippage protection for withdrawals.
+     * @dev Provides slippage protection for withdrawals. `receiver` must equal `msg.sender`
+     *      because `_withdraw` enforces `receiver == owner` (Halborn FIND-008).
      * @param assets Amount of assets to withdraw.
      * @param maxShares Maximum amount of shares willing to burn.
      * @param receiver Address that will own the freshly-minted UnlockReceipt.
@@ -705,7 +764,8 @@ contract ApyUSD is
 
     /**
      * @notice Redeems exact shares for assets or reverts if less than min assets will be withdrawn.
-     * @dev Provides slippage protection for redemptions.
+     * @dev Provides slippage protection for redemptions. `receiver` must equal `msg.sender`
+     *      because `_withdraw` enforces `receiver == owner` (Halborn FIND-008).
      * @param shares Amount of shares to redeem.
      * @param minAssets Minimum amount of assets expected.
      * @param receiver Address that will own the freshly-minted UnlockReceipt.

@@ -6,8 +6,11 @@ import {Errors} from "../../utils/Errors.sol";
 import {IApyUSD} from "../../../src/interfaces/IApyUSD.sol";
 import {IUnlockReceipt} from "../../../src/interfaces/IUnlockReceipt.sol";
 import {UnlockReceipt} from "../../../src/UnlockReceipt.sol";
+import {ApyUSD} from "../../../src/ApyUSD.sol";
+import {MockERC20} from "../../mocks/MockERC20.sol";
 import {FeeCurve} from "../../../src/FeeCurve.sol";
 import {IAccessManaged} from "@openzeppelin/contracts/access/manager/IAccessManaged.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {ERC1967Proxy} from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /// @title  ApyUSD.setUnlockReceipt admin setter
@@ -114,6 +117,39 @@ contract SetUnlockReceiptTest is BaseTest {
     // ------------------------------------------------------------------
     // Helpers
     // ------------------------------------------------------------------
+
+    function test_RevertWhen_SetUnlockReceipt_WrongVault() public {
+        ApyUSD otherImpl = new ApyUSD();
+        bytes memory initData = abi.encodeCall(
+            otherImpl.initialize, ("Other Vault", "oapy", address(accessManager), address(mockToken), address(denyList))
+        );
+        ApyUSD otherVault = ApyUSD(address(new ERC1967Proxy(address(otherImpl), initData)));
+        UnlockReceipt badReceipt = _deployReceiptWithVault(address(otherVault));
+
+        vm.expectRevert(Errors.invalidAddress("unlockReceipt.vault"));
+        vm.prank(admin);
+        apyUSD.setUnlockReceipt(IUnlockReceipt(address(badReceipt)));
+    }
+
+    function test_RevertWhen_SetUnlockReceipt_WrongAsset() public {
+        UnlockReceipt badReceipt = _deployFreshReceipt();
+        vm.mockCall(
+            address(badReceipt),
+            abi.encodeWithSelector(IUnlockReceipt.asset.selector),
+            abi.encode(IERC20(address(mockToken)))
+        );
+
+        vm.expectRevert(Errors.invalidAddress("unlockReceipt.asset"));
+        vm.prank(admin);
+        apyUSD.setUnlockReceipt(IUnlockReceipt(address(badReceipt)));
+    }
+
+    function _deployReceiptWithVault(address vault_) private returns (UnlockReceipt) {
+        UnlockReceipt impl = new UnlockReceipt();
+        bytes memory data =
+            abi.encodeCall(impl.initialize, (address(accessManager), vault_, defaultFeeCurve(), feeRecipient));
+        return UnlockReceipt(address(new ERC1967Proxy(address(impl), data)));
+    }
 
     function _deployFreshReceipt() private returns (UnlockReceipt) {
         UnlockReceipt impl = new UnlockReceipt();

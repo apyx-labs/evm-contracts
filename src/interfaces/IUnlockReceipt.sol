@@ -16,12 +16,11 @@ import {EInvalidCaller} from "../errors/InvalidCaller.sol";
  *      Token and contract URIs are inlined into the implementation rather than stored —
  *      they change via UUPS upgrade only.
  *
- *      **Deny-list / compliance posture (audit H-2).** This receipt has no
- *      deny-list integration of its own; compliance is routed entirely through
- *      the underlying `apxUSD` ERC-20. The underlying's deny-list is therefore
- *      the final-hop authority on `claim`. Integrators that need claim-time
- *      deny-list visibility should subscribe to the underlying's deny-list
- *      events directly.
+ *      **Deny-list / compliance posture (Halborn FIND-005).** `claim` reads the
+ *      escrowed asset's deny-list and reverts when the receipt owner is deny-listed.
+ *      The payout `receiver` is enforced by apxUSD on transfer, not by a duplicate
+ *      receipt-level check. Cancel-to-shares is gated by the vault's `_deposit`
+ *      deny-list check on the receipt owner.
  */
 interface IUnlockReceipt is
     IReceipt,

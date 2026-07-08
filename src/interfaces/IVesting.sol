@@ -92,6 +92,12 @@ interface IVesting is EInvalidAddress, EInvalidAmount {
     // ========================================
 
     /**
+     * @notice Returns the beneficiary address authorized to pull vested yield.
+     * @return Address of the beneficiary contract (the vault).
+     */
+    function beneficiary() external view returns (address);
+
+    /**
      * @notice Returns the amount of yield that has vested and is available, including
      *         fully vested and newly vested yield.
      * @return Amount of vested yield including fully vested and newly vested yield

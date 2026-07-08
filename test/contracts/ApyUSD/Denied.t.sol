@@ -60,11 +60,10 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add alice to deny list before she tries to deposit
         addToDenyList(alice);
 
-        // Alice tries to deposit - should revert with Denied(alice)
-        // Inline so vm.expectRevert applies to apyUSD.deposit (helpers call approve first)
+        // Alice tries to deposit — maxDeposit returns 0 for deny-listed receivers.
         vm.startPrank(alice);
         apxUSD.approve(address(apyUSD), MEDIUM_AMOUNT);
-        vm.expectRevert(Errors.denied(alice));
+        vm.expectRevert(Errors.erc4626ExceededMaxDeposit(alice, MEDIUM_AMOUNT, 0));
         apyUSD.deposit(MEDIUM_AMOUNT, alice);
         vm.stopPrank();
     }
@@ -75,10 +74,10 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add bob to deny list so he cannot receive shares
         addToDenyList(bob);
 
-        // Alice tries to deposit with bob as receiver - should revert with Denied(bob)
+        // Alice tries to deposit with bob as receiver — maxDeposit returns 0.
         vm.startPrank(alice);
         apxUSD.approve(address(apyUSD), MEDIUM_AMOUNT);
-        vm.expectRevert(Errors.denied(bob));
+        vm.expectRevert(Errors.erc4626ExceededMaxDeposit(bob, MEDIUM_AMOUNT, 0));
         apyUSD.deposit(MEDIUM_AMOUNT, bob);
         vm.stopPrank();
     }
@@ -93,12 +92,11 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add alice to deny list before she tries to mint
         addToDenyList(alice);
 
-        // Alice tries to mint - should revert with Denied(alice)
-        // Inline so vm.expectRevert applies to apyUSD.mint (helpers call approve first)
+        // Alice tries to mint — maxMint returns 0 for deny-listed receivers.
         vm.startPrank(alice);
         uint256 assets = apyUSD.previewMint(MEDIUM_AMOUNT);
         apxUSD.approve(address(apyUSD), assets);
-        vm.expectRevert(Errors.denied(alice));
+        vm.expectRevert(Errors.erc4626ExceededMaxMint(alice, MEDIUM_AMOUNT, 0));
         apyUSD.mint(MEDIUM_AMOUNT, alice);
         vm.stopPrank();
     }
@@ -109,11 +107,11 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add bob to deny list so he cannot receive shares
         addToDenyList(bob);
 
-        // Alice tries to mint with bob as receiver - should revert with Denied(bob)
+        // Alice tries to mint with bob as receiver — maxMint returns 0.
         vm.startPrank(alice);
         uint256 assets = apyUSD.previewMint(MEDIUM_AMOUNT);
         apxUSD.approve(address(apyUSD), assets);
-        vm.expectRevert(Errors.denied(bob));
+        vm.expectRevert(Errors.erc4626ExceededMaxMint(bob, MEDIUM_AMOUNT, 0));
         apyUSD.mint(MEDIUM_AMOUNT, bob);
         vm.stopPrank();
     }
@@ -131,11 +129,10 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add alice to deny list
         addToDenyList(alice);
 
-        // Alice tries to withdraw - should revert with Denied(alice)
-        // Inline so vm.expectRevert applies to apyUSD.withdraw (helpers call preview/approve first)
+        // Alice tries to withdraw — maxWithdraw returns 0 for deny-listed owners.
         vm.startPrank(alice);
         apxUSD.approve(address(apyUSD), depositAmount);
-        vm.expectRevert(Errors.denied(alice));
+        vm.expectRevert(Errors.erc4626ExceededMaxWithdraw(alice, depositAmount, 0));
         apyUSD.withdraw(depositAmount, alice, alice);
         vm.stopPrank();
     }
@@ -170,9 +167,8 @@ contract ApyUSDDeniedTest is BaseTest {
         // Add alice to deny list
         addToDenyList(alice);
 
-        // Alice tries to redeem - should revert with Denied(alice)
-        // redeemApyUSD only calls apyUSD.redeem, so expectRevert applies correctly
-        vm.expectRevert(Errors.denied(alice));
+        // Alice tries to redeem — maxRedeem returns 0 for deny-listed owners.
+        vm.expectRevert(Errors.erc4626ExceededMaxRedeem(alice, aliceShares, 0));
         redeemApyUSD(aliceShares, alice, alice);
     }
 
