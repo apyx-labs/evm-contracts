@@ -1,0 +1,5 @@
+* @apyx-labs/developers
+
+/charts/*/argocd/*.yaml @ddaws
+/charts/*/argocd/*.yml @ddaws
+/.github/CODEOWNERS @ddaws
