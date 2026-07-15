@@ -1,5 +1,8 @@
 * @apyx-labs/developers
 
+/.github/workflows/ @ddaws
+/.github/actions/ @ddaws
+
 /charts/*/argocd/**/*.yaml @ddaws
 /charts/*/argocd/**/*.yml @ddaws
 /.github/CODEOWNERS @ddaws
