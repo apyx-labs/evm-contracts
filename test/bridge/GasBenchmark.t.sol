@@ -19,6 +19,47 @@ import {IBridgedToken} from "../../src/bridge/IBridgedToken.sol";
 import {Roles} from "../../src/Roles.sol";
 
 /**
+ * @notice Performs the OffRamp's per-transfer calls from inside a contract and measures
+ *         gas internally, so the result excludes the transaction-level overhead that
+ *         forge's isolate mode would otherwise add to every top-level test call
+ *         (21k intrinsic gas, calldata, cold account/storage access per call).
+ */
+contract OffRampSim {
+    BridgedApyxToken public immutable token;
+    BurnMintTokenPool public immutable pool;
+    uint64 public immutable chainSelector;
+
+    constructor(BridgedApyxToken token_, BurnMintTokenPool pool_, uint64 chainSelector_) {
+        token = token_;
+        pool = pool_;
+        chainSelector = chainSelector_;
+    }
+
+    /// @dev Mints `amount` to each receiver in order and returns the gas used per mint.
+    function deliver(address[] calldata receivers, uint256 amount) external returns (uint256[] memory gasUsed) {
+        gasUsed = new uint256[](receivers.length);
+        for (uint256 i = 0; i < receivers.length; i++) {
+            Pool.ReleaseOrMintInV1 memory releaseIn = Pool.ReleaseOrMintInV1({
+                originalSender: abi.encode(receivers[i]),
+                remoteChainSelector: chainSelector,
+                receiver: receivers[i],
+                sourceDenominatedAmount: amount,
+                localToken: address(token),
+                sourcePoolAddress: abi.encode(address(pool)),
+                sourcePoolData: "",
+                offchainTokenData: ""
+            });
+
+            uint256 gasBefore = gasleft();
+            token.balanceOf(receivers[i]);
+            pool.releaseOrMint(releaseIn);
+            token.balanceOf(receivers[i]);
+            gasUsed[i] = gasBefore - gasleft();
+        }
+    }
+}
+
+/**
  * @title GasBenchmarkTest
  * @notice Benchmarks the gas cost of the three operations the CCIP OffRamp performs
  *         when delivering a token transfer:
@@ -32,9 +73,9 @@ import {Roles} from "../../src/Roles.sol";
  *         our token and pool implementation stays well under the practical gas
  *         budget available to token pools in a CCIP message execution.
  *
- *         All storage is cold at the start of each test function (the EVM
- *         access-list resets between setUp and each test call), giving a
- *         realistic worst-case measurement.
+ *         The calls are made from an `OffRampSim` contract that measures gas internally,
+ *         so results are identical whether or not forge runs in isolate mode. Both
+ *         mints in a test share one transaction, as they would in a CCIP execution.
  */
 contract GasBenchmarkTest is Test {
     using Roles for AccessManager;
@@ -49,6 +90,7 @@ contract GasBenchmarkTest is Test {
     AccessManager public accessManager;
     BridgedApyxToken public bridgedToken;
     BurnMintTokenPool public pool;
+    OffRampSim public offRamp;
 
     // ── Actors ────────────────────────────────────────────────────────────
     address public admin;
@@ -124,6 +166,8 @@ contract GasBenchmarkTest is Test {
 
         vm.prank(pool.owner());
         pool.applyChainUpdates(new uint64[](0), chainUpdates);
+
+        offRamp = new OffRampSim(bridgedToken, pool, chainSelector);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -131,42 +175,26 @@ contract GasBenchmarkTest is Test {
     // ══════════════════════════════════════════════════════════════════════
 
     /**
-     * @notice Measures the combined gas consumed by the three calls the CCIP OffRamp
-     *         makes per token transfer: balanceOf → releaseOrMint → balanceOf.
-     *
-     *         Storage is cold at the start of this function (EVM access-list resets
-     *         between setUp and the test call), giving a realistic worst-case reading.
-     *
-     *         Asserts that the total is strictly below MAX_GAS (90,000).
-     */
-    /**
      * @notice First-ever mint on this chain: both `_totalSupply` and the receiver's
      *         `_balances` slot are zero (cold SSTORE 0→nonzero, 22,100 gas each).
      *         This is the worst-case gas cost. Senders should set ccipReceiveGasLimit
      *         to at least MAX_GAS_FIRST_MINT in their CCIP message extraArgs for the
      *         initial bridge transaction that activates the destination chain.
+     *
+     * @dev    Measures balanceOf → releaseOrMint → balanceOf inside `OffRampSim`, so the
+     *         result excludes per-transaction overhead and is independent of isolate mode.
      */
     function test_gasUsage_firstMint_under120k() public {
-        Pool.ReleaseOrMintInV1 memory releaseIn = Pool.ReleaseOrMintInV1({
-            originalSender: abi.encode(receiver),
-            remoteChainSelector: chainSelector,
-            receiver: receiver,
-            sourceDenominatedAmount: BRIDGE_AMOUNT,
-            localToken: address(bridgedToken),
-            sourcePoolAddress: abi.encode(address(pool)),
-            sourcePoolData: "",
-            offchainTokenData: ""
-        });
+        address[] memory receivers = new address[](1);
+        receivers[0] = receiver;
 
-        uint256 gasBefore = gasleft();
-        bridgedToken.balanceOf(receiver);
-        pool.releaseOrMint(releaseIn);
-        bridgedToken.balanceOf(receiver);
-        uint256 gasUsed = gasBefore - gasleft();
+        uint256[] memory gasUsed = offRamp.deliver(receivers, BRIDGE_AMOUNT);
 
-        console.log("Gas used (first mint, cold storage):", gasUsed);
+        console.log("Gas used (first mint, cold storage):", gasUsed[0]);
         assertLt(
-            gasUsed, MAX_GAS_FIRST_MINT, string.concat("First mint gas exceeds 120k. Measured: ", vm.toString(gasUsed))
+            gasUsed[0],
+            MAX_GAS_FIRST_MINT,
+            string.concat("First mint gas exceeds 120k. Measured: ", vm.toString(gasUsed[0]))
         );
     }
 
@@ -176,49 +204,23 @@ contract GasBenchmarkTest is Test {
      *         transaction. Only the new receiver's `_balances` slot starts cold.
      *         This reflects steady-state bridge usage and must stay under 90k.
      *
-     * @dev    Two mints are performed in sequence. The first activates the chain
-     *         (initialises _totalSupply), the second measures the warm-state cost
-     *         to a fresh receiver address.
+     * @dev    Both mints run in a single `OffRampSim.deliver` call. The first activates
+     *         the chain (initialises _totalSupply) and warms shared storage; the second
+     *         is measured for a fresh receiver. Keeping them in one transaction makes the
+     *         warm state identical with and without isolate mode.
      */
     function test_gasUsage_subsequentMint_under90k() public {
-        address receiver2 = makeAddr("receiver2");
+        address[] memory receivers = new address[](2);
+        receivers[0] = receiver;
+        receivers[1] = makeAddr("receiver2");
 
-        // ── First mint: activates the chain, warms contract/pool storage ──
-        Pool.ReleaseOrMintInV1 memory firstMint = Pool.ReleaseOrMintInV1({
-            originalSender: abi.encode(receiver),
-            remoteChainSelector: chainSelector,
-            receiver: receiver,
-            sourceDenominatedAmount: BRIDGE_AMOUNT,
-            localToken: address(bridgedToken),
-            sourcePoolAddress: abi.encode(address(pool)),
-            sourcePoolData: "",
-            offchainTokenData: ""
-        });
-        pool.releaseOrMint(firstMint);
+        uint256[] memory gasUsed = offRamp.deliver(receivers, BRIDGE_AMOUNT);
 
-        // ── Second mint: new receiver, warm contract/pool state ───────────
-        Pool.ReleaseOrMintInV1 memory secondMint = Pool.ReleaseOrMintInV1({
-            originalSender: abi.encode(receiver2),
-            remoteChainSelector: chainSelector,
-            receiver: receiver2,
-            sourceDenominatedAmount: BRIDGE_AMOUNT,
-            localToken: address(bridgedToken),
-            sourcePoolAddress: abi.encode(address(pool)),
-            sourcePoolData: "",
-            offchainTokenData: ""
-        });
-
-        uint256 gasBefore = gasleft();
-        bridgedToken.balanceOf(receiver2);
-        pool.releaseOrMint(secondMint);
-        bridgedToken.balanceOf(receiver2);
-        uint256 gasUsed = gasBefore - gasleft();
-
-        console.log("Gas used (subsequent mint, warm state):", gasUsed);
+        console.log("Gas used (subsequent mint, warm state):", gasUsed[1]);
         assertLt(
-            gasUsed,
+            gasUsed[1],
             MAX_GAS_SUBSEQUENT_MINT,
-            string.concat("Subsequent mint gas exceeds 90k. Measured: ", vm.toString(gasUsed))
+            string.concat("Subsequent mint gas exceeds 90k. Measured: ", vm.toString(gasUsed[1]))
         );
     }
 }
